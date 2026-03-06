@@ -8,7 +8,7 @@
 
 <br />
 
-[![Live App](https://img.shields.io/badge/🚀%20Live%20App-lumiq.onrender.com-00D4FF?style=for-the-badge&labelColor=050914)](https://lumiq.onrender.com/)
+[![Live App](https://img.shields.io/badge/🚀%20Live%20App-lumiq.vercel.app-00D4FF?style=for-the-badge&labelColor=050914)](https://lumiq-saksham-srivastavas-projects-a00eb29a.vercel.app/)
 [![Landing Page](https://img.shields.io/badge/🌐%20Landing%20Page-saksham653.github.io-7B4FE8?style=for-the-badge&labelColor=050914)](https://saksham653.github.io/LUMIQ/)
 
 <br />
@@ -44,7 +44,7 @@ Built on **Groq's ultra-fast inference engine** running **Llama 3.3 70B**, LUMIQ
 | | |
 |---|---|
 | 🌐 **Landing Page** | [https://saksham653.github.io/LUMIQ/](https://saksham653.github.io/LUMIQ/) |
-| 🚀 **Live Application** | [https://lumiq.onrender.com/](https://lumiq.onrender.com/) |
+| 🚀 **Live Application** | [https://lumiq-saksham-srivastavas-projects-a00eb29a.vercel.app/](https://lumiq-saksham-srivastavas-projects-a00eb29a.vercel.app/) |
 
 <br />
 
@@ -170,7 +170,7 @@ AI Engine   →  Groq API            (Llama 3.3 70B, streaming)
 Charts      →  Pure SVG            (hand-crafted, no chart library)
 Styling     →  Vanilla CSS-in-JS   (no Tailwind, no styled-components)
 Fonts       →  Syne + DM Mono + DM Sans (Google Fonts)
-Deployment  →  Render (app) + GitHub Pages (landing)
+Deployment  →  Vercel (app) + GitHub Pages (landing)
 ```
 
 Zero external UI libraries. Every chart — bar, line, area, donut, heatmap, scatter — is handwritten SVG. That's intentional. It keeps the bundle tiny and the visuals perfectly on-brand.
