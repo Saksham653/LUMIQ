@@ -903,7 +903,7 @@ Example 2: row => String(row.status).toLowerCase() === 'active'`;
       });
     }
     return result;
-  }, [ds, sortConfig, searchQuery]);
+  }, [ds, sortConfig, searchQuery, activeNlFilter]);
 
   const totalPages = Math.ceil((processedData?.length || 0) / rowsPerPage);
   const paginatedData = processedData.slice(pageIdx * rowsPerPage, (pageIdx + 1) * rowsPerPage);
