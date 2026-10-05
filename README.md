@@ -209,14 +209,6 @@ npm run build
 npm run preview
 ```
 
-### Environment Variable (Optional)
-
-To skip the API key setup screen, set:
-
-```env
-VITE_GROQ_API_KEY=gsk_your_key_here
-```
-
 <br />
 
 ---
