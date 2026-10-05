@@ -6,6 +6,15 @@ import {
   parseFilterPlanReply,
   FILTER_ACTIONS,
 } from "./lib/filterPlan.js";
+import {
+  isNumber,
+  numericValues,
+  sum as sumValues,
+  mean as meanValues,
+  max as maxValues,
+  numericPairs,
+  numericEntries,
+} from "./lib/stats.js";
 
 // ============================================================
 // LUMIQ — Luminous Intelligence Queries (Groq Edition)
@@ -139,7 +148,9 @@ function generateAutoInsights(dataset) {
   const insights = [];
   const numericCols = dataset.columns.filter((c) => typeof data[0][c] === "number");
   numericCols.forEach((col) => {
-    const vals = data.map((d) => d[col]);
+    // Blank cells are skipped, never counted as 0
+    const vals = numericValues(data.map((d) => d[col]));
+    if (vals.length === 0) return;
     let max = -Infinity, min = Infinity;
     for (const v of vals) { if (v > max) max = v; if (v < min) min = v; }
     // Compare first 10% vs last 10% for trend detection (more robust for large datasets)
@@ -177,8 +188,9 @@ function downsample(values, maxBuckets = 60) {
   return result;
 }
 
-// Format numbers for axis labels
+// Format numbers for axis labels; blanks and missing stats show as "—"
 function fmtNum(v) {
+  if (!isNumber(v)) return "—";
   if (Math.abs(v) >= 1e6) return `${(v / 1e6).toFixed(1)}M`;
   if (Math.abs(v) >= 1e3) return `${(v / 1e3).toFixed(0)}K`;
   if (Number.isInteger(v)) return String(v);
@@ -273,26 +285,32 @@ function profileColumn(data, colName) {
   };
 
   if (isNumeric) {
-    const nums = values.filter(v => typeof v === "number" && !isNaN(v));
+    // Blank cells are excluded from every statistic; a column with no
+    // numeric values gets null stats (shown as "—"), never fake zeros.
+    const nums = numericValues(values);
     const sorted = [...nums].sort((a, b) => a - b);
     const sum = nums.reduce((a, b) => a + b, 0);
-    profile.min = sorted[0] ?? 0;
-    profile.max = sorted[sorted.length - 1] ?? 0;
-    profile.mean = nums.length > 0 ? sum / nums.length : 0;
-    profile.median = nums.length > 0 ? sorted[Math.floor(sorted.length / 2)] : 0;
-    profile.stdDev = nums.length > 1 ? Math.sqrt(nums.reduce((a, v) => a + Math.pow(v - profile.mean, 2), 0) / (nums.length - 1)) : 0;
+    profile.min = sorted[0] ?? null;
+    profile.max = sorted[sorted.length - 1] ?? null;
+    profile.mean = nums.length > 0 ? sum / nums.length : null;
+    profile.median = nums.length > 0 ? sorted[Math.floor(sorted.length / 2)] : null;
+    profile.stdDev = nums.length > 1 ? Math.sqrt(nums.reduce((a, v) => a + Math.pow(v - profile.mean, 2), 0) / (nums.length - 1)) : null;
 
     // Histogram (10 bins)
-    const range = profile.max - profile.min || 1;
-    const binCount = Math.min(10, uniqueCount);
-    const bins = Array(binCount).fill(0);
-    nums.forEach(v => {
-      let idx = Math.floor(((v - profile.min) / range) * (binCount - 1));
-      if (idx < 0) idx = 0;
-      if (idx >= binCount) idx = binCount - 1;
-      bins[idx]++;
-    });
-    profile.histogram = bins;
+    if (nums.length > 0) {
+      const range = profile.max - profile.min || 1;
+      const binCount = Math.min(10, uniqueCount);
+      const bins = Array(binCount).fill(0);
+      nums.forEach(v => {
+        let idx = Math.floor(((v - profile.min) / range) * (binCount - 1));
+        if (idx < 0) idx = 0;
+        if (idx >= binCount) idx = binCount - 1;
+        bins[idx]++;
+      });
+      profile.histogram = bins;
+    } else {
+      profile.histogram = [];
+    }
   } else {
     // Top 3 frequent values
     const freq = {};
@@ -312,8 +330,10 @@ function profileColumn(data, colName) {
 }
 
 function MiniBarChart({ data, xKey, yKey, color = "#00D4FF" }) {
-  const raw = data.map((d) => d[yKey] || 0);
+  // Rows with a blank value are skipped, not drawn as zero bars
+  const raw = numericValues(data.map((d) => d[yKey]));
   const vals = downsample(raw, 24);
+  if (vals.length === 0) return <div style={{ height: "60px", padding: "4px 0" }} />;
   const max = Math.max(...vals);
   const min = Math.min(0, ...vals);
   const range = max - min || 1;
@@ -332,8 +352,10 @@ function MiniBarChart({ data, xKey, yKey, color = "#00D4FF" }) {
 }
 
 function MiniLineChart({ data, yKey, color = "#FFB627" }) {
-  const raw = data.map((d) => d[yKey] || 0);
+  // Rows with a blank value are skipped, not drawn as zeros
+  const raw = numericValues(data.map((d) => d[yKey]));
   const vals = downsample(raw, 40);
+  if (vals.length === 0) return <div style={{ height: "60px" }} />;
   const max = Math.max(...vals); const min = Math.min(...vals); const range = max - min || 1;
   const w = 200; const h = 60;
   const points = vals.map((v, i) => `${(i / Math.max(vals.length - 1, 1)) * w},${h - ((v - min) / range) * (h - 12) - 6}`).join(" ");
@@ -408,20 +430,26 @@ function HeatmapChart({ matrix, columns }) {
 }
 
 function AnomalyScatterChart({ data, metric, anomalies }) {
-  const rawVals = data.map((d) => d[metric] || 0);
-  const maxV = Math.max(...rawVals); const minV = Math.min(...rawVals); const range = maxV - minV || 1;
+  // Blank cells are not plotted (and never plotted as 0); numeric
+  // cells keep their original row index on the x-axis.
+  const rawVals = data.map((d) => d[metric]);
+  const numeric = numericValues(rawVals);
+  if (numeric.length === 0) return <svg viewBox="0 0 400 200" style={{ width: "100%", height: "100%" }} />;
+  const maxV = Math.max(...numeric); const minV = Math.min(...numeric); const range = maxV - minV || 1;
   const w = 400; const h = 200;
   const padL = 40; const padT = 20; const padB = 30; const padR = 20;
   const chartW = w - padL - padR; const chartH = h - padT - padB;
 
-  // Create a fast lookup set for anomaly indices
-  const anomalySet = new Set(anomalies.map(a => a.index));
+  // Create a fast lookup set for anomaly row indices (rowIdx is the
+  // original row position, so blanks never shift the highlight)
+  const anomalySet = new Set(anomalies.map(a => a.rowIdx ?? a.index));
   // Downsample normal points if dataset is huge, but ALWAYS draw anomalies precisely
   const drawPoints = [];
   const MAX_POINTS = 500;
   const step = Math.max(1, Math.floor(rawVals.length / MAX_POINTS));
 
   for (let i = 0; i < rawVals.length; i++) {
+    if (!isNumber(rawVals[i])) continue; // blank cell — nothing to plot
     const isAnomaly = anomalySet.has(i);
     if (isAnomaly || i % step === 0) {
       drawPoints.push({
@@ -982,9 +1010,12 @@ Rules:
 
   const numericCols = ds ? ds.columns.filter((c) => typeof ds.data[0]?.[c] === "number") : [];
   const metric = selectedMetric || numericCols[0] || "";
-  const totalVal = processedData ? processedData.reduce((s, r) => s + (r[numericCols[0]] || 0), 0) : 0;
-  const avgVal = processedData && processedData.length ? totalVal / processedData.length : 0;
-  const maxVal = processedData ? processedData.reduce((mx, r) => { const v = r[numericCols[0]] || 0; return v > mx ? v : mx; }, -Infinity) : 0;
+  // Blank cells stay blank: totals, averages and peaks are computed
+  // over real numbers only (null when the column has none).
+  const primaryVals = processedData ? processedData.map((r) => r[numericCols[0]]) : [];
+  const totalVal = sumValues(primaryVals);
+  const avgVal = meanValues(primaryVals);
+  const maxVal = maxValues(primaryVals);
 
   const handleFileUpload = (e) => {
     const file = e.target.files[0];
@@ -1092,9 +1123,10 @@ Rules:
         for (let j = 0; i < numericCols.length && j < numericCols.length; j++) {
           if (i === j) row.push(1);
           else {
-            const valsI = ds.data.map(d => d[numericCols[i]] || 0);
-            const valsJ = ds.data.map(d => d[numericCols[j]] || 0);
-            row.push(calcPearsonCorrelation(valsI, valsJ));
+            // Only rows where BOTH columns have real numbers count;
+            // blanks are skipped instead of entering as zeros.
+            const { xs, ys } = numericPairs(ds.data, numericCols[i], numericCols[j]);
+            row.push(xs.length >= 2 ? calcPearsonCorrelation(xs, ys) : 0);
           }
         }
         matrix.push(row);
@@ -1103,10 +1135,12 @@ Rules:
       // 2. Find Top Anomalies across all metrics
       let allAnomalies = [];
       numericCols.forEach(col => {
-        const vals = ds.data.map(d => d[col] || 0);
-        const { anomalies } = getAnomalies(vals, 2.8); // High threshold
+        // Outlier detection skips blank cells; indices map back to the
+        // original rows so a blank never shifts which row is flagged.
+        const entries = numericEntries(ds.data, col);
+        const { anomalies } = getAnomalies(entries.map(e => e.value), 2.8); // High threshold
         anomalies.forEach(a => {
-          allAnomalies.push({ metric: col, rowIdx: a.index, value: a.value, zScore: a.zScore });
+          allAnomalies.push({ metric: col, rowIdx: entries[a.index].index, value: a.value, zScore: a.zScore });
         });
       });
       allAnomalies.sort((a, b) => b.zScore - a.zScore);
@@ -1274,26 +1308,23 @@ Provide a short "Executive Summary" paragraph, then a "Key Findings" bulleted li
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "16px", marginBottom: "24px" }}>
                     <div className="metric-card cyan">
                       <div style={{ fontSize: "11px", fontFamily: "'DM Mono', monospace", color: "#8892b0", marginBottom: "8px", textTransform: "uppercase" }}>Total · {numericCols[0]}</div>
-                      <div className="stat-number">{totalVal >= 1e6 ? `${(totalVal / 1e6).toFixed(1)} M` : totalVal >= 1000 ? `${(totalVal / 1000).toFixed(0)} K` : totalVal.toFixed(0)}</div>
+                      <div className="stat-number">{totalVal == null ? "—" : totalVal >= 1e6 ? `${(totalVal / 1e6).toFixed(1)} M` : totalVal >= 1000 ? `${(totalVal / 1000).toFixed(0)} K` : totalVal.toFixed(0)}</div>
                       <MiniLineChart data={processedData} yKey={numericCols[0]} color="#00D4FF" />
                     </div>
                     <div className="metric-card gold">
                       <div style={{ fontSize: "11px", fontFamily: "'DM Mono', monospace", color: "#8892b0", marginBottom: "8px", textTransform: "uppercase" }}>Average</div>
-                      <div className="stat-number">{avgVal >= 1e6 ? `${(avgVal / 1e6).toFixed(2)}M` : avgVal >= 1000 ? `${(avgVal / 1000).toFixed(1)}K` : avgVal.toFixed(1)}</div>
+                      <div className="stat-number">{avgVal == null ? "—" : avgVal >= 1e6 ? `${(avgVal / 1e6).toFixed(2)}M` : avgVal >= 1000 ? `${(avgVal / 1000).toFixed(1)}K` : avgVal.toFixed(1)}</div>
                       <MiniBarChart data={processedData} xKey={ds.columns[0]} yKey={numericCols[0]} color="#FFB627" />
                     </div>
                     <div className="metric-card violet">
                       <div style={{ fontSize: "11px", fontFamily: "'DM Mono', monospace", color: "#8892b0", marginBottom: "8px", textTransform: "uppercase" }}>Peak Value</div>
-                      <div className="stat-number">{maxVal >= 1e6 ? `${(maxVal / 1e6).toFixed(2)}M` : maxVal >= 1000 ? `${(maxVal / 1000).toFixed(0)}K` : maxVal.toFixed(0)}</div>
+                      <div className="stat-number">{maxVal == null ? "—" : maxVal >= 1e6 ? `${(maxVal / 1e6).toFixed(2)}M` : maxVal >= 1000 ? `${(maxVal / 1000).toFixed(0)}K` : maxVal.toFixed(0)}</div>
                       <div style={{ display: "flex", gap: "8px", marginTop: "10px" }}>
                         {numericCols.slice(0, 3).map((c, i) => {
-                          const colVals = processedData.map(r => r[c] || 0);
-                          const colAvg = colVals.reduce((a, b) => a + b, 0) / (colVals.length || 1);
-                          let colMax = -Infinity;
-                          for (let i = 0; i < colVals.length; i++) {
-                            if (colVals[i] > colMax) colMax = colVals[i];
-                          }
-                          if (colMax === -Infinity) colMax = 0;
+                          // Blank cells are skipped in both average and max
+                          const colVals = processedData.map(r => r[c]);
+                          const colAvg = meanValues(colVals) ?? 0;
+                          const colMax = maxValues(colVals) ?? 0;
 
                           return (
                             <DonutChart key={c} value={colAvg} max={colMax} color={["#7B4FE8", "#00D4FF", "#00E5A0"][i]} label={c.length > 10 ? c.slice(0, 8) + "…" : c} />
@@ -1326,7 +1357,8 @@ Provide a short "Executive Summary" paragraph, then a "Key Findings" bulleted li
                               const next = !forecastEnabled;
                               setForecastEnabled(next);
                               if (next) {
-                                const rawVals = processedData.map(d => d[metric] || 0);
+                                // Blank cells are skipped, not fed in as zeros
+                                const rawVals = numericValues(processedData.map(d => d[metric]));
                                 const reg = calcLinearRegression(rawVals);
                                 runForecast(metric, reg);
                               } else {
@@ -1340,7 +1372,8 @@ Provide a short "Executive Summary" paragraph, then a "Key Findings" bulleted li
                       </div>
                       <div style={{ position: "relative", height: "260px" }}>
                         {(() => {
-                          const rawVals = processedData.map((d) => d[metric] || 0);
+                          // Rows with a blank metric are skipped, never charted as 0
+                          const rawVals = numericValues(processedData.map((d) => d[metric]));
                           const vals = downsample(rawVals, 60);
                           const regression = forecastEnabled ? calcLinearRegression(rawVals) : null;
                           const forecastVals = regression ? regression.forecast : [];
