@@ -1,4 +1,11 @@
 import { useState, useEffect, useRef, useMemo } from "react";
+import {
+  validateFilterPlan,
+  applyFilterPlan,
+  describeFilterPlan,
+  parseFilterPlanReply,
+  FILTER_ACTIONS,
+} from "./lib/filterPlan.js";
 
 // ============================================================
 // LUMIQ — Luminous Intelligence Queries (Groq Edition)
@@ -834,34 +841,51 @@ Write a concise 3-4 sentence forecast narrative. Include: trend direction and st
     }
 
     try {
-      const prompt = `You are a strict data filtering assistant. I have a JSON array of objects with columns: ${ds.columns.join(', ')}.
-The user wants to filter the data: "${nlFilterQuery}"
+      const columnHints = ds.columns
+        .map((c) => `${c} (${typeof ds.data[0]?.[c] === "number" ? "number" : "text"})`)
+        .join(", ");
+      const prompt = `You translate a user's request into a JSON filter plan for a data table.
+Columns: ${columnHints}
+User request: "${nlFilterQuery}"
 
-Write ONLY a JavaScript arrow function that takes a 'row' object and returns a boolean. 
-DO NOT wrap it in markdown block quotes. DO NOT write any explanations. Just the literal code.
-Ensure you convert strings to lowercase for case-insensitive matches if checking text.
-Example 1: row => row.revenue > 1000 && row.region === 'West'
-Example 2: row => String(row.status).toLowerCase() === 'active'`;
+Reply with ONLY a JSON object, no markdown and no explanations, in exactly this shape:
+{"logic":"and","conditions":[{"column":"<column name>","action":"<action>","value":<value>}]}
 
-      let code = "";
-      // callGroq takes a callback and streams text, accumulating into `code`
-      await callGroq(apiKey, [{ role: "user", content: prompt }], (text) => {
-        code = text;
+Allowed actions: ${FILTER_ACTIONS.join(", ")}.
+Rules:
+- "logic" is "and" or "or".
+- greater_than and less_than take a number. between takes [low, high]. is_one_of takes an array of values. is_empty takes no value.
+- Use only the listed column names, exactly as written.
+- If the request cannot be expressed with these actions, reply {"error":"<short reason>"} instead.`;
+
+      const reply = await callGroq(apiKey, [{ role: "user", content: prompt }], () => { });
+
+      // The reply is data, never code: parse it as JSON and check every
+      // column and action against the real dataset before using it.
+      const parsed = parseFilterPlanReply(reply);
+      if (!parsed.ok) {
+        setNlFilterError(parsed.error);
+        return;
+      }
+      const checked = validateFilterPlan(parsed.raw, ds.columns);
+      if (!checked.ok) {
+        setNlFilterError(`Could not apply this filter: ${checked.error}`);
+        return;
+      }
+
+      setActiveNlFilter({
+        query: nlFilterQuery,
+        plan: checked.plan,
+        description: describeFilterPlan(checked.plan),
       });
-
-      code = code.replace(/```javascript/g, "").replace(/```js/g, "").replace(/```/g, "").trim();
-
-      // Safely parse the arrow function
-      const fn = new Function('return (' + code + ')')();
-
-      setActiveNlFilter({ query: nlFilterQuery, fn, code });
       setPageIdx(0);
       setNlFilterQuery("");
     } catch (e) {
-      setNlFilterError("Failed to interpret your query into a valid filter.");
+      setNlFilterError(e?.message || "The AI filter request failed.");
       console.error("NL Filter Error:", e);
+    } finally {
+      setNlFilterLoading(false);
     }
-    setNlFilterLoading(false);
   };
 
   const clearNlFilter = () => {
@@ -875,13 +899,9 @@ Example 2: row => String(row.status).toLowerCase() === 'active'`;
     if (!ds) return [];
     let result = ds.data;
 
-    // AI Natural Language Filter
-    if (activeNlFilter && activeNlFilter.fn) {
-      try {
-        result = result.filter(activeNlFilter.fn);
-      } catch (e) {
-        console.error("Failed to execute NL filter:", e);
-      }
+    // AI Natural Language Filter — a validated plan, never model code
+    if (activeNlFilter && activeNlFilter.plan) {
+      result = applyFilterPlan(result, activeNlFilter.plan);
     }
 
     // Fast text search
@@ -1200,8 +1220,8 @@ Provide a short "Executive Summary" paragraph, then a "Key Findings" bulleted li
                         {activeNlFilter && (
                           <div style={{ marginTop: "12px", padding: "10px", background: "#050914", borderRadius: "8px", border: "1px solid #1e2d5c", fontSize: "11px" }}>
                             <div style={{ color: "#00E5A0", marginBottom: "4px" }}>✓ Filter Applied: "{activeNlFilter.query}"</div>
-                            <div style={{ fontFamily: "'DM Mono', monospace", color: "#8892b0", overflowX: "auto" }}>
-                              <span style={{ color: "#7B4FE8" }}>Executed Code:</span> {activeNlFilter.code}
+                            <div style={{ color: "#8892b0" }}>
+                              <span style={{ color: "#7B4FE8" }}>Showing rows where:</span> {activeNlFilter.description}
                             </div>
                           </div>
                         )}
