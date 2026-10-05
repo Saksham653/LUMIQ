@@ -15,6 +15,7 @@ import {
   numericPairs,
   numericEntries,
 } from "./lib/stats.js";
+import { createStreamReader } from "./lib/streamReader.js";
 
 // ============================================================
 // LUMIQ — Luminous Intelligence Queries (Groq Edition)
@@ -46,48 +47,108 @@ function writeStoredApiKey(key, remember) {
   }
 }
 
-async function callGroq(apiKey, messages, onStream) {
-  const res = await fetch(GROQ_API_URL, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      model: MODEL,
-      messages,
-      stream: true,
-      max_tokens: 1024,
-      temperature: 0.7,
-    }),
-  });
+const STREAM_TIMEOUT_MS = 30000;
 
-  if (!res.ok) {
-    const err = await res.json();
-    throw new Error(err.error?.message || "Groq API error");
+// Plain-words messages for the errors users actually hit.
+function groqErrorMessage(status, detail) {
+  if (status === 401 || status === 403) {
+    return "Groq rejected your API key (401). Open API Settings, check the key and try again.";
   }
+  if (status === 429) {
+    return "The Groq usage limit is reached (429). Wait a moment, then retry.";
+  }
+  return detail || `Groq API error (${status}).`;
+}
 
-  const reader = res.body.getReader();
-  const decoder = new TextDecoder();
-  let fullText = "";
+// Streams a chat completion. Lines split across network chunks are
+// buffered (createStreamReader), the request can be stopped from the
+// UI via options.signal, and a stream that goes silent for 30 seconds
+// is cancelled instead of hanging forever.
+// Thrown errors carry flags: aborted (user pressed Stop), timedOut,
+// canRetry, status.
+async function callGroq(apiKey, messages, onStream, { signal, temperature = 0.7 } = {}) {
+  const controller = new AbortController();
+  let timedOut = false;
+  const abortFromCaller = () => controller.abort();
+  if (signal) {
+    if (signal.aborted) controller.abort();
+    else signal.addEventListener("abort", abortFromCaller, { once: true });
+  }
+  // The timer resets whenever data arrives, so it catches a stuck
+  // connection or a stalled stream, not a healthy reply in progress.
+  let timer = setTimeout(() => { timedOut = true; controller.abort(); }, STREAM_TIMEOUT_MS);
+  const resetTimer = () => {
+    clearTimeout(timer);
+    timer = setTimeout(() => { timedOut = true; controller.abort(); }, STREAM_TIMEOUT_MS);
+  };
 
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    const chunk = decoder.decode(value);
-    const lines = chunk.split("\n").filter((l) => l.startsWith("data: "));
-    for (const line of lines) {
-      const data = line.slice(6);
-      if (data === "[DONE]") break;
+  try {
+    const res = await fetch(GROQ_API_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: MODEL,
+        messages,
+        stream: true,
+        max_tokens: 1024,
+        temperature,
+      }),
+      signal: controller.signal,
+    });
+
+    if (!res.ok) {
+      let detail = "";
       try {
-        const json = JSON.parse(data);
-        const delta = json.choices?.[0]?.delta?.content || "";
+        const err = await res.json();
+        detail = err.error?.message || "";
+      } catch { }
+      const e = new Error(groqErrorMessage(res.status, detail));
+      e.status = res.status;
+      e.canRetry = res.status === 429 || res.status >= 500;
+      throw e;
+    }
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    const sse = createStreamReader();
+    let fullText = "";
+    const emit = (deltas) => {
+      for (const delta of deltas) {
         fullText += delta;
         onStream?.(fullText, delta);
-      } catch { }
+      }
+    };
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      resetTimer();
+      emit(sse.push(decoder.decode(value, { stream: true })));
+      if (sse.finished) break;
     }
+    emit(sse.push(decoder.decode()));
+    emit(sse.flush());
+    return fullText;
+  } catch (err) {
+    if (controller.signal.aborted) {
+      if (timedOut) {
+        const e = new Error("No reply from Groq for 30 seconds — the request was cancelled. Retry in a moment.");
+        e.timedOut = true;
+        e.canRetry = true;
+        throw e;
+      }
+      const e = new Error("Stopped.");
+      e.aborted = true;
+      throw e;
+    }
+    throw err;
+  } finally {
+    clearTimeout(timer);
+    if (signal) signal.removeEventListener("abort", abortFromCaller);
   }
-  return fullText;
 }
 
 // ─── Sample Datasets ────────────────────────────────────────
@@ -859,6 +920,13 @@ const AppShell = ({
   const [forecastNarrative, setForecastNarrative] = useState("");
   const [forecastLoading, setForecastLoading] = useState(false);
 
+  // In-flight AI requests (F5): the Stop buttons abort these, and a
+  // failed Oracle question can be retried.
+  const oracleAbortRef = useRef(null);
+  const narrativeAbortRef = useRef(null);
+  const forecastAbortRef = useRef(null);
+  const [oracleLastFailed, setOracleLastFailed] = useState(null);
+
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   // Reset pagination/sort/filters when dataset changes
@@ -874,6 +942,9 @@ const AppShell = ({
   }, [activeDataset]);
 
   const runForecast = async (metricName, regression) => {
+    forecastAbortRef.current?.abort();
+    const controller = new AbortController();
+    forecastAbortRef.current = controller;
     setForecastLoading(true);
     setForecastNarrative("");
     if (!apiKey || apiKey === "demo") {
@@ -892,11 +963,13 @@ Write a concise 3-4 sentence forecast narrative. Include: trend direction and st
 
       await callGroq(apiKey, [{ role: "user", content: prompt }], (text) => {
         setForecastNarrative(text);
-      });
+      }, { signal: controller.signal });
     } catch (e) {
-      setForecastNarrative("Failed to generate forecast narrative: " + e.message);
+      if (forecastAbortRef.current === controller && !e.aborted) {
+        setForecastNarrative("Could not generate the forecast narrative: " + e.message + " Toggle Crystal Ball off and on to retry.");
+      }
     }
-    setForecastLoading(false);
+    if (forecastAbortRef.current === controller) setForecastLoading(false);
   };
 
   const applyNlFilter = async () => {
@@ -928,7 +1001,8 @@ Rules:
 - Use only the listed column names, exactly as written.
 - If the request cannot be expressed with these actions, reply {"error":"<short reason>"} instead.`;
 
-      const reply = await callGroq(apiKey, [{ role: "user", content: prompt }], () => { });
+      // temperature 0: a filter plan should be deterministic JSON
+      const reply = await callGroq(apiKey, [{ role: "user", content: prompt }], () => { }, { temperature: 0 });
 
       // The reply is data, never code: parse it as JSON and check every
       // column and action against the real dataset before using it.
@@ -1041,12 +1115,17 @@ Rules:
     reader.readAsText(file);
   };
 
-  const sendOracleMessage = async () => {
-    if (!oracleInput.trim() || oracleLoading) return;
-    const userMsg = oracleInput.trim();
-    setOracleInput("");
+  // Pass retryText to re-send a failed question (the Retry button);
+  // otherwise the textarea content is sent.
+  const sendOracleMessage = async (retryText) => {
+    const userMsg = (typeof retryText === "string" ? retryText : oracleInput).trim();
+    if (!userMsg || oracleLoading) return;
+    if (typeof retryText !== "string") setOracleInput("");
+    setOracleLastFailed(null);
     setOracleMessages((prev) => [...prev, { role: "user", content: userMsg }]);
     setOracleLoading(true);
+    const controller = new AbortController();
+    oracleAbortRef.current = controller;
     const systemPrompt = `You are Oracle, LUMIQ's elite AI data analyst — brilliant, direct, proactively insightful.\nDataset: ${ds ? ds.name : "No dataset loaded"}\n${ds ? `Columns: ${ds.columns.join(", ")}\nSample (first 5 rows): ${JSON.stringify(ds.data.slice(0, 5))}\nTotal rows: ${ds.data.length}` : "No dataset loaded — tell the user to select one."}\nStyle: answer directly with real numbers, explain WHY it matters, use → for implications, • for key points, end with one sharp follow-up. Under 220 words.`;
     const msgs = [{ role: "system", content: systemPrompt }, ...oracleMessages.filter(m => !m.streaming).map(m => ({ role: m.role, content: m.content })), { role: "user", content: userMsg }];
     try {
@@ -1054,7 +1133,7 @@ Rules:
       if (apiKey && apiKey !== "demo") {
         await callGroq(apiKey, msgs, (text) => {
           setOracleMessages((prev) => { const u = [...prev]; u[u.length - 1] = { role: "assistant", content: text, streaming: true }; return u; });
-        });
+        }, { signal: controller.signal });
       } else {
         const demo = `I'm running in demo mode — connect a real Groq API key to get live AI analysis!\n\nBased on the data structure I can see:\n• Your dataset has ${ds?.data.length || 0} rows across ${ds?.columns.length || 0} columns\n→ Key numeric metrics: ${ds?.columns.filter(c => typeof ds.data[0]?.[c] === 'number').join(", ") || "none detected"}\n\nWith a real Groq key, I'd give you deep analysis of this question instantly. Get yours free at console.groq.com`;
         let current = "";
@@ -1062,25 +1141,42 @@ Rules:
       }
       setOracleMessages((prev) => { const u = [...prev]; u[u.length - 1] = { ...u[u.length - 1], streaming: false }; return u; });
     } catch (err) {
-      setOracleMessages((prev) => { const u = [...prev]; u[u.length - 1] = { role: "assistant", content: `⚠ Groq error: ${err.message}. Check your API key.`, streaming: false }; return u; });
+      if (err.aborted) {
+        // Stopped by the user — keep whatever already streamed in
+        setOracleMessages((prev) => { const u = [...prev]; const last = u[u.length - 1]; u[u.length - 1] = { role: "assistant", content: last.content ? `${last.content} ⏹` : "⏹ Stopped.", streaming: false }; return u; });
+      } else {
+        setOracleLastFailed(userMsg);
+        setOracleMessages((prev) => { const u = [...prev]; u[u.length - 1] = { role: "assistant", content: `⚠ ${err.message}`, streaming: false }; return u; });
+      }
     }
+    oracleAbortRef.current = null;
     setOracleLoading(false);
   };
 
   const generateNarrative = async () => {
     if (!ds) return;
+    narrativeAbortRef.current?.abort();
+    const controller = new AbortController();
+    narrativeAbortRef.current = controller;
     setNarrativeLoading(true); setNarrativeText("");
     const prompt = `You are a senior business analyst. Write a DECISION BRIEF for:\nDataset: ${ds.name}\nColumns: ${ds.columns.join(", ")}\nData (first 8 rows): ${JSON.stringify(ds.data.slice(0, 8))}\nTotal: ${ds.data.length} rows\n\nFormat:\nHEADLINE: [one sentence]\n\nWHAT HAPPENED: [2-3 sentences with real numbers]\n\nWHY IT MATTERS: [business implication]\n\nTHE RISK: [what could go wrong]\n\nRECOMMENDED ACTION: [one concrete next step]\n\nUnder 280 words. Be direct.`;
     try {
       if (apiKey && apiKey !== "demo") {
-        await callGroq(apiKey, [{ role: "user", content: prompt }], (text) => setNarrativeText(text));
+        await callGroq(apiKey, [{ role: "user", content: prompt }], (text) => setNarrativeText(text), { signal: controller.signal });
       } else {
         const demo = `HEADLINE: Dataset loaded successfully — connect Groq API for AI-generated decision briefs.\n\nWHAT HAPPENED: Your dataset "${ds.name}" contains ${ds.data.length} rows and ${ds.columns.length} columns (${ds.columns.join(", ")}). The data has been parsed and is ready for analysis.\n\nWHY IT MATTERS: With a real Groq API key, Oracle will analyze actual patterns, trends, and anomalies in your data and write executive-ready briefs in under 2 seconds.\n\nTHE RISK: Without AI analysis, you may miss non-obvious correlations and leading indicators buried in the data.\n\nRECOMMENDED ACTION: Get a free Groq API key at console.groq.com and reconnect Oracle to unlock full narrative intelligence.`;
         let current = "";
         for (const char of demo) { await new Promise(r => setTimeout(r, 8)); current += char; setNarrativeText(current); }
       }
-    } catch (err) { setNarrativeText(`Error: ${err.message}`); }
-    setNarrativeLoading(false);
+    } catch (err) {
+      if (narrativeAbortRef.current === controller && !err.aborted) {
+        setNarrativeText(`Error: ${err.message} Use Generate / Regenerate to retry.`);
+      }
+    }
+    if (narrativeAbortRef.current === controller) {
+      setNarrativeLoading(false);
+      narrativeAbortRef.current = null;
+    }
   };
 
   const runScenario = async () => {
@@ -1362,6 +1458,7 @@ Provide a short "Executive Summary" paragraph, then a "Key Findings" bulleted li
                                 const reg = calcLinearRegression(rawVals);
                                 runForecast(metric, reg);
                               } else {
+                                forecastAbortRef.current?.abort();
                                 setForecastNarrative("");
                               }
                             }}
@@ -1663,8 +1760,16 @@ Provide a short "Executive Summary" paragraph, then a "Key Findings" bulleted li
               </div>
               <div style={{ display: "flex", gap: "10px" }}>
                 <textarea className="oracle-input" value={oracleInput} onChange={(e) => setOracleInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendOracleMessage(); } }} placeholder="Ask Oracle anything about your data..." rows={2} style={{ flex: 1 }} disabled={oracleLoading} />
-                <button className="btn-primary" onClick={sendOracleMessage} disabled={oracleLoading || !oracleInput.trim()} style={{ alignSelf: "flex-end", padding: "14px 20px" }}>{oracleLoading ? "..." : "→"}</button>
+                {oracleLoading && apiKey && apiKey !== "demo" && (
+                  <button className="btn-ghost" onClick={() => oracleAbortRef.current?.abort()} style={{ alignSelf: "flex-end", padding: "14px 16px" }}>⏹ Stop</button>
+                )}
+                <button className="btn-primary" onClick={() => sendOracleMessage()} disabled={oracleLoading || !oracleInput.trim()} style={{ alignSelf: "flex-end", padding: "14px 20px" }}>{oracleLoading ? "..." : "→"}</button>
               </div>
+              {oracleLastFailed && !oracleLoading && (
+                <div style={{ marginTop: "10px" }}>
+                  <button className="btn-ghost" style={{ fontSize: "12px" }} onClick={() => sendOracleMessage(oracleLastFailed)}>↻ Retry last question</button>
+                </div>
+              )}
               {(!apiKey || apiKey === "demo") && (
                 <div style={{ marginTop: "12px", padding: "12px 16px", background: "#FFB6271a", border: "1px solid #FFB62733", borderRadius: "8px", fontSize: "12px", color: "#FFB627" }}>
                   ⚡ Demo mode — <button onClick={() => setPage("setup")} style={{ background: "none", border: "none", color: "#FFB627", cursor: "pointer", textDecoration: "underline", fontSize: "12px" }}>Connect your free Groq API key</button> for real AI responses
@@ -1679,7 +1784,12 @@ Provide a short "Executive Summary" paragraph, then a "Key Findings" bulleted li
                 <h2 style={{ fontFamily: "'Syne', sans-serif", fontSize: "20px", fontWeight: 800, marginBottom: "8px" }}>Decision Brief Generator</h2>
                 <p style={{ color: "#8892b0", fontSize: "13px" }}>LUMIQ generates executive-grade decision briefs via Groq — your data becomes a story that drives action.</p>
               </div>
-              <button className="btn-primary" onClick={generateNarrative} disabled={narrativeLoading || !ds} style={{ marginBottom: "20px" }}>{narrativeLoading ? "Oracle is writing..." : "Generate Decision Brief"}</button>
+              <div style={{ display: "flex", gap: "10px", marginBottom: "20px" }}>
+                <button className="btn-primary" onClick={generateNarrative} disabled={narrativeLoading || !ds}>{narrativeLoading ? "Oracle is writing..." : "Generate Decision Brief"}</button>
+                {narrativeLoading && apiKey && apiKey !== "demo" && (
+                  <button className="btn-ghost" onClick={() => narrativeAbortRef.current?.abort()}>⏹ Stop</button>
+                )}
+              </div>
               {!ds && <div style={{ color: "#FFB627", fontSize: "13px", marginBottom: "16px" }}>⚠ Select a dataset from the sidebar first</div>}
               {narrativeText && (
                 <div>
