@@ -31,7 +31,7 @@
 
 **LUMIQ** *(Luminous Intelligence Queries)* is a zero-backend, browser-native AI analytics platform that transforms raw datasets into **living, breathing intelligence**. No servers. No database. No bloat. Just your data and a Groq API key — and suddenly your spreadsheets start talking.
 
-Built on **Groq's ultra-fast inference engine** running **Llama 3.3 70B**, LUMIQ delivers sub-100ms AI responses directly in the browser. You ask questions in plain English. Oracle answers in milliseconds. That's it.
+Built on **Groq's fast inference engine** running **Llama 3.3 70B**, LUMIQ streams AI responses directly in the browser. You ask questions in plain English. Oracle streams the answer back as it is generated.
 
 > *Not just charts. Decision intelligence.*
 
@@ -58,7 +58,7 @@ The Canvas is LUMIQ's command center. The moment you load a dataset, it transfor
 
 - **Smart KPI tiles** — Total, Average, Peak Value with sparklines and donut breakdowns
 - **Interactive charts** — Bar, Line, and Area views with adaptive downsampling for massive datasets
-- **Sortable, searchable data table** with pagination that handles 50K+ rows without breaking a sweat
+- **Sortable, searchable data table** with pagination
 - **Auto-Insights engine** — detects statistically significant trends (>20% change) automatically, no prompting needed
 
 ---
@@ -83,7 +83,7 @@ Forget filter dropdowns. Just *describe* what you want:
 "Give me the top performing categories only"
 ```
 
-LUMIQ sends your intent to Groq, which returns a JavaScript arrow function, executes it safely, and instantly updates every chart, metric, and table on the Canvas. The generated filter code is shown transparently so you always know exactly what's happening.
+LUMIQ sends your request and the column names to Groq, which returns a structured filter plan — never code. LUMIQ validates the plan against your real columns (anything else is rejected with a plain error), applies it instantly to every chart, metric, and table on the Canvas, and shows the applied filter in plain words, e.g. *revenue is more than 300,000 and region is "North"*.
 
 ---
 
@@ -200,7 +200,7 @@ npm install
 npm run dev
 ```
 
-Open `http://localhost:5173` and enter your Groq API key when prompted.
+Open `http://localhost:3000` (the dev server port set in `vite.config.js`) and enter your Groq API key when prompted.
 
 ### Build for Production
 
@@ -258,7 +258,7 @@ LUMIQ uses the **Groq API** for all AI features. Getting a key is free and takes
 2. Sign up and create an API key
 3. Paste it into LUMIQ's setup screen
 
-All API calls are made **directly from your browser** — your key never touches any server. You can also run LUMIQ in **Demo Mode** without a key to explore the UI (AI features will be simulated).
+All API calls are made **directly from your browser** — your key never touches any server. The key is kept in memory for the session; tick **"Remember on this device"** on the setup screen to save it in your browser's localStorage. You can also run LUMIQ in **Demo Mode** without a key to explore the UI — AI features are disabled in Demo Mode and show a notice asking you to connect a key.
 
 <br />
 
