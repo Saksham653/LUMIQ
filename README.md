@@ -213,17 +213,29 @@ npm run preview
 
 ---
 
+## 🗺️ Roadmap
+
+The full fix plan (audit, requirements, targets) is in [docs/PRD.md](docs/PRD.md).
+
+<br />
+
+---
+
 ## 📁 Project Structure
 
 ```
 LUMIQ/
 ├── src/
 │   ├── App.jsx          # Entire application (single-file architecture)
+│   ├── lib/             # Filter-plan validator, stream reader, blank-aware stats (+ unit tests)
 │   └── main.jsx         # React entry point
+├── docs/
+│   └── PRD.md           # Fix PRD: audit, requirements and roadmap
 ├── public/
 │   └── lumiq-icon.svg   # Prism logo
 ├── index.html
 ├── vite.config.js
+├── LICENSE
 └── package.json
 ```
 
