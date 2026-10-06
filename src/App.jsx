@@ -1865,6 +1865,7 @@ Provide a short "Executive Summary" paragraph, then a "Key Findings" bulleted li
                   <button className="btn-ghost" style={{ fontSize: "12px" }} onClick={() => sendOracleMessage(oracleLastFailed)}>↻ Retry last question</button>
                 </div>
               )}
+              <p style={{ fontSize: "11px", color: "#3d4f7c", marginTop: "8px" }}>Each question is answered on its own. Include the full detail, for example "revenue by region for 2026".</p>
               {(!apiKey || apiKey === "demo") && (
                 <div style={{ marginTop: "12px" }}>
                   <KeyNudge setPage={setPage} />
