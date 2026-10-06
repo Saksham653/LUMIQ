@@ -127,6 +127,24 @@ export function formatCell(value, typeInfo) {
   return formatNumber(value);
 }
 
+// Tile formatting: percent and averaged (rate-like) values keep one
+// decimal (12.5, never 13), money carries its symbol, counts and
+// other summed amounts show no decimals. Large values compress to
+// K / M as before.
+export function formatTileValue(value, typeInfo, rule = "sum") {
+  if (value === null || value === undefined) return "—";
+  const type = typeInfo?.type;
+  const wantsDecimal = type === "percent" || rule === "avg";
+  const abs = Math.abs(value);
+  let core;
+  if (abs >= 1e6) core = `${(value / 1e6).toFixed(wantsDecimal ? 2 : 1)}M`;
+  else if (abs >= 1000) core = `${(value / 1000).toFixed(wantsDecimal ? 1 : 0)}K`;
+  else core = wantsDecimal ? value.toFixed(1) : String(Math.round(value));
+  if (type === "percent") return `${core}%`;
+  if (type === "money") return `${typeInfo?.symbol || ""}${core}`;
+  return core;
+}
+
 const AVERAGE_NAME_RE = /rate|margin|ratio|pct|avg|score|nps/i;
 
 // How to total a number column: percent columns and rate-like names
