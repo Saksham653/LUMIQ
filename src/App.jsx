@@ -513,6 +513,16 @@ export default function LumiqApp() {
     }
   }, [activeDataset]);
 
+  // The demo path: straight to Overview with the Sales sample loaded,
+  // so a first visit shows real numbers with no key and no clicks.
+  const startDemo = () => {
+    if (!activeDataset) {
+      setActiveDataset(SAMPLE_DATASETS.sales);
+      setActiveTab("canvas");
+    }
+    setPage("app");
+  };
+
   const css = `
     @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:ital,wght@0,300;0,400;0,500;1,400&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap');
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -603,13 +613,14 @@ export default function LumiqApp() {
   return (
     <div className="lumiq-app">
       <style>{css}</style>
-      {page === "landing" && <LandingPage setPage={setPage} />}
+      {page === "landing" && <LandingPage setPage={setPage} startDemo={startDemo} />}
       {page === "setup" && (
         <ApiKeySetup
           setPage={setPage}
           apiKeyInput={apiKeyInput}
           setApiKeyInput={setApiKeyInput}
           setApiKey={setApiKey}
+          startDemo={startDemo}
         />
       )}
       {(page === "app" || (page !== "landing" && page !== "setup")) && (
@@ -678,7 +689,16 @@ function PrismLogo({ size = 48 }) {
   );
 }
 
-const LandingPage = ({ setPage }) => (
+// The one line shown wherever a feature needs a key (demo / no-key
+// mode), with a button that opens the key screen.
+const KeyNudge = ({ setPage }) => (
+  <div style={{ display: "inline-flex", alignItems: "center", gap: "10px", flexWrap: "wrap", padding: "10px 14px", background: "#7B4FE81a", border: "1px solid #7B4FE833", borderRadius: "8px", fontSize: "12px", color: "#ccd6f6" }}>
+    <span>Add a free Groq key to ask questions in your own words.</span>
+    <button className="btn-ghost" style={{ fontSize: "11px", padding: "4px 12px" }} onClick={() => setPage("setup")}>Add key</button>
+  </div>
+);
+
+const LandingPage = ({ setPage, startDemo }) => (
   <div className="landing-hero" style={{ minHeight: "100vh", position: "relative", overflow: "hidden" }}>
     <div style={{ position: "absolute", inset: 0, pointerEvents: "none" }}>
       {[...Array(20)].map((_, i) => (
@@ -709,7 +729,7 @@ const LandingPage = ({ setPage }) => (
       </p>
       <div style={{ display: "flex", gap: "16px", justifyContent: "center", flexWrap: "wrap" }}>
         <button className="btn-primary" style={{ fontSize: "16px", padding: "14px 36px" }} onClick={() => setPage("setup")}>Launch LUMIQ</button>
-        <button className="btn-ghost" style={{ padding: "14px 28px" }} onClick={() => setPage("app")}>Skip (no AI)</button>
+        <button className="btn-ghost" style={{ padding: "14px 28px" }} onClick={startDemo}>Try the demo</button>
       </div>
     </div>
     <div style={{ display: "flex", justifyContent: "center", gap: "12px", flexWrap: "wrap", padding: "0 40px 40px" }}>
@@ -751,7 +771,7 @@ const LandingPage = ({ setPage }) => (
   </div>
 );
 
-const ApiKeySetup = ({ setPage, apiKeyInput, setApiKeyInput, setApiKey }) => {
+const ApiKeySetup = ({ setPage, apiKeyInput, setApiKeyInput, setApiKey, startDemo }) => {
   const [rememberKey, setRememberKey] = useState(false);
 
   const launch = () => {
@@ -782,7 +802,7 @@ const ApiKeySetup = ({ setPage, apiKeyInput, setApiKeyInput, setApiKey }) => {
         Your key stays in this browser. Unticked, it is kept in memory for this session only; ticked, it is saved in this browser's local storage. Avoid ticking it on a shared computer.
       </p>
       <button className="btn-primary" style={{ width: "100%" }} onClick={launch} disabled={!apiKeyInput.trim()}>Launch LUMIQ →</button>
-      <button className="btn-ghost" style={{ width: "100%", marginTop: "10px" }} onClick={() => { setApiKey("demo"); writeStoredApiKey("", false); setPage("app"); }}>Continue in Demo Mode</button>
+      <button className="btn-ghost" style={{ width: "100%", marginTop: "10px" }} onClick={() => { setApiKey("demo"); writeStoredApiKey("", false); startDemo(); }}>Continue in Demo Mode</button>
     </div>
     <div style={{ marginTop: "20px", display: "flex", gap: "8px", flexWrap: "wrap", justifyContent: "center" }}>
       {["Free tier", "Llama 3 70B", "Privacy-first"].map((t) => (<div key={t} className="data-pill">{t}</div>))}
@@ -905,14 +925,9 @@ Write a concise 3-4 sentence forecast narrative. Include: trend direction and st
 
   const applyNlFilter = async () => {
     if (!nlFilterQuery.trim() || nlFilterLoading) return;
+    if (!apiKey || apiKey === "demo") return; // the KeyNudge under the bar explains
     setNlFilterLoading(true);
     setNlFilterError("");
-
-    if (!apiKey || apiKey === "demo") {
-      setNlFilterError("AI Filtering requires a connected Groq API key.");
-      setNlFilterLoading(false);
-      return;
-    }
 
     try {
       const columnHints = ds.columns
@@ -1167,9 +1182,7 @@ Rules:
           await runOracleFlow(userMsg, controller);
         }
       } else {
-        const demo = `I'm running in demo mode — connect a real Groq API key to get live AI analysis!\n\nBased on the data structure I can see:\n• Your dataset has ${ds?.data.length || 0} rows across ${ds?.columns.length || 0} columns\n→ Key numeric metrics: ${numericColumns(ds).join(", ") || "none detected"}\n\nWith a real Groq key, I'd give you deep analysis of this question instantly. Get yours free at console.groq.com`;
-        let current = "";
-        for (const char of demo) { await new Promise(r => setTimeout(r, 15)); current += char; setOracleMessages((prev) => { const u = [...prev]; u[u.length - 1] = { role: "assistant", content: current, streaming: true }; return u; }); }
+        updateLastOracle({ content: "Add a free Groq key to ask questions in your own words — then I plan the calculation, run it on all your rows in your browser, and show the work under every answer." });
       }
       setOracleMessages((prev) => { const u = [...prev]; u[u.length - 1] = { ...u[u.length - 1], streaming: false }; return u; });
     } catch (err) {
@@ -1186,7 +1199,7 @@ Rules:
   };
 
   const generateNarrative = async () => {
-    if (!ds) return;
+    if (!ds || !apiKey || apiKey === "demo") return;
     narrativeAbortRef.current?.abort();
     const controller = new AbortController();
     narrativeAbortRef.current = controller;
@@ -1195,13 +1208,7 @@ Rules:
     // raw rows.
     const prompt = `You are a senior business analyst. Write a DECISION BRIEF from this dataset summary. It was computed on all rows; you have no access to the rows themselves, so use only figures that appear in the summary.\n\n${renderSchemaSummary(buildSchemaSummary(ds))}\n\nFormat:\nHEADLINE: [one sentence]\n\nWHAT HAPPENED: [2-3 sentences with real numbers from the summary]\n\nWHY IT MATTERS: [business implication]\n\nTHE RISK: [what could go wrong]\n\nRECOMMENDED ACTION: [one concrete next step]\n\nUnder 280 words. Be direct.`;
     try {
-      if (apiKey && apiKey !== "demo") {
-        await callGroq(apiKey, [{ role: "user", content: prompt }], (text) => setNarrativeText(text), { signal: controller.signal });
-      } else {
-        const demo = `HEADLINE: Dataset loaded successfully — connect Groq API for AI-generated decision briefs.\n\nWHAT HAPPENED: Your dataset "${ds.name}" contains ${ds.data.length} rows and ${ds.columns.length} columns (${ds.columns.join(", ")}). The data has been parsed and is ready for analysis.\n\nWHY IT MATTERS: With a real Groq API key, Oracle will analyze actual patterns, trends, and anomalies in your data and write executive-ready briefs in under 2 seconds.\n\nTHE RISK: Without AI analysis, you may miss non-obvious correlations and leading indicators buried in the data.\n\nRECOMMENDED ACTION: Get a free Groq API key at console.groq.com and reconnect Oracle to unlock full narrative intelligence.`;
-        let current = "";
-        for (const char of demo) { await new Promise(r => setTimeout(r, 8)); current += char; setNarrativeText(current); }
-      }
+      await callGroq(apiKey, [{ role: "user", content: prompt }], (text) => setNarrativeText(text), { signal: controller.signal });
     } catch (err) {
       if (narrativeAbortRef.current === controller && !err.aborted) {
         setNarrativeText(`Error: ${err.message} Use Generate / Regenerate to retry.`);
@@ -1214,7 +1221,7 @@ Rules:
   };
 
   const runScenario = async () => {
-    if (!ds || !scenarioInput.trim()) return;
+    if (!ds || !scenarioInput.trim() || !apiKey || apiKey === "demo") return;
     setScenarioLoading(true); setScenarios([]);
     const isScenario = /what if|if we|suppose|assume|scenario|increase|decrease|double|halve|drop|rise|grow|shrink|change|impact|affect/i.test(scenarioInput);
     // Scenario Forge sees the schema summary (all rows, no raw rows)
@@ -1224,16 +1231,7 @@ Rules:
       ? `Quantitative strategist. Scenario: "${scenarioInput}"\n\nDataset summary, computed on all rows (you have no access to the rows; use only figures from this summary):\n${scenarioSummary}\n\nReturn ONLY a valid JSON array, no markdown. Do not state probabilities or invent figures that are not in the summary:\n[{"label":"Optimistic","impact":"+X%","description":"...","key_driver":"..."},{"label":"Base Case","impact":"+X%","description":"...","key_driver":"..."},{"label":"Pessimistic","impact":"-X%","description":"...","key_driver":"..."}]`
       : `Expert data analyst. Question: "${scenarioInput}"\n\nDataset summary, computed on all rows (you have no access to the rows; use only figures from this summary):\n${scenarioSummary}\n\nReturn ONLY a valid JSON array, no markdown:\n[{"label":"Overview","impact":"—","description":"Direct answer using the summary figures","key_driver":"context"},{"label":"Key Insight","impact":"—","description":"Most important finding","key_driver":"primary signal"},{"label":"What To Watch","impact":"—","description":"Critical risk or variable","key_driver":"risk factor"}]`;
     try {
-      let result = "";
-      if (apiKey && apiKey !== "demo") {
-        result = await callGroq(apiKey, [{ role: "user", content: prompt }], () => { });
-      } else {
-        result = JSON.stringify([
-          { label: "Demo Mode", impact: "\u2014", description: "Connect a Groq API key to get real AI scenario analysis. Get yours free at console.groq.com", key_driver: "Groq API required" },
-          { label: "Dataset Ready", impact: "\u2014", description: `Your "${ds.name}" dataset with ${ds.data.length} rows is loaded and ready for analysis.`, key_driver: "Data loaded successfully" },
-          { label: "Next Step", impact: "\u2014", description: "Add your Groq API key in Settings \u2192 the Oracle will analyze your exact scenario with real data.", key_driver: "API key setup" },
-        ]);
-      }
+      const result = await callGroq(apiKey, [{ role: "user", content: prompt }], () => { });
       const match = result.replace(/```json|```/g, "").trim().match(/\[[\s\S]*\]/);
       if (!match) throw new Error("No JSON in response");
       setScenarios(JSON.parse(match[0]));
@@ -1243,8 +1241,10 @@ Rules:
     setScenarioLoading(false);
   };
 
+  // The correlation matrix and anomaly stats are computed locally and
+  // work without a key; only the written interpretation needs Groq.
   const runDeepDive = async () => {
-    if (!apiKey || apiKey === "demo") return;
+    if (!ds) return;
     setLabLoading(true);
     setLabAnalysis(null);
 
@@ -1290,8 +1290,11 @@ Rules:
         }
       }
 
-      // 4. Send to Groq for interpretation
-      const prompt = `Act as an expert Data Scientist. I have analyzed the dataset "${ds.name}" and found these statistical patterns. 
+      // 4. Send the derived statistics (never rows) to Groq for the
+      // written interpretation — only when a real key is connected.
+      let analysisText = null;
+      if (apiKey && apiKey !== "demo") {
+        const prompt = `Act as an expert Data Scientist. I have analyzed the dataset "${ds.name}" and found these statistical patterns.
 Explain what they mean in plain, non-technical business English.
 
 STRONGEST CORRELATIONS (1 = perfect positive, -1 = perfect negative):
@@ -1302,13 +1305,14 @@ ${topAnomalies.length ? topAnomalies.map(a => `- Row #${a.rowIdx}: ${a.metric} w
 
 Provide a short "Executive Summary" paragraph, then a "Key Findings" bulleted list. Do NOT output markdown code blocks, just raw text with markdown formatting (bold/italics).`;
 
-      const result = await callGroq(apiKey, [{ role: "user", content: prompt }], () => { });
+        analysisText = await callGroq(apiKey, [{ role: "user", content: prompt }], () => { });
+      }
 
       setLabAnalysis({
         matrix,
         columns: numericCols,
         anomalies: topAnomalies,
-        analysisText: result
+        analysisText
       });
     } catch (e) {
       setLabAnalysis({ error: e.message });
@@ -1414,7 +1418,7 @@ Provide a short "Executive Summary" paragraph, then a "Key Findings" bulleted li
                             className="btn-primary"
                             style={{ padding: "10px 20px" }}
                             onClick={applyNlFilter}
-                            disabled={nlFilterLoading || !nlFilterQuery.trim()}
+                            disabled={nlFilterLoading || !nlFilterQuery.trim() || !apiKey || apiKey === "demo"}
                           >
                             {nlFilterLoading ? "Thinking..." : "Filter"}
                           </button>
@@ -1425,6 +1429,7 @@ Provide a short "Executive Summary" paragraph, then a "Key Findings" bulleted li
                         </div>
 
                         {nlFilterError && <div style={{ color: "#FF3C3C", fontSize: "12px", marginTop: "8px" }}>{nlFilterError}</div>}
+                        {(!apiKey || apiKey === "demo") && <div style={{ marginTop: "10px" }}><KeyNudge setPage={setPage} /></div>}
 
                         {activeNlFilter && (
                           <div style={{ marginTop: "12px", padding: "10px", background: "#050914", borderRadius: "8px", border: "1px solid #1e2d5c", fontSize: "11px" }}>
@@ -1864,8 +1869,8 @@ Provide a short "Executive Summary" paragraph, then a "Key Findings" bulleted li
                 </div>
               )}
               {(!apiKey || apiKey === "demo") && (
-                <div style={{ marginTop: "12px", padding: "12px 16px", background: "#FFB6271a", border: "1px solid #FFB62733", borderRadius: "8px", fontSize: "12px", color: "#FFB627" }}>
-                  ⚡ Demo mode — <button onClick={() => setPage("setup")} style={{ background: "none", border: "none", color: "#FFB627", cursor: "pointer", textDecoration: "underline", fontSize: "12px" }}>Connect your free Groq API key</button> for real AI responses
+                <div style={{ marginTop: "12px" }}>
+                  <KeyNudge setPage={setPage} />
                 </div>
               )}
             </div>
@@ -1877,11 +1882,12 @@ Provide a short "Executive Summary" paragraph, then a "Key Findings" bulleted li
                 <h2 style={{ fontFamily: "'Syne', sans-serif", fontSize: "20px", fontWeight: 800, marginBottom: "8px" }}>Decision Brief Generator</h2>
                 <p style={{ color: "#8892b0", fontSize: "13px" }}>LUMIQ generates executive-grade decision briefs via Groq — your data becomes a story that drives action.</p>
               </div>
-              <div style={{ display: "flex", gap: "10px", marginBottom: "20px" }}>
-                <button className="btn-primary" onClick={generateNarrative} disabled={narrativeLoading || !ds}>{narrativeLoading ? "Oracle is writing..." : "Generate Decision Brief"}</button>
+              <div style={{ display: "flex", gap: "10px", marginBottom: "20px", alignItems: "center", flexWrap: "wrap" }}>
+                <button className="btn-primary" onClick={generateNarrative} disabled={narrativeLoading || !ds || !apiKey || apiKey === "demo"}>{narrativeLoading ? "Oracle is writing..." : "Generate Decision Brief"}</button>
                 {narrativeLoading && apiKey && apiKey !== "demo" && (
                   <button className="btn-ghost" onClick={() => narrativeAbortRef.current?.abort()}>⏹ Stop</button>
                 )}
+                {(!apiKey || apiKey === "demo") && <KeyNudge setPage={setPage} />}
               </div>
               {!ds && <div style={{ color: "#FFB627", fontSize: "13px", marginBottom: "16px" }}>⚠ Select a dataset from the sidebar first</div>}
               {narrativeText && (
@@ -1909,8 +1915,11 @@ Provide a short "Executive Summary" paragraph, then a "Key Findings" bulleted li
               <div className="glass-card" style={{ padding: "24px", marginBottom: "20px" }}>
                 <label style={{ display: "block", fontSize: "11px", fontFamily: "'DM Mono', monospace", color: "#8892b0", marginBottom: "8px", textTransform: "uppercase", letterSpacing: "1px" }}>Your Question or Hypothesis</label>
                 <textarea className="oracle-input" style={{ width: "100%", marginBottom: "14px" }} rows={3} placeholder='e.g. "What is this dataset about?" or "What if loan defaults increase 20%?" or "Which metric best predicts churn?"' value={scenarioInput} onChange={(e) => setScenarioInput(e.target.value)} disabled={scenarioLoading} />
-                <button className="btn-primary" onClick={runScenario} disabled={scenarioLoading || !scenarioInput.trim() || !ds}>{scenarioLoading ? "Analyzing..." : "Run Analysis"}</button>
-                {!ds && <span style={{ color: "#FFB627", fontSize: "12px", marginLeft: "12px" }}>Select a dataset first</span>}
+                <div style={{ display: "flex", gap: "10px", alignItems: "center", flexWrap: "wrap" }}>
+                  <button className="btn-primary" onClick={runScenario} disabled={scenarioLoading || !scenarioInput.trim() || !ds || !apiKey || apiKey === "demo"}>{scenarioLoading ? "Analyzing..." : "Run Analysis"}</button>
+                  {!ds && <span style={{ color: "#FFB627", fontSize: "12px" }}>Select a dataset first</span>}
+                  {(!apiKey || apiKey === "demo") && <KeyNudge setPage={setPage} />}
+                </div>
               </div>
               {scenarios.length > 0 && (
                 <div>
@@ -1988,7 +1997,9 @@ Provide a short "Executive Summary" paragraph, then a "Key Findings" bulleted li
                       <span className="badge badge-violet">AI INTERPRETATION</span>
                       <span style={{ fontSize: "11px", color: "#3d4f7c", fontFamily: "'DM Mono', monospace" }}>Powered by Groq</span>
                     </div>
-                    <div className="narrative-box" style={{ borderRadius: "12px", borderLeft: "3px solid #7B4FE8" }}>{labAnalysis.analysisText}</div>
+                    {labAnalysis.analysisText
+                      ? <div className="narrative-box" style={{ borderRadius: "12px", borderLeft: "3px solid #7B4FE8" }}>{labAnalysis.analysisText}</div>
+                      : <KeyNudge setPage={setPage} />}
                   </div>
                 </div>
               )}
