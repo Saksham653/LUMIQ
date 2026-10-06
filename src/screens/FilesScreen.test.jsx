@@ -13,21 +13,22 @@ const csvFile = () => new File([CSV], "mini.csv", { type: "text/csv" });
 function setup() {
   const setActiveDataset = vi.fn();
   const setActiveTab = vi.fn();
-  const setUploadedData = vi.fn();
+  const addUploadedDataset = vi.fn();
   const setUploadError = vi.fn();
   render(
     <FilesScreen
       activeDataset={null}
       setActiveDataset={setActiveDataset}
       setActiveTab={setActiveTab}
-      uploadedData={null}
-      setUploadedData={setUploadedData}
+      uploadedDatasets={[]}
+      addUploadedDataset={addUploadedDataset}
+      deleteEverything={vi.fn()}
       uploadError=""
       setUploadError={setUploadError}
       fileInputRef={{ current: null }}
     />
   );
-  return { setActiveDataset, setActiveTab, setUploadedData };
+  return { setActiveDataset, setActiveTab, addUploadedDataset };
 }
 
 describe("FilesScreen upload preview (B5-4)", () => {

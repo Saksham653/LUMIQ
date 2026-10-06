@@ -25,6 +25,7 @@ import { useScenario } from "./hooks/useScenario.js";
 import { useDeepDive } from "./hooks/useDeepDive.js";
 import { useNlFilter } from "./hooks/useNlFilter.js";
 import { useForecast } from "./hooks/useForecast.js";
+import { usePersistence } from "./hooks/usePersistence.js";
 // ============================================================
 // LUMIQ — Luminous Intelligence Queries (Groq Edition)
 // ============================================================
@@ -46,8 +47,9 @@ export default function LumiqApp() {
   const [labAnalysis, setLabAnalysis] = useState(null);
   const [labLoading, setLabLoading] = useState(false);
   const [askContext, setAskContext] = useState([]); // follow-up context (B5-3)
-  const [uploadedData, setUploadedData] = useState(null);
+  const [uploadedDatasets, setUploadedDatasets] = useState([]);
   const [uploadError, setUploadError] = useState("");
+  const addUploadedDataset = (d) => setUploadedDatasets((prev) => [...prev.filter((x) => x.name !== d.name), d]);
   const chatEndRef = useRef(null);
   const fileInputRef = useRef(null);
 
@@ -69,6 +71,13 @@ export default function LumiqApp() {
     }
     setPage("app");
   };
+
+  // Saves and restores work between visits (F16); storageOk turns
+  // false when the browser blocks storage.
+  const { storageOk, deleteEverything } = usePersistence({
+    activeDataset, setActiveDataset, activeTab, setActiveTab,
+    uploadedDatasets, setUploadedDatasets, oracleMessages, setOracleMessages, setAskContext,
+  });
 
 
 
@@ -97,8 +106,8 @@ export default function LumiqApp() {
           oracleMessages, setOracleMessages, oracleInput, setOracleInput, oracleLoading, setOracleLoading,
           askContext, setAskContext, narrativeText, setNarrativeText, narrativeLoading, setNarrativeLoading,
           scenarioLoading, setScenarioLoading, scenarios, setScenarios, scenarioInput, setScenarioInput,
-          labAnalysis, setLabAnalysis, labLoading, setLabLoading, uploadedData, setUploadedData,
-          uploadError, setUploadError, chatEndRef, fileInputRef,
+          labAnalysis, setLabAnalysis, labLoading, setLabLoading, uploadedDatasets, addUploadedDataset,
+          uploadError, setUploadError, chatEndRef, fileInputRef, storageOk, deleteEverything,
         }} />
       )}
     </div>
@@ -112,8 +121,8 @@ const AppShell = ({
   oracleMessages, setOracleMessages, oracleInput, setOracleInput, oracleLoading, setOracleLoading,
   askContext, setAskContext, narrativeText, setNarrativeText, narrativeLoading, setNarrativeLoading,
   scenarioLoading, setScenarioLoading, scenarios, setScenarios, scenarioInput, setScenarioInput,
-  labAnalysis, setLabAnalysis, labLoading, setLabLoading, uploadedData, setUploadedData,
-  uploadError, setUploadError, chatEndRef, fileInputRef,
+  labAnalysis, setLabAnalysis, labLoading, setLabLoading, uploadedDatasets, addUploadedDataset,
+  uploadError, setUploadError, chatEndRef, fileInputRef, storageOk, deleteEverything,
 }) => {
   const ds = activeDataset;
   const [selectedMetric, setSelectedMetric] = useState("");
@@ -223,10 +232,10 @@ const AppShell = ({
   return (
     <div style={{ display: "flex", height: "100vh", overflow: "hidden" }}>
       <div className="sidebar-overlay" style={{ display: isMobileMenuOpen ? "block" : "none" }} onClick={() => setIsMobileMenuOpen(false)} />
-      <Sidebar apiKey={apiKey} setPage={setPage} activeTab={activeTab} setActiveTab={setActiveTab} activeDataset={activeDataset} setActiveDataset={setActiveDataset} uploadedData={uploadedData} isMobileMenuOpen={isMobileMenuOpen} setIsMobileMenuOpen={setIsMobileMenuOpen} />
+      <Sidebar apiKey={apiKey} setPage={setPage} activeTab={activeTab} setActiveTab={setActiveTab} activeDataset={activeDataset} setActiveDataset={setActiveDataset} uploadedDatasets={uploadedDatasets} isMobileMenuOpen={isMobileMenuOpen} setIsMobileMenuOpen={setIsMobileMenuOpen} />
 
       <main style={{ flex: 1, overflow: "auto", background: "#070c1e" }} className="app-main grid-bg">
-        <TopBar ds={ds} apiKey={apiKey} setPage={setPage} activeTab={activeTab} setActiveTab={setActiveTab} setIsMobileMenuOpen={setIsMobileMenuOpen} />
+        <TopBar ds={ds} apiKey={apiKey} setPage={setPage} activeTab={activeTab} setActiveTab={setActiveTab} setIsMobileMenuOpen={setIsMobileMenuOpen} storageOk={storageOk} />
 
         <div style={{ padding: "24px" }}>
           {activeTab === "canvas" && <ErrorBoundary onRecover={() => setActiveTab("canvas")}><OverviewScreen ds={ds} apiKey={apiKey} setPage={setPage} nlFilter={nlFilter} processedData={processedData} insights={insights} metric={metric} metricRule={metricRule} setSelectedMetric={setSelectedMetric} chartType={chartType} setChartType={setChartType} numericCols={numericCols} headlineVal={headlineVal} avgVal={avgVal} medianVal={medianVal} maxVal={maxVal} forecast={forecast} forecastTime={forecastTime} sortConfig={sortConfig} handleSort={handleSort} searchQuery={searchQuery} setSearchQuery={setSearchQuery} paginatedData={paginatedData} pageIdx={pageIdx} setPageIdx={setPageIdx} totalPages={totalPages} rowsPerPage={rowsPerPage} /></ErrorBoundary>}
@@ -241,7 +250,7 @@ const AppShell = ({
 
           {activeTab === "datadna" && <ErrorBoundary onRecover={() => setActiveTab("canvas")}><ColumnDetailsScreen ds={ds} /></ErrorBoundary>}
 
-          {activeTab === "data" && <ErrorBoundary onRecover={() => setActiveTab("canvas")}><FilesScreen activeDataset={activeDataset} setActiveDataset={setActiveDataset} setActiveTab={setActiveTab} uploadedData={uploadedData} setUploadedData={setUploadedData} uploadError={uploadError} setUploadError={setUploadError} fileInputRef={fileInputRef} /></ErrorBoundary>}
+          {activeTab === "data" && <ErrorBoundary onRecover={() => setActiveTab("canvas")}><FilesScreen activeDataset={activeDataset} setActiveDataset={setActiveDataset} setActiveTab={setActiveTab} uploadedDatasets={uploadedDatasets} addUploadedDataset={addUploadedDataset} deleteEverything={deleteEverything} uploadError={uploadError} setUploadError={setUploadError} fileInputRef={fileInputRef} /></ErrorBoundary>}
         </div>
       </main>
     </div>
