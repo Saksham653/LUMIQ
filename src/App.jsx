@@ -21,7 +21,6 @@ import ColumnDetailsScreen from "./screens/ColumnDetailsScreen.jsx";
 import FilesScreen from "./screens/FilesScreen.jsx";
 import { useOracleChat } from "./hooks/useOracleChat.js";
 import { useNarrative } from "./hooks/useNarrative.js";
-import { useScenario } from "./hooks/useScenario.js";
 import { useDeepDive } from "./hooks/useDeepDive.js";
 import { useNlFilter } from "./hooks/useNlFilter.js";
 import { useForecast } from "./hooks/useForecast.js";
@@ -41,9 +40,6 @@ export default function LumiqApp() {
   const [oracleLoading, setOracleLoading] = useState(false);
   const [narrativeText, setNarrativeText] = useState("");
   const [narrativeLoading, setNarrativeLoading] = useState(false);
-  const [scenarioLoading, setScenarioLoading] = useState(false);
-  const [scenarios, setScenarios] = useState([]);
-  const [scenarioInput, setScenarioInput] = useState("");
   const [labAnalysis, setLabAnalysis] = useState(null);
   const [labLoading, setLabLoading] = useState(false);
   const [askContext, setAskContext] = useState([]); // follow-up context (B5-3)
@@ -105,7 +101,6 @@ export default function LumiqApp() {
           apiKey, setPage, activeDataset, setActiveDataset, activeTab, setActiveTab,
           oracleMessages, setOracleMessages, oracleInput, setOracleInput, oracleLoading, setOracleLoading,
           askContext, setAskContext, narrativeText, setNarrativeText, narrativeLoading, setNarrativeLoading,
-          scenarioLoading, setScenarioLoading, scenarios, setScenarios, scenarioInput, setScenarioInput,
           labAnalysis, setLabAnalysis, labLoading, setLabLoading, uploadedDatasets, addUploadedDataset,
           uploadError, setUploadError, chatEndRef, fileInputRef, storageOk, deleteEverything,
         }} />
@@ -120,7 +115,6 @@ const AppShell = ({
   apiKey, setPage, activeDataset, setActiveDataset, activeTab, setActiveTab,
   oracleMessages, setOracleMessages, oracleInput, setOracleInput, oracleLoading, setOracleLoading,
   askContext, setAskContext, narrativeText, setNarrativeText, narrativeLoading, setNarrativeLoading,
-  scenarioLoading, setScenarioLoading, scenarios, setScenarios, scenarioInput, setScenarioInput,
   labAnalysis, setLabAnalysis, labLoading, setLabLoading, uploadedDatasets, addUploadedDataset,
   uploadError, setUploadError, chatEndRef, fileInputRef, storageOk, deleteEverything,
 }) => {
@@ -225,8 +219,6 @@ const AppShell = ({
 
   const { generateNarrative, narrativeAbortRef } = useNarrative({ apiKey, ds, setNarrativeText, setNarrativeLoading });
 
-  const { runScenario } = useScenario({ apiKey, ds, scenarioInput, setScenarios, setScenarioLoading });
-
   const { runDeepDive } = useDeepDive({ apiKey, ds, setLabAnalysis, setLabLoading });
 
   return (
@@ -244,7 +236,7 @@ const AppShell = ({
 
           {activeTab === "narrative" && <ErrorBoundary onRecover={() => setActiveTab("canvas")}><ReportScreen ds={ds} apiKey={apiKey} setPage={setPage} narrativeText={narrativeText} narrativeLoading={narrativeLoading} generateNarrative={generateNarrative} narrativeAbortRef={narrativeAbortRef} /></ErrorBoundary>}
 
-          {activeTab === "scenario" && <ErrorBoundary onRecover={() => setActiveTab("canvas")}><WhatIfScreen ds={ds} apiKey={apiKey} setPage={setPage} scenarios={scenarios} setScenarios={setScenarios} scenarioInput={scenarioInput} setScenarioInput={setScenarioInput} scenarioLoading={scenarioLoading} runScenario={runScenario} /></ErrorBoundary>}
+          {activeTab === "scenario" && <ErrorBoundary onRecover={() => setActiveTab("canvas")}><WhatIfScreen ds={ds} apiKey={apiKey} setPage={setPage} /></ErrorBoundary>}
 
           {activeTab === "ailab" && <ErrorBoundary onRecover={() => setActiveTab("canvas")}><DataHealthScreen ds={ds} setPage={setPage} labAnalysis={labAnalysis} labLoading={labLoading} runDeepDive={runDeepDive} /></ErrorBoundary>}
 

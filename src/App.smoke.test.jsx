@@ -71,12 +71,16 @@ describe("screen smoke tests (no key, Sales sample)", () => {
     expect(screen.getAllByText(/Add a free Groq key/).length).toBeGreaterThan(0);
   });
 
-  it("What-if renders its form, key-gated", () => {
+  it("What-if is a working calculator with no key", () => {
     enterDemo();
     goTab("What-if");
-    expect(screen.getByText("Your Question or Hypothesis")).toBeTruthy();
-    const btn = screen.getByText("Run Analysis").closest("button");
-    expect(btn.disabled).toBe(true);
+    expect(screen.getByText(/A calculator, not a guess/)).toBeTruthy();
+    fireEvent.click(screen.getByText("Apply change"));
+    // +10% revenue across all rows: 4,677,000 → 5,144,700
+    // (grouping follows the machine locale)
+    expect(screen.getByText("Total")).toBeTruthy();
+    expect(screen.getByText((5144700).toLocaleString())).toBeTruthy();
+    expect(screen.getByText(`+${(467700).toLocaleString()}`)).toBeTruthy();
   });
 
   it("Data health computes the matrix locally without a key", async () => {
