@@ -1,4 +1,5 @@
 import KeyNudge from "../components/KeyNudge.jsx";
+import RichText from "../components/RichText.jsx";
 
 export default function WhatIfScreen({ ds, apiKey, setPage, scenarios, setScenarios, scenarioInput, setScenarioInput, scenarioLoading, runScenario }) {
   return (
@@ -31,7 +32,7 @@ export default function WhatIfScreen({ ds, apiKey, setPage, scenarios, setScenar
                   <span style={{ fontFamily: "'Syne', sans-serif", fontWeight: 700, color }}>{s.label}</span>
                   <span style={{ fontFamily: "'DM Mono', monospace", fontSize: "20px", fontWeight: 500, color }}>{s.impact}</span>
                 </div>
-                <p style={{ fontSize: "13px", color: "#ccd6f6", lineHeight: 1.6, marginBottom: "8px" }}>{s.description}</p>
+                <div style={{ fontSize: "13px", color: "#ccd6f6", lineHeight: 1.6, marginBottom: "8px" }}><RichText text={s.description} /></div>
                 <div style={{ fontSize: "11px", color: "#8892b0" }}><span style={{ color: "#3d4f7c" }}>Key driver: </span>{s.key_driver}</div>
               </div>
             );

@@ -55,10 +55,11 @@ export function useOracleChat({ apiKey, ds, oracleInput, setOracleInput, oracleL
       sent.push({ label: "Answer request (schema summary only)", text: describePrompt });
       updateLastOracle({ content: "" });
       const answer = await callGroq(apiKey, [{ role: "user", content: describePrompt }], (text) => updateLastOracle({ content: text }), { signal: controller.signal });
-      const check = verifyNumbers(answer, schemaNumberCandidates(summary));
+      const schemaCandidates = schemaNumberCandidates(summary);
+      const check = verifyNumbers(answer, schemaCandidates);
       updateLastOracle({
         content: answer,
-        segments: check.segments,
+        candidates: schemaCandidates,
         unverified: check.unverified,
         proof: {
           steps: ["No calculation was needed — answered from the dataset summary (column names, types and per-column statistics; no rows were sent)."],
@@ -109,7 +110,7 @@ export function useOracleChat({ apiKey, ds, oracleInput, setOracleInput, oracleL
     const check = verifyNumbers(answer, candidates);
     updateLastOracle({
       content: answer,
-      segments: check.segments,
+      candidates,
       unverified: check.unverified,
       proof: { steps: result.steps, table: result.table, rowsUsed: result.rowsUsed, totalRows: result.totalRows, sent },
     });

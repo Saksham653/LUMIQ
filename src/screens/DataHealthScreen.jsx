@@ -1,6 +1,7 @@
 import HeatmapChart from "../charts/HeatmapChart.jsx";
 import AnomalyScatterChart from "../charts/AnomalyScatterChart.jsx";
 import KeyNudge from "../components/KeyNudge.jsx";
+import RichText from "../components/RichText.jsx";
 
 export default function DataHealthScreen({ ds, setPage, labAnalysis, labLoading, runDeepDive }) {
   return (
@@ -54,7 +55,7 @@ export default function DataHealthScreen({ ds, setPage, labAnalysis, labLoading,
               <span style={{ fontSize: "11px", color: "#3d4f7c", fontFamily: "'DM Mono', monospace" }}>Powered by Groq</span>
             </div>
             {labAnalysis.analysisText
-              ? <div className="narrative-box" style={{ borderRadius: "12px", borderLeft: "3px solid #7B4FE8" }}>{labAnalysis.analysisText}</div>
+              ? <div className="narrative-box" style={{ borderRadius: "12px", borderLeft: "3px solid #7B4FE8" }}><RichText text={labAnalysis.analysisText} /></div>
               : <KeyNudge setPage={setPage} />}
           </div>
         </div>

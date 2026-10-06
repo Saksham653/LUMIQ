@@ -68,7 +68,7 @@ describe("a malicious Ask answer renders as plain text", () => {
     chatEndRef: { current: null },
   };
 
-  it("as plain content and inside verified segments", () => {
+  it("as plain content and with number-marking candidates active", () => {
     const { container } = render(
       <AskScreen
         {...stub}
@@ -77,16 +77,17 @@ describe("a malicious Ask answer renders as plain text", () => {
           { role: "assistant", content: PAYLOAD, streaming: false },
           {
             role: "assistant",
-            content: `prefix ${PAYLOAD}`,
+            content: `prefix ${PAYLOAD} and **${PAYLOAD}**`,
             streaming: false,
-            segments: [{ text: "prefix " }, { text: PAYLOAD, number: 1, verified: false }],
+            candidates: [42],
             unverified: 1,
           },
         ]}
       />
     );
-    expect(screen.getAllByText(new RegExp("alert\\(1\\)")).length).toBeGreaterThan(0);
+    expect(container.textContent).toContain("<script>alert(");
     expect(container.querySelector("script")).toBeNull();
+    expect(container.querySelector("img")).toBeNull();
   });
 
   it("inside the Show-the-work proof table", () => {
