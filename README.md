@@ -52,9 +52,9 @@ Built on **Groq's fast inference engine** running **Llama 3.3 70B**, LUMIQ strea
 
 ## 🌟 Feature Showcase
 
-### ⬡ Canvas — Your Data, Alive
+### ⬡ Overview — Your Data, Alive
 
-The Canvas is LUMIQ's command center. The moment you load a dataset, it transforms into a real-time analytics dashboard:
+The Overview is LUMIQ's command center. The moment you load a dataset, it transforms into a real-time analytics dashboard:
 
 - **Smart KPI tiles** — Total, Average, Peak Value with sparklines and donut breakdowns
 - **Interactive charts** — Bar, Line, and Area views with adaptive downsampling for massive datasets
@@ -63,9 +63,9 @@ The Canvas is LUMIQ's command center. The moment you load a dataset, it transfor
 
 ---
 
-### 🔮 Crystal Ball — AI-Powered Forecasting
+### 🔮 Forecast — Trend Projections
 
-Toggle the Crystal Ball overlay on any metric and watch LUMIQ project the future:
+Toggle the Forecast overlay on any metric and watch LUMIQ project the future:
 
 - **Linear regression trendlines** with confidence bands rendered directly on the chart
 - **R² goodness-of-fit** displayed inline so you know exactly how much to trust the forecast
@@ -83,22 +83,22 @@ Forget filter dropdowns. Just *describe* what you want:
 "Give me the top performing categories only"
 ```
 
-LUMIQ sends your request and the column names to Groq, which returns a structured filter plan — never code. LUMIQ validates the plan against your real columns (anything else is rejected with a plain error), applies it instantly to every chart, metric, and table on the Canvas, and shows the applied filter in plain words, e.g. *revenue is more than 300,000 and region is "North"*.
+LUMIQ sends your request and the column names to Groq, which returns a structured filter plan — never code. LUMIQ validates the plan against your real columns (anything else is rejected with a plain error), applies it instantly to every chart, metric, and table on the Overview, and shows the applied filter in plain words, e.g. *revenue is more than 300,000 and region is "North"*.
 
 ---
 
-### 🗣️ Oracle AI — Conversational Data Intelligence
+### 🗣️ Ask — Answers With Proof
 
-A full streaming chat interface powered by Groq + Llama 3.3 70B, seeded with your live dataset context:
+Ask questions in plain English. The AI never sees your rows and never does the maths:
 
-- Answers questions about your data with **actual numbers**, not vague summaries
-- Uses `→` for implications and `•` for key findings — structured for fast reading
-- Ends every response with a sharp follow-up question to keep the analysis moving
-- Streams token-by-token in real-time — no waiting, no spinners, just instant intelligence
+- Your question goes out with a **schema summary** only — column names, types and per-column statistics computed on all rows
+- The AI returns a **calculation plan**; LUMIQ validates it against your real columns and runs it on every row **in your browser**
+- The AI words the result, streamed in real time — and every number it states is **checked against the result table**; anything unmatched is marked *not verified*
+- **Show the work** under each answer lists the plain-English steps, the result table and "Based on N of M rows"; **What was sent** shows the exact text that left the browser
 
 ---
 
-### 📄 Decision Brief Generator — Auto Reports
+### 📄 Report — One-Click Decision Briefs
 
 One click. One executive-grade report. Oracle structures its analysis into:
 
@@ -114,20 +114,20 @@ Copy to clipboard or regenerate with a fresh perspective.
 
 ---
 
-### 🌐 Scenario Forge — What-If Engine
+### 🌐 What-if — Scenario Cards
 
-Ask anything — hypothetical or factual. Oracle returns a structured probabilistic analysis:
+Ask anything — hypothetical or factual. Oracle returns structured scenario cards:
 
-- **What-if scenarios** → Optimistic / Base Case / Pessimistic with probability bars
+- **What-if scenarios** → Optimistic / Base Case / Pessimistic cards
 - **Direct questions** → Overview / Key Insight / What To Watch
-- Every scenario includes a key driver, impact indicator, and percentage probability
-- Works with your live, filtered dataset — not stale data
+- Every scenario includes a key driver and an impact indicator — no invented probabilities
+- Grounded in a summary of all your rows; raw rows are never sent to the AI
 
 ---
 
-### 🔬 AI Lab — Deep Statistical Analysis
+### 🔬 Data health — Deep Statistical Analysis
 
-The AI Lab runs a full statistical teardown and sends it to Groq for interpretation:
+Data health runs a full statistical teardown and sends it to Groq for interpretation:
 
 - **Pearson Correlation Heatmap** — a full N×N matrix showing how every numeric column relates to every other. Positive correlations in cyan. Negative in red.
 - **Z-Score Anomaly Detection** — flags outliers with Z-score > 2.8 and plots them as a scatter chart with anomalies highlighted in red
@@ -135,7 +135,7 @@ The AI Lab runs a full statistical teardown and sends it to Groq for interpretat
 
 ---
 
-### 🧬 Data DNA — Column Profiler
+### 🧬 Column details — Column Profiler
 
 A deep X-ray of every column in your dataset:
 
@@ -149,12 +149,12 @@ A deep X-ray of every column in your dataset:
 
 ---
 
-### 🗃️ Data Manager — Upload Your Own Data
+### 🗃️ Files — Upload Your Own Data
 
 Drop any CSV file and LUMIQ handles the rest:
 
-- Auto-detects column types (numeric vs string)
-- Parses all rows, strips whitespace, handles quoted values
+- Proper CSV parsing (papaparse): quoted commas, CRLF line endings, a UTF-8 BOM, quoted newlines
+- Column types (number, percent, money, date, text) decided from **all rows**, never the first row; `1,20,000`, `₹1,200` and `12.5%` parse as numbers and blanks stay blank
 - Immediately activates it as a live dataset across all 7 features
 - Three curated sample datasets included: **E-Commerce Sales**, **Marketing Campaign**, **Customer Churn**
 
@@ -165,7 +165,7 @@ Drop any CSV file and LUMIQ handles the rest:
 ## ⚡ Tech Stack
 
 ```
-Frontend    →  React 18 + Vite 5   (zero dependencies beyond React)
+Frontend    →  React 18 + Vite 5   (runtime deps: React + papaparse)
 AI Engine   →  Groq API            (Llama 3.3 70B, streaming)
 Charts      →  Pure SVG            (hand-crafted, no chart library)
 Styling     →  Vanilla CSS-in-JS   (no Tailwind, no styled-components)
