@@ -45,6 +45,7 @@ export default function LumiqApp() {
   const [scenarioInput, setScenarioInput] = useState("");
   const [labAnalysis, setLabAnalysis] = useState(null);
   const [labLoading, setLabLoading] = useState(false);
+  const [askContext, setAskContext] = useState([]); // follow-up context (B5-3)
   const [uploadedData, setUploadedData] = useState(null);
   const [uploadError, setUploadError] = useState("");
   const chatEndRef = useRef(null);
@@ -55,6 +56,7 @@ export default function LumiqApp() {
   useEffect(() => {
     if (activeDataset) {
       setLabAnalysis(null);
+      setAskContext([]); // a new dataset is a new topic
     }
   }, [activeDataset]);
 
@@ -90,40 +92,14 @@ export default function LumiqApp() {
         />
       )}
       {(page === "app" || (page !== "landing" && page !== "setup")) && (
-        <AppShell
-          apiKey={apiKey}
-          setPage={setPage}
-          activeDataset={activeDataset}
-          setActiveDataset={setActiveDataset}
-          activeTab={activeTab}
-          setActiveTab={setActiveTab}
-          oracleMessages={oracleMessages}
-          setOracleMessages={setOracleMessages}
-          oracleInput={oracleInput}
-          setOracleInput={setOracleInput}
-          oracleLoading={oracleLoading}
-          setOracleLoading={setOracleLoading}
-          narrativeText={narrativeText}
-          setNarrativeText={setNarrativeText}
-          narrativeLoading={narrativeLoading}
-          setNarrativeLoading={setNarrativeLoading}
-          scenarioLoading={scenarioLoading}
-          setScenarioLoading={setScenarioLoading}
-          scenarios={scenarios}
-          setScenarios={setScenarios}
-          scenarioInput={scenarioInput}
-          setScenarioInput={setScenarioInput}
-          labAnalysis={labAnalysis}
-          setLabAnalysis={setLabAnalysis}
-          labLoading={labLoading}
-          setLabLoading={setLabLoading}
-          uploadedData={uploadedData}
-          setUploadedData={setUploadedData}
-          uploadError={uploadError}
-          setUploadError={setUploadError}
-          chatEndRef={chatEndRef}
-          fileInputRef={fileInputRef}
-        />
+        <AppShell {...{
+          apiKey, setPage, activeDataset, setActiveDataset, activeTab, setActiveTab,
+          oracleMessages, setOracleMessages, oracleInput, setOracleInput, oracleLoading, setOracleLoading,
+          askContext, setAskContext, narrativeText, setNarrativeText, narrativeLoading, setNarrativeLoading,
+          scenarioLoading, setScenarioLoading, scenarios, setScenarios, scenarioInput, setScenarioInput,
+          labAnalysis, setLabAnalysis, labLoading, setLabLoading, uploadedData, setUploadedData,
+          uploadError, setUploadError, chatEndRef, fileInputRef,
+        }} />
       )}
     </div>
   );
@@ -132,38 +108,12 @@ export default function LumiqApp() {
 // ─── Sub-Components (Moved outside to prevent focus loss) ──────────────────
 
 const AppShell = ({
-  apiKey,
-  setPage,
-  activeDataset,
-  setActiveDataset,
-  activeTab,
-  setActiveTab,
-  oracleMessages,
-  setOracleMessages,
-  oracleInput,
-  setOracleInput,
-  oracleLoading,
-  setOracleLoading,
-  narrativeText,
-  setNarrativeText,
-  narrativeLoading,
-  setNarrativeLoading,
-  scenarioLoading,
-  setScenarioLoading,
-  scenarios,
-  setScenarios,
-  scenarioInput,
-  setScenarioInput,
-  labAnalysis,
-  setLabAnalysis,
-  labLoading,
-  setLabLoading,
-  uploadedData,
-  setUploadedData,
-  uploadError,
-  setUploadError,
-  chatEndRef,
-  fileInputRef,
+  apiKey, setPage, activeDataset, setActiveDataset, activeTab, setActiveTab,
+  oracleMessages, setOracleMessages, oracleInput, setOracleInput, oracleLoading, setOracleLoading,
+  askContext, setAskContext, narrativeText, setNarrativeText, narrativeLoading, setNarrativeLoading,
+  scenarioLoading, setScenarioLoading, scenarios, setScenarios, scenarioInput, setScenarioInput,
+  labAnalysis, setLabAnalysis, labLoading, setLabLoading, uploadedData, setUploadedData,
+  uploadError, setUploadError, chatEndRef, fileInputRef,
 }) => {
   const ds = activeDataset;
   const [selectedMetric, setSelectedMetric] = useState("");
@@ -262,7 +212,7 @@ const AppShell = ({
   const medianVal = medianValue(primaryVals);
   const headlineVal = metricRule === "avg" ? avgVal : totalVal;
 
-  const { sendOracleMessage, oracleAbortRef, oracleLastFailed } = useOracleChat({ apiKey, ds, oracleInput, setOracleInput, oracleLoading, setOracleLoading, setOracleMessages });
+  const { sendOracleMessage, oracleAbortRef, oracleLastFailed, clearContext, contextActive } = useOracleChat({ apiKey, ds, oracleInput, setOracleInput, oracleLoading, setOracleLoading, setOracleMessages, askContext, setAskContext });
 
   const { generateNarrative, narrativeAbortRef } = useNarrative({ apiKey, ds, setNarrativeText, setNarrativeLoading });
 
@@ -281,7 +231,7 @@ const AppShell = ({
         <div style={{ padding: "24px" }}>
           {activeTab === "canvas" && <ErrorBoundary onRecover={() => setActiveTab("canvas")}><OverviewScreen ds={ds} apiKey={apiKey} setPage={setPage} nlFilter={nlFilter} processedData={processedData} insights={insights} metric={metric} metricRule={metricRule} setSelectedMetric={setSelectedMetric} chartType={chartType} setChartType={setChartType} numericCols={numericCols} headlineVal={headlineVal} avgVal={avgVal} medianVal={medianVal} maxVal={maxVal} forecast={forecast} forecastTime={forecastTime} sortConfig={sortConfig} handleSort={handleSort} searchQuery={searchQuery} setSearchQuery={setSearchQuery} paginatedData={paginatedData} pageIdx={pageIdx} setPageIdx={setPageIdx} totalPages={totalPages} rowsPerPage={rowsPerPage} /></ErrorBoundary>}
 
-          {activeTab === "oracle" && <ErrorBoundary onRecover={() => setActiveTab("canvas")}><AskScreen ds={ds} apiKey={apiKey} setPage={setPage} oracleMessages={oracleMessages} oracleInput={oracleInput} setOracleInput={setOracleInput} oracleLoading={oracleLoading} sendOracleMessage={sendOracleMessage} oracleAbortRef={oracleAbortRef} oracleLastFailed={oracleLastFailed} chatEndRef={chatEndRef} /></ErrorBoundary>}
+          {activeTab === "oracle" && <ErrorBoundary onRecover={() => setActiveTab("canvas")}><AskScreen ds={ds} apiKey={apiKey} setPage={setPage} oracleMessages={oracleMessages} oracleInput={oracleInput} setOracleInput={setOracleInput} oracleLoading={oracleLoading} sendOracleMessage={sendOracleMessage} oracleAbortRef={oracleAbortRef} oracleLastFailed={oracleLastFailed} chatEndRef={chatEndRef} clearContext={clearContext} contextActive={contextActive} /></ErrorBoundary>}
 
           {activeTab === "narrative" && <ErrorBoundary onRecover={() => setActiveTab("canvas")}><ReportScreen ds={ds} apiKey={apiKey} setPage={setPage} narrativeText={narrativeText} narrativeLoading={narrativeLoading} generateNarrative={generateNarrative} narrativeAbortRef={narrativeAbortRef} /></ErrorBoundary>}
 

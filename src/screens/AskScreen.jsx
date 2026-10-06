@@ -3,7 +3,7 @@ import ShowTheWork from "../components/ShowTheWork.jsx";
 import RichText from "../components/RichText.jsx";
 import { exampleQuestions } from "../ai/oraclePlanner.js";
 
-export default function AskScreen({ ds, apiKey, setPage, oracleMessages, oracleInput, setOracleInput, oracleLoading, sendOracleMessage, oracleAbortRef, oracleLastFailed, chatEndRef }) {
+export default function AskScreen({ ds, apiKey, setPage, oracleMessages, oracleInput, setOracleInput, oracleLoading, sendOracleMessage, oracleAbortRef, oracleLastFailed, chatEndRef, clearContext, contextActive }) {
   return (
     <div style={{ maxWidth: "800px", margin: "0 auto", animation: "fadeSlide 0.3s ease" }}>
       <div style={{ marginBottom: "24px" }}>
@@ -54,7 +54,7 @@ export default function AskScreen({ ds, apiKey, setPage, oracleMessages, oracleI
           <button className="btn-ghost" style={{ fontSize: "12px" }} onClick={() => sendOracleMessage(oracleLastFailed)}>↻ Retry last question</button>
         </div>
       )}
-      <p style={{ fontSize: "11px", color: "#3d4f7c", marginTop: "8px" }}>Each question is answered on its own. Include the full detail, for example "revenue by region for 2026".</p>
+      <div style={{ display: "flex", alignItems: "center", gap: "10px", marginTop: "8px", flexWrap: "wrap" }}><p style={{ fontSize: "11px", color: "#3d4f7c", margin: 0 }}>You can ask follow-ups like "and by category?" Press New topic to start fresh.</p><button className="btn-ghost" style={{ fontSize: "11px", padding: "4px 10px", opacity: contextActive ? 1 : 0.5 }} onClick={clearContext} disabled={!contextActive}>New topic</button></div>
       {(!apiKey || apiKey === "demo") && (
         <div style={{ marginTop: "12px" }}>
           <KeyNudge setPage={setPage} />
