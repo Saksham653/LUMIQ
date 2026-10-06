@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { computeInsights, detectTimeColumn } from "./insights.js";
+import { computeInsights, detectTimeColumn, forecastTimeColumn, forecastSeries } from "./insights.js";
 import { buildDataset } from "../data/dataset.js";
 import { SAMPLE_DATASETS } from "../data/sampleDatasets.js";
 
@@ -111,6 +111,38 @@ describe("unusual values (median-based, works on small files)", () => {
     const rows = [98, 101, 99, 102, 100, 97, 103, 104].map((v, i) => ({ id: `r${i}`, v }));
     const ds = makeDs(["id", "v"], rows);
     expect(computeInsights(ds, ds.data).filter((i) => i.type === "unusual")).toHaveLength(0);
+  });
+});
+
+describe("forecast eligibility and time ordering (B3-7)", () => {
+  const SALES_IN_TIME_ORDER = [245000, 198000, 312000, 289000, 334000, 378000, 421000, 398000, 356000, 445000, 589000, 712000];
+
+  it("Sales qualifies (12 month points) and the series is in month order", () => {
+    const ds = SAMPLE_DATASETS.sales;
+    expect(forecastTimeColumn(ds)?.column).toBe("month");
+    expect(forecastSeries(ds, ds.data, "revenue")).toEqual(SALES_IN_TIME_ORDER);
+  });
+
+  it("sorting the table does not change the forecast series", () => {
+    const ds = SAMPLE_DATASETS.sales;
+    const sortedByRevenue = [...ds.data].sort((a, b) => a.revenue - b.revenue);
+    const sortedByRegion = [...ds.data].sort((a, b) => a.region.localeCompare(b.region));
+    expect(forecastSeries(ds, sortedByRevenue, "revenue")).toEqual(SALES_IN_TIME_ORDER);
+    expect(forecastSeries(ds, sortedByRegion, "revenue")).toEqual(SALES_IN_TIME_ORDER);
+  });
+
+  it("Marketing gets no forecast (2 week points) and Churn neither (5 quarters)", () => {
+    expect(forecastTimeColumn(SAMPLE_DATASETS.marketing)).toBeNull();
+    expect(forecastSeries(SAMPLE_DATASETS.marketing, SAMPLE_DATASETS.marketing.data, "spend")).toBeNull();
+    expect(forecastTimeColumn(SAMPLE_DATASETS.churn)).toBeNull();
+  });
+
+  it("a dataset with no time column gets no forecast", () => {
+    const ds = makeDs(["region", "v"], [
+      { region: "North", v: 1 }, { region: "South", v: 2 }, { region: "East", v: 3 },
+      { region: "West", v: 4 }, { region: "Mid", v: 5 }, { region: "Far", v: 6 },
+    ]);
+    expect(forecastTimeColumn(ds)).toBeNull();
   });
 });
 

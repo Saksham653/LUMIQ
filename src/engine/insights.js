@@ -11,7 +11,7 @@
 import { runPlan } from "./runPlan.js";
 import { numericColumns } from "../data/dataset.js";
 import { aggregationRule, formatCell } from "../data/columnTypes.js";
-import { sum, mean, median, numericEntries, isBlank } from "../lib/stats.js";
+import { sum, mean, median, numericEntries, numericValues, isBlank } from "../lib/stats.js";
 
 const MAX_INSIGHTS = 4;
 const TREND_MIN_POINTS = 6;
@@ -57,6 +57,37 @@ export function detectTimeColumn(ds) {
     if (keyOf) candidates.push({ column: col, keyOf });
   }
   return candidates[0] || null;
+}
+
+const FORECAST_MIN_POINTS = 6;
+
+// Forecast eligibility shares the insights' time detection: the
+// dataset needs a time column holding at least 6 distinct points.
+export function forecastTimeColumn(ds, minPoints = FORECAST_MIN_POINTS) {
+  if (!ds) return null;
+  const time = detectTimeColumn(ds);
+  if (!time) return null;
+  const distinct = new Set(
+    ds.data
+      .map((r) => r?.[time.column])
+      .filter((v) => !isBlank(v))
+      .map((v) => time.keyOf(v))
+  );
+  return distinct.size >= minPoints ? time : null;
+}
+
+// The metric values ordered by the time column — never by table
+// order or the current sort. Rows with a blank time cell are left
+// out; blanks in the metric are skipped as everywhere else.
+export function forecastSeries(ds, rows, metric) {
+  const time = forecastTimeColumn(ds);
+  if (!time || !metric || !Array.isArray(rows)) return null;
+  return numericValues(
+    rows
+      .filter((r) => !isBlank(r?.[time.column]))
+      .sort((a, b) => time.keyOf(a[time.column]) - time.keyOf(b[time.column]))
+      .map((r) => r[metric])
+  );
 }
 
 const pct1 = (x) => Math.round(x * 10) / 10;
