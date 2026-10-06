@@ -14,6 +14,12 @@ export function buildUploadPreview(text, name) {
   if (columns.length === 0 || rows.length === 0) {
     throw new Error("No data rows found in this CSV.");
   }
+  return buildPreviewFromGrid(columns, rows, name);
+}
+
+// Excel sheets arrive as a ready grid (B7-2) and share the same
+// preview shape, type detection and overrides as a CSV.
+export function buildPreviewFromGrid(columns, rows, name) {
   return { name, columns, rows, rowCount: rows.length, types: detectColumnTypes(rows, columns) };
 }
 
