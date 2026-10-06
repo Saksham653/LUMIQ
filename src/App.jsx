@@ -1785,7 +1785,7 @@ Provide a short "Executive Summary" paragraph, then a "Key Findings" bulleted li
                     <div style={{ fontSize: "36px", marginBottom: "12px" }}>🔮</div>
                     <p style={{ fontSize: "14px" }}>Oracle is ready. Ask your first question.</p>
                     <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", justifyContent: "center", marginTop: "16px" }}>
-                      {["Why did revenue peak in November?", "What's the biggest risk in this data?", "Which metric should I focus on?"].map((q) => (
+                      {(ds ? exampleQuestions(ds) : []).map((q) => (
                         <button key={q} className="btn-ghost" style={{ fontSize: "11px", padding: "6px 12px" }} onClick={() => setOracleInput(q)}>{q}</button>
                       ))}
                     </div>
