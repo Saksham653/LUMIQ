@@ -8,7 +8,7 @@ export default function TopBar({ ds, apiKey, setPage, activeTab, setActiveTab, s
         <div style={{ display: "flex", alignItems: "center", gap: "12px", maxWidth: "70%" }}>
           <button className="mobile-menu-btn" onClick={() => setIsMobileMenuOpen(true)}>☰</button>
           <div style={{ display: "flex", gap: "4px" }} className="top-tabs">
-            {[{ id: "canvas", label: "Overview" }, { id: "oracle", label: "Ask" }, { id: "narrative", label: "Report" }, { id: "scenario", label: "What-if" }, { id: "ailab", label: "Data health" }, { id: "datadna", label: "Column details" }, { id: "data", label: "Files" }].map((t) => (
+            {[{ id: "canvas", label: "Overview" }, { id: "oracle", label: "Ask" }, { id: "narrative", label: "Report" }, { id: "scenario", label: "What-if" }, { id: "ailab", label: "Data health" }, { id: "data", label: "Files" }].map((t) => (
               <button key={t.id} className={`tab-btn ${activeTab === t.id ? "active" : ""} `} onClick={() => setActiveTab(t.id)}>{t.label}</button>
             ))}
           </div>

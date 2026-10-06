@@ -17,7 +17,6 @@ import AskScreen from "./screens/AskScreen.jsx";
 import ReportScreen from "./screens/ReportScreen.jsx";
 import WhatIfScreen from "./screens/WhatIfScreen.jsx";
 import DataHealthScreen from "./screens/DataHealthScreen.jsx";
-import ColumnDetailsScreen from "./screens/ColumnDetailsScreen.jsx";
 import FilesScreen from "./screens/FilesScreen.jsx";
 import { useOracleChat } from "./hooks/useOracleChat.js";
 import { useNarrative } from "./hooks/useNarrative.js";
@@ -239,8 +238,6 @@ const AppShell = ({
           {activeTab === "scenario" && <ErrorBoundary onRecover={() => setActiveTab("canvas")}><WhatIfScreen ds={ds} apiKey={apiKey} setPage={setPage} /></ErrorBoundary>}
 
           {activeTab === "ailab" && <ErrorBoundary onRecover={() => setActiveTab("canvas")}><DataHealthScreen ds={ds} setPage={setPage} labAnalysis={labAnalysis} labLoading={labLoading} runDeepDive={runDeepDive} /></ErrorBoundary>}
-
-          {activeTab === "datadna" && <ErrorBoundary onRecover={() => setActiveTab("canvas")}><ColumnDetailsScreen ds={ds} /></ErrorBoundary>}
 
           {activeTab === "data" && <ErrorBoundary onRecover={() => setActiveTab("canvas")}><FilesScreen activeDataset={activeDataset} setActiveDataset={setActiveDataset} setActiveTab={setActiveTab} uploadedDatasets={uploadedDatasets} addUploadedDataset={addUploadedDataset} deleteEverything={deleteEverything} uploadError={uploadError} setUploadError={setUploadError} fileInputRef={fileInputRef} /></ErrorBoundary>}
         </div>
