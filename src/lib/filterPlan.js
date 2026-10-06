@@ -105,7 +105,12 @@ export function validateFilterPlan(raw, columns) {
 }
 
 // Exact match first, then a unique case-insensitive match; null if
-// the column does not exist in the dataset.
+// the column does not exist in the dataset. Shared with the
+// calculation engine's plan validator.
+export function resolveColumnName(name, columns) {
+  return resolveColumn(name, columns);
+}
+
 function resolveColumn(name, columns) {
   if (typeof name !== "string" || name === "") return null;
   if (columns.includes(name)) return name;
