@@ -59,4 +59,54 @@ No CSP changes so far. No new runtime dependencies (papaparse already present).
 - Bundle is one chunk (94.89 kB gzip); B7-1/B7-2 will add the worker split and the
   CDN-loaded SheetJS without touching this budget.
 
-## Part B (B7-1 … B7-5) — pending
+## Part B (B7-1 … B7-5) — DONE, all green
+
+Final numbers (re-measured after the last commit):
+**252 unit tests** (31 files) · **6/6 Playwright flows** (9.1 s) ·
+build green — main **98.78 kB gzip** (vite) / 96.5 KB (zlib), worker chunk 26.9 kB,
+Excel chunk 163.12 kB gzip loaded on demand · `node scripts/perf.mjs`: 100k×20
+load + typing **1,726 ms Node** (target 3,000) · browser drop→preview **1,604 ms**
+(perf.spec.js) · banned-pattern grep (`dangerouslySetInnerHTML|innerHTML|new
+Function|eval(`) over src: **nothing** · **zero CSP changes** (`git diff main...HEAD
+-- vercel.json` is empty) · Lighthouse accessibility **100** on the production preview.
+
+### B7-1 — big files without freezing (F13) — commit `e551588`
+- Parsing, type detection and plan running moved into a same-origin module
+  worker (`new Worker(new URL(...), { type: "module" })`, no blob workers).
+  Worker caches rows: Ask plans on a fresh upload copy nothing.
+- Progress bar with live row counts (1 MB chunks) + working Cancel.
+- Own ~25-line windowing in the data table: 100,000 rows ≈ 22–31 `<tr>`s.
+- Found and fixed en route: papaparse newline detection breaks on tiny first
+  chunks; spreading 100k parse errors blew the worker stack; my first perf
+  CSV was malformed (unquoted ₹1,234) — perf.mjs now exits nonzero on parse
+  errors so timings can never be measured on garbage again.
+
+### B7-2 — Excel (F6 completion) — commit `9ff1c84`
+- SheetJS **0.20.3** pinned from the official `cdn.sheetjs.com` tarball (npm
+  xlsx 0.18.x not used). Dynamic `import()` only — verified in-browser: zero
+  xlsx network requests until an .xlsx is chosen.
+- Sheet picker, Excel dates → real dates (round-to-second drift guard),
+  blank/merged headers → "Column 3", duplicate headers de-collided.
+- Main bundle cost: +1.52 kB gzip of picker/branching UI, zero SheetJS bytes.
+
+### B7-3 — accessibility — commit `1192ccf`
+- Real buttons everywhere, focus-visible ring, labels on icon-only controls,
+  "View as table" + text description on every chart (main, 2 sparklines,
+  donuts, heatmap, anomaly scatter), all HTML text ≥12 px, AA contrast
+  measured in-browser on all six screens (violet → #a78bfa was the one real
+  fix), reduced-motion kills animations, 360 px with no sideways scroll.
+- vitest-axe on all 8 screens: 0 serious/critical. Lighthouse a11y: **100**.
+
+### B7-4 — end-to-end tests — commit `86f19b6`
+- Playwright, Chromium only, against `vite preview` (production CSP live).
+  Groq mocked by route interception; no real key anywhere.
+- The 5 required flows + a perf spec that re-measures the browser target
+  (1,604 ms this run). Separate `e2e` job added to ci.yml.
+
+### B7-5 — docs — commit `55ec465`
+- README rewritten to the shipped app; a "Measured, not promised" table with
+  only measured claims + repro commands; Privacy section added.
+- PRD: Status cell on all 18 F-rows — **15 Done, 3 Partly done**
+  (F8: accuracy set is 23 questions, not 50 · F10: with Forecast off the
+  chart still follows table sort · F13: unusual values listed but not yet
+  clickable through to rows) — plus measured results under the Targets table.
