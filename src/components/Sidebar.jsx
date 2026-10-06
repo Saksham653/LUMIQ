@@ -24,12 +24,12 @@ export default function Sidebar({ apiKey, setPage, activeTab, setActiveTab, acti
       <div style={{ marginTop: "16px" }}>
         <div style={{ fontSize: "10px", fontFamily: "'DM Mono', monospace", color: "#3d4f7c", textTransform: "uppercase", letterSpacing: "1px", marginBottom: "6px", paddingLeft: "4px" }}>Datasets</div>
         {Object.values(SAMPLE_DATASETS).map((d) => (
-          <div key={d.name} className={`sidebar-link ${activeDataset?.name === d.name ? "active" : ""}`} onClick={() => { setActiveDataset(d); setIsMobileMenuOpen(false); }} style={{ fontSize: "12px" }}>
+          <div key={d.id} className={`sidebar-link ${activeDataset?.id === d.id ? "active" : ""}`} onClick={() => { setActiveDataset(d); setIsMobileMenuOpen(false); }} style={{ fontSize: "12px" }}>
             <span>{d.icon}</span><span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{d.name}</span>
           </div>
         ))}
         {(uploadedDatasets || []).map((d) => (
-          <div key={d.name} className={`sidebar-link ${activeDataset?.name === d.name ? "active" : ""} `} onClick={() => { setActiveDataset(d); setIsMobileMenuOpen(false); }} style={{ fontSize: "12px" }}>
+          <div key={d.id} className={`sidebar-link ${activeDataset?.id === d.id ? "active" : ""} `} onClick={() => { setActiveDataset(d); setIsMobileMenuOpen(false); }} style={{ fontSize: "12px" }}>
             <span>📁</span><span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{d.name}</span>
           </div>
         ))}

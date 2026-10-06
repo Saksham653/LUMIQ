@@ -5,10 +5,21 @@
 import { parseCsvText } from "./csv.js";
 import { detectColumnTypes, coerceRows, NUMERIC_TYPES } from "./columnTypes.js";
 
-export function buildDataset({ name, icon, description, columns, rows }) {
+export function buildDataset({ id, name, icon, description, columns, rows }) {
   const columnTypes = detectColumnTypes(rows, columns);
   const data = coerceRows(rows, columns, columnTypes);
-  return { name, icon, description, columns, data, columnTypes };
+  // Every dataset carries a unique id; storage and Ask history key on
+  // it, so two files with the same name never collide. Samples pass
+  // stable ids so saved work survives reloads.
+  return { id: id ?? crypto.randomUUID(), name, icon, description, columns, data, columnTypes };
+}
+
+// Display-name dedupe for uploads: `sales`, then `sales (2)`, …
+export function uniqueDatasetName(name, takenNames) {
+  if (!takenNames.includes(name)) return name;
+  let n = 2;
+  while (takenNames.includes(`${name} (${n})`)) n++;
+  return `${name} (${n})`;
 }
 
 export function datasetFromCsv(text, name) {

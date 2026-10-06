@@ -61,3 +61,23 @@ describe("datasetFromCsv end to end", () => {
     expect(() => datasetFromCsv("", "x")).toThrow("No data rows");
   });
 });
+
+describe("dataset ids and name dedupe (B5-7)", () => {
+  it("every dataset gets a unique id; sample ids are stable", async () => {
+    const { SAMPLE_DATASETS } = await import("./sampleDatasets.js");
+    expect(SAMPLE_DATASETS.sales.id).toBe("sample:sales");
+    expect(SAMPLE_DATASETS.marketing.id).toBe("sample:marketing");
+    const a = datasetFromCsv("x\n1\n", "same");
+    const b = datasetFromCsv("x\n1\n", "same");
+    expect(a.id).toBeTruthy();
+    expect(a.id).not.toBe(b.id);
+  });
+
+  it("uniqueDatasetName appends (2), (3) against taken names", async () => {
+    const { uniqueDatasetName } = await import("./dataset.js");
+    expect(uniqueDatasetName("sales", [])).toBe("sales");
+    expect(uniqueDatasetName("sales", ["sales"])).toBe("sales (2)");
+    expect(uniqueDatasetName("sales", ["sales", "sales (2)"])).toBe("sales (3)");
+    expect(uniqueDatasetName("E-Commerce Sales", ["E-Commerce Sales"])).toBe("E-Commerce Sales (2)");
+  });
+});

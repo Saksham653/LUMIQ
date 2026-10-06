@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { SAMPLE_DATASETS } from "../data/sampleDatasets.js";
 import { buildUploadPreview, datasetFromPreview } from "../data/uploadPreview.js";
+import { uniqueDatasetName } from "../data/dataset.js";
 import UploadPreview from "../components/UploadPreview.jsx";
 
 export default function FilesScreen({ activeDataset, setActiveDataset, setActiveTab, uploadedDatasets, addUploadedDataset, deleteEverything, uploadError, setUploadError, fileInputRef }) {
@@ -36,6 +37,10 @@ export default function FilesScreen({ activeDataset, setActiveDataset, setActive
 
   const loadPreview = () => {
     const dataset = datasetFromPreview(preview, previewTypes);
+    // Same display name twice? Show the newcomer as "name (2)" —
+    // storage and history key on the id either way.
+    const taken = [...(uploadedDatasets || []).map((d) => d.name), ...Object.values(SAMPLE_DATASETS).map((s) => s.name)];
+    dataset.name = uniqueDatasetName(dataset.name, taken);
     addUploadedDataset(dataset);
     setActiveDataset(dataset);
     setActiveTab("canvas");
@@ -49,12 +54,12 @@ export default function FilesScreen({ activeDataset, setActiveDataset, setActive
   };
 
   const datasetCard = (d) => (
-    <div key={d.name} className={`glass-card`} style={{ padding: "20px", cursor: "pointer", transition: "all 0.2s", borderColor: activeDataset?.name === d.name ? "#00D4FF44" : "#1e2d5c" }} onClick={() => { setActiveDataset(d); setActiveTab("canvas"); }}>
+    <div key={d.id} className={`glass-card`} style={{ padding: "20px", cursor: "pointer", transition: "all 0.2s", borderColor: activeDataset?.id === d.id ? "#00D4FF44" : "#1e2d5c" }} onClick={() => { setActiveDataset(d); setActiveTab("canvas"); }}>
       <div style={{ fontSize: "28px", marginBottom: "10px" }}>{d.icon}</div>
       <div style={{ fontFamily: "'Syne', sans-serif", fontWeight: 700, fontSize: "14px", marginBottom: "6px" }}>{d.name}</div>
       <p style={{ color: "#8892b0", fontSize: "12px", marginBottom: "12px" }}>{d.description}</p>
       <div style={{ display: "flex", flexWrap: "wrap", gap: "4px" }}>{d.columns.slice(0, 3).map((c) => <span key={c} className="data-pill" style={{ fontSize: "10px" }}>{c}</span>)}</div>
-      {activeDataset?.name === d.name && <div style={{ marginTop: "10px" }}><span className="badge badge-cyan">Active</span></div>}
+      {activeDataset?.id === d.id && <div style={{ marginTop: "10px" }}><span className="badge badge-cyan">Active</span></div>}
     </div>
   );
 
