@@ -20,6 +20,17 @@ import { createStreamReader } from "./lib/streamReader.js";
 import { SAMPLE_DATASETS } from "./data/sampleDatasets.js";
 import { datasetFromCsv, numericColumns } from "./data/dataset.js";
 import { formatCell, aggregationRule, NUMERIC_TYPES } from "./data/columnTypes.js";
+import { validatePlan } from "./engine/validatePlan.js";
+import { runPlan } from "./engine/runPlan.js";
+import { buildSchemaSummary, renderSchemaSummary, schemaNumberCandidates } from "./ai/schemaSummary.js";
+import {
+  buildPlanPrompt,
+  buildDescribePrompt,
+  buildExplainPrompt,
+  parsePlannerReply,
+  exampleQuestions,
+} from "./ai/oraclePlanner.js";
+import { collectCandidates, verifyNumbers } from "./ai/numberCheck.js";
 
 // ============================================================
 // LUMIQ — Luminous Intelligence Queries (Groq Edition)
@@ -1072,6 +1083,100 @@ Rules:
     reader.readAsText(file);
   };
 
+  // Merges fields into the last (streaming) Oracle message.
+  const updateLastOracle = (patch) => {
+    setOracleMessages((prev) => {
+      const u = [...prev];
+      u[u.length - 1] = { ...u[u.length - 1], ...patch };
+      return u;
+    });
+  };
+
+  // The proof flow (F8). 1) The question plus a schema summary — no
+  // raw rows — goes to the AI, which returns a JSON calculation plan.
+  // 2) The plan is validated (one corrected retry) and the browser
+  // runs it on every row. 3) The AI words the result table, streamed.
+  // 4) Every number in the wording is checked against that table and
+  // unmatched ones are marked. The proof (steps, table, N of M rows,
+  // exact prompts sent) is attached to the message.
+  const runOracleFlow = async (question, controller) => {
+    const summary = buildSchemaSummary(ds);
+    const schemaText = renderSchemaSummary(summary);
+    const sent = [];
+
+    updateLastOracle({ content: "Planning the calculation…" });
+    const planPrompt = buildPlanPrompt(question, schemaText);
+    sent.push({ label: "Plan request (schema summary only — no rows)", text: planPrompt });
+    const planReply = await callGroq(apiKey, [{ role: "user", content: planPrompt }], null, { signal: controller.signal, temperature: 0 });
+    let parsed = parsePlannerReply(planReply);
+
+    // Questions that need no calculation are answered from the
+    // summary alone and checked against the summary's own figures.
+    if (parsed.kind === "describe") {
+      const describePrompt = buildDescribePrompt(question, schemaText);
+      sent.push({ label: "Answer request (schema summary only)", text: describePrompt });
+      updateLastOracle({ content: "" });
+      const answer = await callGroq(apiKey, [{ role: "user", content: describePrompt }], (text) => updateLastOracle({ content: text }), { signal: controller.signal });
+      const check = verifyNumbers(answer, schemaNumberCandidates(summary));
+      updateLastOracle({
+        content: answer,
+        segments: check.segments,
+        unverified: check.unverified,
+        proof: {
+          steps: ["No calculation was needed — answered from the dataset summary (column names, types and per-column statistics; no rows were sent)."],
+          table: [],
+          rowsUsed: ds.data.length,
+          totalRows: ds.data.length,
+          sent,
+        },
+      });
+      return;
+    }
+
+    let checked = parsed.kind === "plan"
+      ? validatePlan(parsed.raw, ds.columns, ds.columnTypes)
+      : { ok: false, error: parsed.error };
+    if (!checked.ok) {
+      // One corrected attempt, then decline honestly.
+      updateLastOracle({ content: "Correcting the calculation plan…" });
+      const retryPrompt = `${planPrompt}\n\nYour previous reply was rejected: ${checked.error}\nReply again with ONLY a corrected JSON object.`;
+      sent.push({ label: "Corrected plan request", text: retryPrompt });
+      const retryReply = await callGroq(apiKey, [{ role: "user", content: retryPrompt }], null, { signal: controller.signal, temperature: 0 });
+      parsed = parsePlannerReply(retryReply);
+      checked = parsed.kind === "plan"
+        ? validatePlan(parsed.raw, ds.columns, ds.columnTypes)
+        : { ok: false, error: parsed.kind === "error" ? parsed.error : "The reply was not a plan." };
+      if (!checked.ok) {
+        const examples = exampleQuestions(ds);
+        updateLastOracle({
+          content: `I couldn't work that out from this data.\n\nQuestions I can answer here:\n• ${examples.join("\n• ")}`,
+          proof: {
+            steps: [`The calculation plan was rejected twice. Last reason: ${checked.error}`],
+            table: [],
+            rowsUsed: 0,
+            totalRows: ds.data.length,
+            sent,
+          },
+        });
+        return;
+      }
+    }
+
+    const result = runPlan(ds.data, ds.columns, checked.plan);
+    const explainPrompt = buildExplainPrompt(question, result.steps, result.table, result.rowsUsed, result.totalRows);
+    sent.push({ label: "Answer request (steps + result table — no rows)", text: explainPrompt });
+    updateLastOracle({ content: "" });
+    const answer = await callGroq(apiKey, [{ role: "user", content: explainPrompt }], (text) => updateLastOracle({ content: text }), { signal: controller.signal });
+    const candidates = collectCandidates(result.table, [result.rowsUsed, result.totalRows, result.table.length]);
+    const check = verifyNumbers(answer, candidates);
+    updateLastOracle({
+      content: answer,
+      segments: check.segments,
+      unverified: check.unverified,
+      proof: { steps: result.steps, table: result.table, rowsUsed: result.rowsUsed, totalRows: result.totalRows, sent },
+    });
+  };
+
   // Pass retryText to re-send a failed question (the Retry button);
   // otherwise the textarea content is sent.
   const sendOracleMessage = async (retryText) => {
@@ -1083,14 +1188,14 @@ Rules:
     setOracleLoading(true);
     const controller = new AbortController();
     oracleAbortRef.current = controller;
-    const systemPrompt = `You are Oracle, LUMIQ's elite AI data analyst — brilliant, direct, proactively insightful.\nDataset: ${ds ? ds.name : "No dataset loaded"}\n${ds ? `Columns: ${ds.columns.join(", ")}\nSample (first 5 rows): ${JSON.stringify(ds.data.slice(0, 5))}\nTotal rows: ${ds.data.length}` : "No dataset loaded — tell the user to select one."}\nStyle: answer directly with real numbers, explain WHY it matters, use → for implications, • for key points, end with one sharp follow-up. Under 220 words.`;
-    const msgs = [{ role: "system", content: systemPrompt }, ...oracleMessages.filter(m => !m.streaming).map(m => ({ role: m.role, content: m.content })), { role: "user", content: userMsg }];
     try {
       setOracleMessages((prev) => [...prev, { role: "assistant", content: "", streaming: true }]);
       if (apiKey && apiKey !== "demo") {
-        await callGroq(apiKey, msgs, (text) => {
-          setOracleMessages((prev) => { const u = [...prev]; u[u.length - 1] = { role: "assistant", content: text, streaming: true }; return u; });
-        }, { signal: controller.signal });
+        if (!ds) {
+          updateLastOracle({ content: "Select a dataset from the sidebar first — I calculate every answer from its rows." });
+        } else {
+          await runOracleFlow(userMsg, controller);
+        }
       } else {
         const demo = `I'm running in demo mode — connect a real Groq API key to get live AI analysis!\n\nBased on the data structure I can see:\n• Your dataset has ${ds?.data.length || 0} rows across ${ds?.columns.length || 0} columns\n→ Key numeric metrics: ${numericColumns(ds).join(", ") || "none detected"}\n\nWith a real Groq key, I'd give you deep analysis of this question instantly. Get yours free at console.groq.com`;
         let current = "";
@@ -1713,7 +1818,60 @@ Provide a short "Executive Summary" paragraph, then a "Key Findings" bulleted li
                 ) : oracleMessages.map((msg, i) => (
                   <div key={i} style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
                     <div style={{ fontSize: "10px", fontFamily: "'DM Mono', monospace", color: "#3d4f7c", marginBottom: "4px", textAlign: msg.role === "user" ? "right" : "left" }}>{msg.role === "user" ? "YOU" : "ORACLE"}</div>
-                    <div className={msg.role === "user" ? "chat-bubble-user" : `chat-bubble-oracle ${msg.streaming ? "streaming-cursor" : ""}`}>{msg.content || (msg.streaming ? "" : "...")}</div>
+                    <div className={msg.role === "user" ? "chat-bubble-user" : `chat-bubble-oracle ${msg.streaming ? "streaming-cursor" : ""}`}>
+                      {msg.segments
+                        ? msg.segments.map((s, j) =>
+                          s.number !== undefined && !s.verified ? (
+                            <span key={j} title="Not verified — this number does not match the calculation" style={{ color: "#FFB627", borderBottom: "1px dashed #FFB627" }}>{s.text}<sup style={{ fontSize: "9px" }}>?</sup></span>
+                          ) : (
+                            <span key={j}>{s.text}</span>
+                          )
+                        )
+                        : (msg.content || (msg.streaming ? "" : "..."))}
+                    </div>
+                    {msg.unverified > 0 && !msg.streaming && (
+                      <div style={{ fontSize: "10px", color: "#FFB627" }}>⚠ {msg.unverified} number{msg.unverified === 1 ? "" : "s"} marked <sup>?</sup> could not be matched to the calculation</div>
+                    )}
+                    {msg.proof && !msg.streaming && (
+                      <div style={{ maxWidth: "85%", display: "flex", flexDirection: "column", gap: "4px" }}>
+                        <details style={{ background: "#0a1128", border: "1px solid #1e2d5c", borderRadius: "8px", padding: "8px 12px", fontSize: "12px" }}>
+                          <summary style={{ cursor: "pointer", color: "#8892b0", fontSize: "11px" }}>Show the work</summary>
+                          <ol style={{ margin: "8px 0 0 18px", color: "#ccd6f6", lineHeight: 1.7, fontSize: "12px" }}>
+                            {msg.proof.steps.map((s, j) => <li key={j}>{s}</li>)}
+                          </ol>
+                          {msg.proof.table.length > 0 && (
+                            <div style={{ overflowX: "auto", maxHeight: "220px", overflowY: "auto", marginTop: "8px", border: "1px solid #1e2d5c", borderRadius: "6px" }}>
+                              <table style={{ borderCollapse: "collapse", fontSize: "11px", width: "100%" }}>
+                                <thead>
+                                  <tr>{Object.keys(msg.proof.table[0]).map((c) => (
+                                    <th key={c} style={{ textAlign: "left", padding: "4px 10px", color: "#8892b0", fontFamily: "'DM Mono', monospace", fontSize: "10px", borderBottom: "1px solid #1e2d5c", textTransform: "uppercase", whiteSpace: "nowrap" }}>{c}</th>
+                                  ))}</tr>
+                                </thead>
+                                <tbody>
+                                  {msg.proof.table.map((row, r) => (
+                                    <tr key={r}>{Object.keys(msg.proof.table[0]).map((c) => (
+                                      <td key={c} style={{ padding: "4px 10px", color: typeof row[c] === "number" ? "#00D4FF" : "#ccd6f6", fontFamily: typeof row[c] === "number" ? "'DM Mono', monospace" : "inherit", borderBottom: "1px solid #1e2d5c33", whiteSpace: "nowrap" }}>
+                                        {row[c] == null ? "—" : typeof row[c] === "number" ? row[c].toLocaleString() : String(row[c])}
+                                      </td>
+                                    ))}</tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          )}
+                          <div style={{ marginTop: "8px", fontSize: "10px", color: "#3d4f7c", fontFamily: "'DM Mono', monospace" }}>Based on {msg.proof.rowsUsed} of {msg.proof.totalRows} rows</div>
+                        </details>
+                        <details style={{ background: "#0a1128", border: "1px solid #1e2d5c", borderRadius: "8px", padding: "8px 12px", fontSize: "12px" }}>
+                          <summary style={{ cursor: "pointer", color: "#8892b0", fontSize: "11px" }}>What was sent</summary>
+                          {msg.proof.sent.map((s, j) => (
+                            <div key={j} style={{ marginTop: "8px" }}>
+                              <div style={{ fontSize: "10px", color: "#7B4FE8", marginBottom: "4px", fontFamily: "'DM Mono', monospace", textTransform: "uppercase" }}>{s.label}</div>
+                              <pre style={{ whiteSpace: "pre-wrap", background: "#050914", border: "1px solid #1e2d5c", borderRadius: "6px", padding: "8px", fontSize: "10px", color: "#8892b0", fontFamily: "'DM Mono', monospace", maxHeight: "180px", overflow: "auto", margin: 0 }}>{s.text}</pre>
+                            </div>
+                          ))}
+                        </details>
+                      </div>
+                    )}
                   </div>
                 ))}
                 <div ref={chatEndRef} />
