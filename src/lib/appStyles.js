@@ -78,4 +78,15 @@ export const css = `
       .landing-hero nav { padding: 12px 16px; }
       .landing-hero h1 { letter-spacing: -1px; }
     }
+  
+    @media print {
+      @page { size: A4; margin: 12mm; }
+      body, .lumiq-app, .app-main { background: #fff !important; color: #111 !important; }
+      .app-sidebar, .sidebar-overlay, .no-print, .lumiq-app button { display: none !important; }
+      .app-main { overflow: visible !important; }
+      .lumiq-app { height: auto !important; }
+      .glass-card, .narrative-box { background: #fff !important; border-color: #bbb !important; color: #111 !important; box-shadow: none !important; }
+      .report-page, .report-page * { color: #111 !important; -webkit-text-fill-color: #111 !important; }
+      .stat-number { background: none !important; }
+    }
   `;

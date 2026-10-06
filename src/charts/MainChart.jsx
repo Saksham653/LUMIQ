@@ -2,6 +2,9 @@ import { fmtNum, fitLabel } from "../lib/format.js";
 import { downsample } from "../lib/analysis.js";
 import { buildForecast } from "../engine/forecast.js";
 import { chartSeries } from "../engine/chartSeries.js";
+import { useRef } from "react";
+import { exportSvgToPng } from "../lib/exportChart.js";
+import { downloadBlob } from "../lib/exportData.js";
 
 // The Overview's main visualization card: metric and chart-type
 // selectors, the Forecast toggle, the SVG chart and the forecast
@@ -9,6 +12,12 @@ import { chartSeries } from "../engine/chartSeries.js";
 export default function MainChart({ ds, processedData, numericCols, metric, setSelectedMetric, chartType, setChartType, forecastTime, forecastEnabled, setForecastEnabled, forecastNarrative, setForecastNarrative, forecastLoading, runForecast, forecastAbortRef }) {
   // The self-check shown under the chart (recomputed cheaply here so
   // the narrative box outside the SVG closure can read it)
+  const chartRef = useRef(null);
+  const downloadPng = async () => {
+    const svg = chartRef.current?.querySelector("svg");
+    if (!svg) return;
+    try { downloadBlob(`${ds.name}-${metric}.png`, await exportSvgToPng(svg)); } catch (e) { console.error("PNG export failed:", e); }
+  };
   const check = forecastEnabled ? buildForecast(chartSeries(ds, processedData, metric, { timeOrdered: !!forecastTime }).values) : null;
   return (
     <div className="glass-card" style={{ padding: "24px" }}>
@@ -17,6 +26,7 @@ export default function MainChart({ ds, processedData, numericCols, metric, setS
         <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
           <select value={metric} onChange={(e) => setSelectedMetric(e.target.value)}>{numericCols.map((c) => <option key={c} value={c}>{c}</option>)}</select>
           <select value={chartType} onChange={(e) => setChartType(e.target.value)}><option value="bar">Bar</option><option value="line">Line</option><option value="area">Area</option></select>
+          <button className="btn-ghost" style={{ fontSize: "12px", padding: "5px 12px" }} onClick={downloadPng} aria-label="Download chart as PNG">⬇ PNG</button>
           {forecastTime ? (
             <button
               className={forecastEnabled ? "btn-primary" : "btn-ghost"}
@@ -49,7 +59,7 @@ export default function MainChart({ ds, processedData, numericCols, metric, setS
           )}
         </div>
       </div>
-      <div style={{ position: "relative", height: "260px" }}>
+      <div ref={chartRef} style={{ position: "relative", height: "260px" }}>
         {(() => {
           // Rows with a blank metric are skipped, never charted
           // as 0. With Forecast on, the series follows the time

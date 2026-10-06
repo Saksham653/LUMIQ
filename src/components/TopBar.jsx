@@ -4,7 +4,7 @@
 export default function TopBar({ ds, apiKey, setPage, activeTab, setActiveTab, setIsMobileMenuOpen, storageOk = true }) {
   return (
     <>
-      <div style={{ background: "#050914ee", backdropFilter: "blur(10px)", borderBottom: "1px solid #1e2d5c", padding: "12px 24px", display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, zIndex: 50 }}>
+      <div className="no-print" style={{ background: "#050914ee", backdropFilter: "blur(10px)", borderBottom: "1px solid #1e2d5c", padding: "12px 24px", display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, zIndex: 50 }}>
         <div style={{ display: "flex", alignItems: "center", gap: "12px", maxWidth: "70%" }}>
           <button className="mobile-menu-btn" onClick={() => setIsMobileMenuOpen(true)}>☰</button>
           <div style={{ display: "flex", gap: "4px" }} className="top-tabs">

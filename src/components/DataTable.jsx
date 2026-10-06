@@ -1,4 +1,5 @@
 import { formatCell } from "../data/columnTypes.js";
+import { downloadCsv } from "../lib/exportData.js";
 
 // The Interactive Data Explorer: sortable, searchable, paginated.
 export default function DataTable({ ds, processedData, paginatedData, sortConfig, handleSort, searchQuery, setSearchQuery, pageIdx, setPageIdx, totalPages, rowsPerPage }) {
@@ -6,13 +7,16 @@ export default function DataTable({ ds, processedData, paginatedData, sortConfig
     <div className="glass-card" style={{ padding: "20px" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
         <h3 style={{ fontFamily: "'Syne', sans-serif", fontSize: "14px", fontWeight: 700 }}>Interactive Data Explorer</h3>
-        <input
-          type="text"
-          placeholder="Search dataset..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          style={{ padding: "6px 12px", fontSize: "12px", width: "200px" }}
-        />
+        <div style={{ display: "flex", gap: "8px", alignItems: "center", flexWrap: "wrap" }}>
+          <button className="btn-ghost" style={{ fontSize: "12px", padding: "6px 12px" }} onClick={() => downloadCsv(`${ds.name}-filtered.csv`, ds.columns, processedData)}>⬇ Download filtered data (CSV)</button>
+          <input
+            type="text"
+            placeholder="Search dataset..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            style={{ padding: "6px 12px", fontSize: "12px", width: "200px" }}
+          />
+        </div>
       </div>
       <div style={{ overflowX: "auto", minHeight: "300px" }}>
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "12px" }}>

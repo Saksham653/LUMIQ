@@ -4,7 +4,7 @@
 
 import { useRef } from "react";
 import { callGroq } from "../ai/client.js";
-import { buildSchemaSummary, renderSchemaSummary } from "../ai/schemaSummary.js";
+import { buildReportData } from "../engine/reportData.js";
 
 export function useNarrative({ apiKey, ds, setNarrativeText, setNarrativeLoading }) {
   const narrativeAbortRef = useRef(null);
@@ -15,9 +15,14 @@ export function useNarrative({ apiKey, ds, setNarrativeText, setNarrativeLoading
     const controller = new AbortController();
     narrativeAbortRef.current = controller;
     setNarrativeLoading(true); setNarrativeText("");
-    // The brief sees the schema summary (computed on all rows), never
-    // raw rows.
-    const prompt = `You are a senior business analyst. Write a DECISION BRIEF from this dataset summary. It was computed on all rows; you have no access to the rows themselves, so use only figures that appear in the summary.\n\n${renderSchemaSummary(buildSchemaSummary(ds))}\n\nFormat:\nHEADLINE: [one sentence]\n\nWHAT HAPPENED: [2-3 sentences with real numbers from the summary]\n\nWHY IT MATTERS: [business implication]\n\nTHE RISK: [what could go wrong]\n\nRECOMMENDED ACTION: [one concrete next step]\n\nUnder 280 words. Be direct.`;
+    // The summary may only word the report numbers the engine already
+    // calculated — the same numbers the footnotes document.
+    const report = buildReportData(ds);
+    const facts = report.items.map((it, i) => `${i + 1}. ${it.label}: ${it.value}`).join("\n");
+    const prompt = `You are a business analyst. The browser calculated these figures for the dataset "${ds.name}" (footnoted in the report):
+${facts}
+
+Write a 3-5 sentence executive summary using ONLY these numbers (you may round them). Plain sentences, no markdown headings, no invented figures.`;
     try {
       await callGroq(apiKey, [{ role: "user", content: prompt }], (text) => setNarrativeText(text), { signal: controller.signal });
     } catch (err) {
