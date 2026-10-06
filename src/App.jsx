@@ -1934,7 +1934,7 @@ Provide a short "Executive Summary" paragraph, then a "Key Findings" bulleted li
             <div style={{ maxWidth: "780px", margin: "0 auto", animation: "fadeSlide 0.3s ease" }}>
               <div style={{ marginBottom: "24px" }}>
                 <h2 style={{ fontFamily: "'Syne', sans-serif", fontSize: "20px", fontWeight: 800, marginBottom: "8px" }}>Scenario Forge</h2>
-                <p style={{ color: "#8892b0", fontSize: "13px" }}>Ask any question about your data, or describe a what-if scenario. Oracle models probabilistic outcomes via Groq.</p>
+                <p style={{ color: "#8892b0", fontSize: "13px" }}>Ask any question about your data, or describe a what-if scenario. Oracle reasons from your dataset summary — it does not invent probabilities.</p>
               </div>
               <div className="glass-card" style={{ padding: "24px", marginBottom: "20px" }}>
                 <label style={{ display: "block", fontSize: "11px", fontFamily: "'DM Mono', monospace", color: "#8892b0", marginBottom: "8px", textTransform: "uppercase", letterSpacing: "1px" }}>Your Question or Hypothesis</label>
