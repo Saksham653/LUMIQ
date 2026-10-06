@@ -733,20 +733,20 @@ const LandingPage = ({ setPage, startDemo }) => (
       </div>
     </div>
     <div style={{ display: "flex", justifyContent: "center", gap: "12px", flexWrap: "wrap", padding: "0 40px 40px" }}>
-      {[{ icon: "⬡", label: "Canvas Analytics" }, { icon: "🗣️", label: "Oracle AI Chat" }, { icon: "🔮", label: "Crystal Ball Forecast" }, { icon: "💬", label: "AI Data Filter" }, { icon: "🧬", label: "Data DNA Profiler" }, { icon: "🔬", label: "AI Lab" }, { icon: "🌐", label: "Scenario Forge" }, { icon: "🗃️", label: "Data Explorer" }].map((f) => (
+      {[{ icon: "⬡", label: "Overview" }, { icon: "🗣️", label: "Ask" }, { icon: "🔮", label: "Forecast" }, { icon: "💬", label: "AI Data Filter" }, { icon: "🧬", label: "Column details" }, { icon: "🔬", label: "Data health" }, { icon: "🌐", label: "What-if" }, { icon: "🗃️", label: "Files" }].map((f) => (
         <div key={f.label} className="data-pill" style={{ padding: "8px 16px", fontSize: "13px" }}><span>{f.icon}</span><span style={{ color: "#ccd6f6" }}>{f.label}</span></div>
       ))}
     </div>
     <div style={{ maxWidth: "1100px", margin: "0 auto", padding: "40px", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: "20px" }}>
       {[
-        { icon: "🔮", color: "#7B4FE8", badge: "badge-violet", title: "Crystal Ball Forecast", tag: "Predictive AI", desc: "Linear regression trendlines project future values with confidence bands. Groq explains what the numbers predict in plain English." },
-        { icon: "🧬", color: "#00E5A0", badge: "badge-green", title: "Data DNA Profiler", tag: "Column X-Ray", desc: "Deep statistical profile of every column — type detection, completeness, min/max/mean/median, distribution histograms, and data quality scores." },
+        { icon: "🔮", color: "#7B4FE8", badge: "badge-violet", title: "Forecast", tag: "Predictive AI", desc: "Linear regression trendlines project future values with confidence bands. Groq explains what the numbers predict in plain English." },
+        { icon: "🧬", color: "#00E5A0", badge: "badge-green", title: "Column details", tag: "Column X-Ray", desc: "Deep statistical profile of every column — type detection, completeness, min/max/mean/median, distribution histograms, and data quality scores." },
         { icon: "💬", color: "#00D4FF", badge: "badge-cyan", title: "AI Data Filter", tag: "Natural Language", desc: "Query your data in plain English. LUMIQ translates your questions into precise filters and updates the entire dashboard instantly." },
-        { icon: "🔬", color: "#FF6B6B", badge: "badge-cyan", title: "AI Lab", tag: "Deep Analysis", desc: "Correlation heatmaps, Z-score anomaly detection, and AI-powered executive summaries of your statistical findings." },
-        { icon: "⚡", color: "#FFB627", badge: "badge-gold", title: "Oracle AI", tag: "Groq-Powered", desc: "Ask questions about your data. Every number is calculated from all your rows, and every answer shows its working." },
-        { icon: "🌐", color: "#7B4FE8", badge: "badge-violet", title: "Scenario Forge", tag: "What-If Engine", desc: "Describe a what-if and get a structured take grounded in your dataset summary — no invented probabilities." },
+        { icon: "🔬", color: "#FF6B6B", badge: "badge-cyan", title: "Data health", tag: "Deep Analysis", desc: "Correlation heatmaps, Z-score anomaly detection, and AI-powered executive summaries of your statistical findings." },
+        { icon: "⚡", color: "#FFB627", badge: "badge-gold", title: "Ask", tag: "Groq-Powered", desc: "Ask questions about your data. Every number is calculated from all your rows, and every answer shows its working." },
+        { icon: "🌐", color: "#7B4FE8", badge: "badge-violet", title: "What-if", tag: "What-If Engine", desc: "Describe a what-if and get a structured take grounded in your dataset summary — no invented probabilities." },
         { icon: "🗃️", color: "#00D4FF", badge: "badge-cyan", title: "Interactive Explorer", tag: "Data Grid", desc: "Searchable, sortable, paginated data grid for exploring every row of your dataset." },
-        { icon: "📄", color: "#00E5A0", badge: "badge-green", title: "AI Narrative", tag: "Auto Reports", desc: "One-click AI-generated executive reports that summarize key metrics, trends, and anomalies from your dataset." },
+        { icon: "📄", color: "#00E5A0", badge: "badge-green", title: "Report", tag: "Auto Reports", desc: "One-click AI-generated executive reports that summarize key metrics, trends, and anomalies from your dataset." },
       ].map((f) => (
         <div key={f.title} className="glass-card" style={{ padding: "28px" }}>
           <div style={{ display: "flex", alignItems: "center", gap: "14px", marginBottom: "14px" }}>
@@ -917,7 +917,7 @@ Write a concise 3-4 sentence forecast narrative. Include: trend direction and st
       }, { signal: controller.signal });
     } catch (e) {
       if (forecastAbortRef.current === controller && !e.aborted) {
-        setForecastNarrative("Could not generate the forecast narrative: " + e.message + " Toggle Crystal Ball off and on to retry.");
+        setForecastNarrative("Could not generate the forecast narrative: " + e.message + " Toggle Forecast off and on to retry.");
       }
     }
     if (forecastAbortRef.current === controller) setForecastLoading(false);
@@ -1330,7 +1330,7 @@ Provide a short "Executive Summary" paragraph, then a "Key Findings" bulleted li
         </div>
         <div style={{ marginBottom: "8px" }}>
           <div style={{ fontSize: "10px", fontFamily: "'DM Mono', monospace", color: "#3d4f7c", textTransform: "uppercase", letterSpacing: "1px", marginBottom: "6px", paddingLeft: "4px" }}>Workspace</div>
-          {[{ id: "canvas", icon: "⬡", label: "Canvas" }, { id: "oracle", icon: "🔮", label: "Oracle AI" }, { id: "narrative", icon: "📄", label: "Narrative" }, { id: "scenario", icon: "🌐", label: "Scenario Forge" }, { id: "ailab", icon: "🔬", label: "AI Lab" }, { id: "datadna", icon: "🧬", label: "Data DNA" }, { id: "data", icon: "🗃️", label: "Data Manager" }].map((t) => (
+          {[{ id: "canvas", icon: "⬡", label: "Overview" }, { id: "oracle", icon: "🔮", label: "Ask" }, { id: "narrative", icon: "📄", label: "Report" }, { id: "scenario", icon: "🌐", label: "What-if" }, { id: "ailab", icon: "🔬", label: "Data health" }, { id: "datadna", icon: "🧬", label: "Column details" }, { id: "data", icon: "🗃️", label: "Files" }].map((t) => (
             <div key={t.id} className={`sidebar-link ${activeTab === t.id ? "active" : ""} `} onClick={() => { setActiveTab(t.id); setIsMobileMenuOpen(false); }}>
               <span style={{ fontSize: "16px" }}>{t.icon}</span><span>{t.label}</span>
               {t.id === "oracle" && <span className="badge badge-violet" style={{ marginLeft: "auto", fontSize: "9px" }}>AI</span>}
@@ -1371,7 +1371,7 @@ Provide a short "Executive Summary" paragraph, then a "Key Findings" bulleted li
           <div style={{ display: "flex", alignItems: "center", gap: "12px", maxWidth: "70%" }}>
             <button className="mobile-menu-btn" onClick={() => setIsMobileMenuOpen(true)}>☰</button>
             <div style={{ display: "flex", gap: "4px" }} className="top-tabs">
-              {[{ id: "canvas", label: "Canvas" }, { id: "oracle", label: "Oracle" }, { id: "narrative", label: "Narrative" }, { id: "scenario", label: "Scenario Forge" }, { id: "ailab", label: "AI Lab" }, { id: "datadna", label: "Data DNA" }, { id: "data", label: "Data" }].map((t) => (
+              {[{ id: "canvas", label: "Overview" }, { id: "oracle", label: "Ask" }, { id: "narrative", label: "Report" }, { id: "scenario", label: "What-if" }, { id: "ailab", label: "Data health" }, { id: "datadna", label: "Column details" }, { id: "data", label: "Files" }].map((t) => (
                 <button key={t.id} className={`tab-btn ${activeTab === t.id ? "active" : ""} `} onClick={() => setActiveTab(t.id)}>{t.label}</button>
               ))}
             </div>
@@ -1389,7 +1389,7 @@ Provide a short "Executive Summary" paragraph, then a "Key Findings" bulleted li
                 <div style={{ textAlign: "center", padding: "80px 20px" }}>
                   <div style={{ fontSize: "48px", marginBottom: "16px" }}>⬡</div>
                   <h3 style={{ fontFamily: "'Syne', sans-serif", fontSize: "22px", marginBottom: "10px" }}>Select a Dataset</h3>
-                  <p style={{ color: "#8892b0", fontSize: "14px" }}>Choose a sample dataset from the sidebar or upload your own CSV in Data Manager</p>
+                  <p style={{ color: "#8892b0", fontSize: "14px" }}>Choose a sample dataset from the sidebar or upload your own CSV in Files</p>
                 </div>
               ) : (
                 <>
@@ -1505,7 +1505,7 @@ Provide a short "Executive Summary" paragraph, then a "Key Findings" bulleted li
                               }
                             }}
                           >
-                            🔮 {forecastEnabled ? "Forecasting ON" : "Crystal Ball"}
+                            🔮 {forecastEnabled ? "Forecast ON" : "Forecast"}
                           </button>
                         </div>
                       </div>
@@ -1661,7 +1661,7 @@ Provide a short "Executive Summary" paragraph, then a "Key Findings" bulleted li
                         <div style={{ marginTop: "16px", padding: "14px", background: "#0a0f22", borderRadius: "10px", border: "1px solid #FFB62744" }}>
                           <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
                             <span style={{ fontSize: "16px" }}>🔮</span>
-                            <span style={{ fontFamily: "'Syne', sans-serif", fontWeight: 700, fontSize: "13px" }}>Crystal Ball Forecast</span>
+                            <span style={{ fontFamily: "'Syne', sans-serif", fontWeight: 700, fontSize: "13px" }}>Forecast</span>
                             <span className="badge badge-gold" style={{ fontSize: "9px" }}>{forecastLoading ? "Analyzing..." : "AI Insight"}</span>
                           </div>
                           <p style={{ fontSize: "12px", color: "#ccd6f6", lineHeight: 1.6 }}>{forecastNarrative || "Generating forecast..."}</p>
@@ -1775,7 +1775,7 @@ Provide a short "Executive Summary" paragraph, then a "Key Findings" bulleted li
               <div style={{ marginBottom: "24px" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "8px" }}>
                   <div style={{ width: "36px", height: "36px", borderRadius: "10px", background: "linear-gradient(135deg, #00D4FF1a, #7B4FE81a)", border: "1px solid #00D4FF33", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "18px" }}>🔮</div>
-                  <h2 style={{ fontFamily: "'Syne', sans-serif", fontSize: "20px", fontWeight: 800 }}>Oracle AI</h2>
+                  <h2 style={{ fontFamily: "'Syne', sans-serif", fontSize: "20px", fontWeight: 800 }}>Ask</h2>
                   <span className="badge badge-violet">Groq · Llama 3.3 70B</span>
                   {(!apiKey || apiKey === "demo") && <span className="badge badge-gold">Demo Mode</span>}
                 </div>
@@ -1876,7 +1876,7 @@ Provide a short "Executive Summary" paragraph, then a "Key Findings" bulleted li
           {activeTab === "narrative" && (
             <div style={{ maxWidth: "760px", margin: "0 auto", animation: "fadeSlide 0.3s ease" }}>
               <div style={{ marginBottom: "24px" }}>
-                <h2 style={{ fontFamily: "'Syne', sans-serif", fontSize: "20px", fontWeight: 800, marginBottom: "8px" }}>Decision Brief Generator</h2>
+                <h2 style={{ fontFamily: "'Syne', sans-serif", fontSize: "20px", fontWeight: 800, marginBottom: "8px" }}>Report</h2>
                 <p style={{ color: "#8892b0", fontSize: "13px" }}>LUMIQ generates executive-grade decision briefs via Groq — your data becomes a story that drives action.</p>
               </div>
               <div style={{ display: "flex", gap: "10px", marginBottom: "20px", alignItems: "center", flexWrap: "wrap" }}>
@@ -1906,7 +1906,7 @@ Provide a short "Executive Summary" paragraph, then a "Key Findings" bulleted li
           {activeTab === "scenario" && (
             <div style={{ maxWidth: "780px", margin: "0 auto", animation: "fadeSlide 0.3s ease" }}>
               <div style={{ marginBottom: "24px" }}>
-                <h2 style={{ fontFamily: "'Syne', sans-serif", fontSize: "20px", fontWeight: 800, marginBottom: "8px" }}>Scenario Forge</h2>
+                <h2 style={{ fontFamily: "'Syne', sans-serif", fontSize: "20px", fontWeight: 800, marginBottom: "8px" }}>What-if</h2>
                 <p style={{ color: "#8892b0", fontSize: "13px" }}>Ask any question about your data, or describe a what-if scenario. Oracle reasons from your dataset summary — it does not invent probabilities.</p>
               </div>
               <div className="glass-card" style={{ padding: "24px", marginBottom: "20px" }}>
@@ -1948,7 +1948,7 @@ Provide a short "Executive Summary" paragraph, then a "Key Findings" bulleted li
             <div style={{ maxWidth: "900px", margin: "0 auto", animation: "fadeSlide 0.3s ease" }}>
               <div style={{ marginBottom: "24px", display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
                 <div>
-                  <h2 style={{ fontFamily: "'Syne', sans-serif", fontSize: "20px", fontWeight: 800, marginBottom: "8px" }}>AI Data Lab</h2>
+                  <h2 style={{ fontFamily: "'Syne', sans-serif", fontSize: "20px", fontWeight: 800, marginBottom: "8px" }}>Data health</h2>
                   <p style={{ color: "#8892b0", fontSize: "13px" }}>Deep statistical analysis and Groq-powered interpretations.</p>
                 </div>
                 <button className="btn-primary" onClick={runDeepDive} disabled={labLoading || !ds}>
@@ -2013,7 +2013,7 @@ Provide a short "Executive Summary" paragraph, then a "Key Findings" bulleted li
             <div style={{ animation: "fadeSlide 0.3s ease" }}>
               <div style={{ marginBottom: "24px" }}>
                 <h2 style={{ fontFamily: "'Syne', sans-serif", fontSize: "22px", fontWeight: 800, marginBottom: "8px", display: "flex", alignItems: "center", gap: "10px" }}>
-                  🧬 Data DNA
+                  🧬 Column details
                   <span className="badge badge-green" style={{ fontSize: "10px" }}>Column Profiler</span>
                 </h2>
                 <p style={{ color: "#8892b0", fontSize: "13px" }}>Deep statistical X-ray of every column in your dataset.</p>
@@ -2023,7 +2023,7 @@ Provide a short "Executive Summary" paragraph, then a "Key Findings" bulleted li
                 <div style={{ textAlign: "center", padding: "80px 20px" }}>
                   <div style={{ fontSize: "48px", marginBottom: "16px" }}>🧬</div>
                   <h3 style={{ fontFamily: "'Syne', sans-serif", fontSize: "22px", marginBottom: "10px" }}>Select a Dataset</h3>
-                  <p style={{ color: "#8892b0", fontSize: "14px" }}>Choose a dataset from the sidebar to see its DNA profile</p>
+                  <p style={{ color: "#8892b0", fontSize: "14px" }}>Choose a dataset from the sidebar to see its column details</p>
                 </div>
               ) : (
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: "16px" }}>
@@ -2112,7 +2112,7 @@ Provide a short "Executive Summary" paragraph, then a "Key Findings" bulleted li
           {activeTab === "data" && (
             <div style={{ maxWidth: "780px", margin: "0 auto", animation: "fadeSlide 0.3s ease" }}>
               <div style={{ marginBottom: "24px" }}>
-                <h2 style={{ fontFamily: "'Syne', sans-serif", fontSize: "20px", fontWeight: 800, marginBottom: "8px" }}>Data Manager</h2>
+                <h2 style={{ fontFamily: "'Syne', sans-serif", fontSize: "20px", fontWeight: 800, marginBottom: "8px" }}>Files</h2>
                 <p style={{ color: "#8892b0", fontSize: "13px" }}>Upload your own CSV or choose from sample datasets</p>
               </div>
               <div className="upload-zone" style={{ marginBottom: "24px" }} onClick={() => fileInputRef.current?.click()}>
