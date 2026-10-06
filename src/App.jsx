@@ -31,7 +31,7 @@ import {
   exampleQuestions,
 } from "./ai/oraclePlanner.js";
 import { collectCandidates, verifyNumbers } from "./ai/numberCheck.js";
-import { computeInsights } from "./engine/insights.js";
+import { computeInsights, forecastTimeColumn, forecastSeries } from "./engine/insights.js";
 
 // ============================================================
 // LUMIQ — Luminous Intelligence Queries (Groq Edition)
@@ -1019,6 +1019,10 @@ Rules:
   // so the AI filter and search change them too.
   const insights = useMemo(() => computeInsights(ds, processedData), [ds, processedData]);
 
+  // Forecast only exists when the dataset has a time column with at
+  // least 6 points (same detection as the insights).
+  const forecastTime = useMemo(() => forecastTimeColumn(ds), [ds]);
+
   const totalPages = Math.ceil((processedData?.length || 0) / rowsPerPage);
   const paginatedData = processedData.slice(pageIdx * rowsPerPage, (pageIdx + 1) * rowsPerPage);
 
@@ -1488,31 +1492,47 @@ Provide a short "Executive Summary" paragraph, then a "Key Findings" bulleted li
                         <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
                           <select value={metric} onChange={(e) => setSelectedMetric(e.target.value)}>{numericCols.map((c) => <option key={c} value={c}>{c}</option>)}</select>
                           <select value={chartType} onChange={(e) => setChartType(e.target.value)}><option value="bar">Bar</option><option value="line">Line</option><option value="area">Area</option></select>
-                          <button
-                            className={forecastEnabled ? "btn-primary" : "btn-ghost"}
-                            style={{ fontSize: "11px", padding: "5px 12px", display: "flex", alignItems: "center", gap: "4px" }}
-                            onClick={() => {
-                              const next = !forecastEnabled;
-                              setForecastEnabled(next);
-                              if (next) {
-                                // Blank cells are skipped, not fed in as zeros
-                                const rawVals = numericValues(processedData.map(d => d[metric]));
-                                const reg = calcLinearRegression(rawVals);
-                                runForecast(metric, reg);
-                              } else {
-                                forecastAbortRef.current?.abort();
-                                setForecastNarrative("");
-                              }
-                            }}
-                          >
-                            🔮 {forecastEnabled ? "Forecast ON" : "Forecast"}
-                          </button>
+                          {forecastTime ? (
+                            <button
+                              className={forecastEnabled ? "btn-primary" : "btn-ghost"}
+                              style={{ fontSize: "11px", padding: "5px 12px", display: "flex", alignItems: "center", gap: "4px" }}
+                              onClick={() => {
+                                const next = !forecastEnabled;
+                                setForecastEnabled(next);
+                                if (next) {
+                                  // Points in time order (never table order);
+                                  // blank cells are skipped, not fed in as zeros
+                                  const rawVals = forecastSeries(ds, processedData, metric) || [];
+                                  const reg = calcLinearRegression(rawVals);
+                                  runForecast(metric, reg);
+                                } else {
+                                  forecastAbortRef.current?.abort();
+                                  setForecastNarrative("");
+                                }
+                              }}
+                            >
+                              🔮 {forecastEnabled ? "Forecast ON" : "Forecast"}
+                            </button>
+                          ) : (
+                            <button
+                              className="btn-ghost"
+                              disabled
+                              title="Forecast needs a date or month column"
+                              style={{ fontSize: "11px", padding: "5px 12px", opacity: 0.4, cursor: "default" }}
+                            >
+                              🔮 Forecast
+                            </button>
+                          )}
                         </div>
                       </div>
                       <div style={{ position: "relative", height: "260px" }}>
                         {(() => {
-                          // Rows with a blank metric are skipped, never charted as 0
-                          const rawVals = numericValues(processedData.map((d) => d[metric]));
+                          // Rows with a blank metric are skipped, never charted
+                          // as 0. With Forecast on, the series follows the time
+                          // column — sorting the table cannot change it.
+                          const rawVals = forecastEnabled && forecastTime
+                            ? (forecastSeries(ds, processedData, metric) || [])
+                            : numericValues(processedData.map((d) => d[metric]));
                           const vals = downsample(rawVals, 60);
                           const regression = forecastEnabled ? calcLinearRegression(rawVals) : null;
                           const forecastVals = regression ? regression.forecast : [];
