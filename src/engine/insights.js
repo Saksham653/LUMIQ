@@ -9,6 +9,7 @@
 //   on small files without the average being dragged by the outlier.
 
 import { runPlan } from "./runPlan.js";
+import { FORECAST_MIN_POINTS } from "./forecast.js";
 import { numericColumns } from "../data/dataset.js";
 import { aggregationRule, formatCell } from "../data/columnTypes.js";
 import { sum, mean, median, numericEntries, numericValues, isBlank } from "../lib/stats.js";
@@ -59,7 +60,6 @@ export function detectTimeColumn(ds) {
   return candidates[0] || null;
 }
 
-const FORECAST_MIN_POINTS = 6;
 
 // Forecast eligibility shares the insights' time detection: the
 // dataset needs a time column holding at least 6 distinct points.

@@ -1,11 +1,15 @@
 import { fmtNum, fitLabel } from "../lib/format.js";
-import { downsample, calcLinearRegression } from "../lib/analysis.js";
+import { downsample } from "../lib/analysis.js";
+import { buildForecast } from "../engine/forecast.js";
 import { chartSeries } from "../engine/chartSeries.js";
 
 // The Overview's main visualization card: metric and chart-type
 // selectors, the Forecast toggle, the SVG chart and the forecast
 // narrative box. Moved verbatim from App.jsx.
 export default function MainChart({ ds, processedData, numericCols, metric, setSelectedMetric, chartType, setChartType, forecastTime, forecastEnabled, setForecastEnabled, forecastNarrative, setForecastNarrative, forecastLoading, runForecast, forecastAbortRef }) {
+  // The self-check shown under the chart (recomputed cheaply here so
+  // the narrative box outside the SVG closure can read it)
+  const check = forecastEnabled ? buildForecast(chartSeries(ds, processedData, metric, { timeOrdered: !!forecastTime }).values) : null;
   return (
     <div className="glass-card" style={{ padding: "24px" }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "20px" }}>
@@ -23,9 +27,8 @@ export default function MainChart({ ds, processedData, numericCols, metric, setS
                 if (next) {
                   // Points in time order (never table order);
                   // blank cells are skipped, not fed in as zeros
-                  const rawVals = chartSeries(ds, processedData, metric, { timeOrdered: true }).values;
-                  const reg = calcLinearRegression(rawVals);
-                  runForecast(metric, reg);
+                  const fc = buildForecast(chartSeries(ds, processedData, metric, { timeOrdered: true }).values);
+                  runForecast(metric, fc);
                 } else {
                   forecastAbortRef.current?.abort();
                   setForecastNarrative("");
@@ -38,7 +41,7 @@ export default function MainChart({ ds, processedData, numericCols, metric, setS
             <button
               className="btn-ghost"
               disabled
-              title="Forecast needs a date or month column"
+              title="Forecast needs a date or month column with at least 8 points"
               style={{ fontSize: "11px", padding: "5px 12px", opacity: 0.4, cursor: "default" }}
             >
               🔮 Forecast
@@ -54,12 +57,12 @@ export default function MainChart({ ds, processedData, numericCols, metric, setS
           const series = chartSeries(ds, processedData, metric, { timeOrdered: forecastEnabled && !!forecastTime });
           const rawVals = series.values;
           const vals = downsample(rawVals, 60);
-          const regression = forecastEnabled ? calcLinearRegression(rawVals) : null;
-          const forecastVals = regression ? regression.forecast : [];
+          const regression = forecastEnabled ? buildForecast(rawVals) : null;
+          const forecastVals = regression?.ok && !regression.tooIrregular ? regression.forecast : [];
           const allVals = forecastEnabled ? [...vals, ...forecastVals] : vals;
           let globalMax = -Infinity, globalMin = Infinity;
           for (const v of allVals) { if (v > globalMax) globalMax = v; if (v < globalMin) globalMin = v; }
-          if (forecastEnabled && regression) {
+          if (forecastEnabled && regression?.ok && !regression.tooIrregular) {
             for (let i = 0; i < forecastVals.length; i++) {
               const upper = forecastVals[i] + regression.confidence[i];
               const lower = forecastVals[i] - regression.confidence[i];
@@ -200,6 +203,12 @@ export default function MainChart({ ds, processedData, numericCols, metric, setS
       {/* Forecast Narrative */}
       {forecastEnabled && (
         <div style={{ marginTop: "16px", padding: "14px", background: "#0a0f22", borderRadius: "10px", border: "1px solid #FFB62744" }}>
+          {check?.ok && !check.tooIrregular && (
+            <p style={{ fontSize: "12px", color: "#8892b0", marginBottom: "6px" }}>Checked on the last {check.holdoutPoints} points: off by about {check.errorPct}%.</p>
+          )}
+          {check?.ok && check.tooIrregular && (
+            <p style={{ fontSize: "12px", color: "#FFB627", marginBottom: "6px" }}>This data is too irregular for a reliable forecast — on the last {check.holdoutPoints} points the trendline was off by about {check.errorPct}%.</p>
+          )}
           <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
             <span style={{ fontSize: "16px" }}>🔮</span>
             <span style={{ fontFamily: "'Syne', sans-serif", fontWeight: 700, fontSize: "13px" }}>Forecast</span>
