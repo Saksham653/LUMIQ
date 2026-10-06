@@ -55,6 +55,9 @@ import ReportScreen from "./screens/ReportScreen.jsx";
 import { useNarrative } from "./hooks/useNarrative.js";
 import AskScreen from "./screens/AskScreen.jsx";
 import { useOracleChat } from "./hooks/useOracleChat.js";
+import OverviewScreen from "./screens/OverviewScreen.jsx";
+import { useNlFilter } from "./hooks/useNlFilter.js";
+import { useForecast } from "./hooks/useForecast.js";
 
 // ============================================================
 // LUMIQ — Luminous Intelligence Queries (Groq Edition)
@@ -287,20 +290,10 @@ const AppShell = ({
   const [pageIdx, setPageIdx] = useState(0);
   const rowsPerPage = 10;
 
-  // AI Data Querying State
-  const [nlFilterQuery, setNlFilterQuery] = useState("");
-  const [nlFilterLoading, setNlFilterLoading] = useState(false);
-  const [nlFilterError, setNlFilterError] = useState("");
-  const [activeNlFilter, setActiveNlFilter] = useState(null);
-
-  // Crystal Ball Forecasting State
-  const [forecastEnabled, setForecastEnabled] = useState(false);
-  const [forecastNarrative, setForecastNarrative] = useState("");
-  const [forecastLoading, setForecastLoading] = useState(false);
-
-  // In-flight AI requests (F5): the Stop buttons abort these, and a
-  // failed Oracle question can be retried.
-  const forecastAbortRef = useRef(null);
+  // AI filter + Forecast state and runners (hooks keep them at shell
+  // level so they survive tab switches)
+  const nlFilter = useNlFilter({ apiKey, ds, setPageIdx });
+  const forecast = useForecast({ apiKey });
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -310,104 +303,12 @@ const AppShell = ({
     setSortConfig(null);
     setSearchQuery("");
     setPageIdx(0);
-    setNlFilterQuery("");
-    setNlFilterError("");
-    setActiveNlFilter(null);
-    setForecastEnabled(false);
-    setForecastNarrative("");
+    nlFilter.setNlFilterQuery("");
+    nlFilter.setNlFilterError("");
+    nlFilter.setActiveNlFilter(null);
+    forecast.setForecastEnabled(false);
+    forecast.setForecastNarrative("");
   }, [activeDataset]);
-
-  const runForecast = async (metricName, regression) => {
-    forecastAbortRef.current?.abort();
-    const controller = new AbortController();
-    forecastAbortRef.current = controller;
-    setForecastLoading(true);
-    setForecastNarrative("");
-    if (!apiKey || apiKey === "demo") {
-      setForecastNarrative(`📊 Trend Analysis: The metric "${metricName}" shows a ${regression.slope > 0 ? "positive" : "negative"} trend with a slope of ${regression.slope.toFixed(2)} per period. R² = ${regression.r2.toFixed(3)} (${regression.r2 > 0.7 ? "strong" : regression.r2 > 0.4 ? "moderate" : "weak"} fit). Forecast: next 5 values projected at ${regression.forecast.map(f => fmtNum(f)).join(", ")}. Connect a Groq API key for deeper AI analysis.`);
-      setForecastLoading(false);
-      return;
-    }
-    try {
-      const prompt = `You are a data forecasting analyst. Analyze this trend:
-Metric: ${metricName}
-Linear Regression: slope=${regression.slope.toFixed(4)}, intercept=${regression.intercept.toFixed(2)}, R²=${regression.r2.toFixed(4)}
-Residual Std Dev: ${regression.residualStd.toFixed(2)}
-Next 5 forecasted values: ${regression.forecast.map(f => f.toFixed(2)).join(", ")}
-
-Write a concise 3-4 sentence forecast narrative. Include: trend direction and strength, confidence level based on R², specific predicted values, and one business recommendation. Be direct and use actual numbers.`;
-
-      await callGroq(apiKey, [{ role: "user", content: prompt }], (text) => {
-        setForecastNarrative(text);
-      }, { signal: controller.signal });
-    } catch (e) {
-      if (forecastAbortRef.current === controller && !e.aborted) {
-        setForecastNarrative("Could not generate the forecast narrative: " + e.message + " Toggle Forecast off and on to retry.");
-      }
-    }
-    if (forecastAbortRef.current === controller) setForecastLoading(false);
-  };
-
-  const applyNlFilter = async () => {
-    if (!nlFilterQuery.trim() || nlFilterLoading) return;
-    if (!apiKey || apiKey === "demo") return; // the KeyNudge under the bar explains
-    setNlFilterLoading(true);
-    setNlFilterError("");
-
-    try {
-      const columnHints = ds.columns
-        .map((c) => `${c} (${ds.columnTypes?.[c]?.type || "text"})`)
-        .join(", ");
-      const prompt = `You translate a user's request into a JSON filter plan for a data table.
-Columns: ${columnHints}
-User request: "${nlFilterQuery}"
-
-Reply with ONLY a JSON object, no markdown and no explanations, in exactly this shape:
-{"logic":"and","conditions":[{"column":"<column name>","action":"<action>","value":<value>}]}
-
-Allowed actions: ${FILTER_ACTIONS.join(", ")}.
-Rules:
-- "logic" is "and" or "or".
-- greater_than and less_than take a number. between takes [low, high]. is_one_of takes an array of values. is_empty takes no value.
-- Use only the listed column names, exactly as written.
-- If the request cannot be expressed with these actions, reply {"error":"<short reason>"} instead.`;
-
-      // temperature 0: a filter plan should be deterministic JSON
-      const reply = await callGroq(apiKey, [{ role: "user", content: prompt }], () => { }, { temperature: 0 });
-
-      // The reply is data, never code: parse it as JSON and check every
-      // column and action against the real dataset before using it.
-      const parsed = parseFilterPlanReply(reply);
-      if (!parsed.ok) {
-        setNlFilterError(parsed.error);
-        return;
-      }
-      const checked = validateFilterPlan(parsed.raw, ds.columns);
-      if (!checked.ok) {
-        setNlFilterError(`Could not apply this filter: ${checked.error}`);
-        return;
-      }
-
-      setActiveNlFilter({
-        query: nlFilterQuery,
-        plan: checked.plan,
-        description: describeFilterPlan(checked.plan),
-      });
-      setPageIdx(0);
-      setNlFilterQuery("");
-    } catch (e) {
-      setNlFilterError(e?.message || "The AI filter request failed.");
-      console.error("NL Filter Error:", e);
-    } finally {
-      setNlFilterLoading(false);
-    }
-  };
-
-  const clearNlFilter = () => {
-    setActiveNlFilter(null);
-    setNlFilterError("");
-    setPageIdx(0);
-  };
 
   // Compute filtered and sorted data
   const processedData = useMemo(() => {
@@ -415,8 +316,8 @@ Rules:
     let result = ds.data;
 
     // AI Natural Language Filter — a validated plan, never model code
-    if (activeNlFilter && activeNlFilter.plan) {
-      result = applyFilterPlan(result, activeNlFilter.plan);
+    if (nlFilter.activeNlFilter && nlFilter.activeNlFilter.plan) {
+      result = applyFilterPlan(result, nlFilter.activeNlFilter.plan);
     }
 
     // Fast text search
@@ -438,7 +339,7 @@ Rules:
       });
     }
     return result;
-  }, [ds, sortConfig, searchQuery, activeNlFilter]);
+  }, [ds, sortConfig, searchQuery, nlFilter.activeNlFilter]);
 
   // Auto Insights run on the filtered rows (engine + robust stats),
   // so the AI filter and search change them too.
@@ -547,408 +448,7 @@ Rules:
         </div>
 
         <div style={{ padding: "24px" }}>
-          {activeTab === "canvas" && (
-            <div style={{ animation: "fadeSlide 0.3s ease" }}>
-              {!ds ? (
-                <div style={{ textAlign: "center", padding: "80px 20px" }}>
-                  <div style={{ fontSize: "48px", marginBottom: "16px" }}>⬡</div>
-                  <h3 style={{ fontFamily: "'Syne', sans-serif", fontSize: "22px", marginBottom: "10px" }}>Select a Dataset</h3>
-                  <p style={{ color: "#8892b0", fontSize: "14px" }}>Choose a sample dataset from the sidebar or upload your own CSV in Files</p>
-                </div>
-              ) : (
-                <>
-                  {/* AI Natural Language Filter Bar */}
-                  <div className="glass-card" style={{ padding: "16px 24px", marginBottom: "24px", borderLeft: "3px solid #7B4FE8" }}>
-                    <div style={{ display: "flex", gap: "12px", alignItems: "flex-start" }}>
-                      <div style={{ fontSize: "20px", marginTop: "2px" }}>💬</div>
-                      <div style={{ flex: 1 }}>
-                        <h3 style={{ fontFamily: "'Syne', sans-serif", fontSize: "14px", fontWeight: 700, marginBottom: "8px", display: "flex", alignItems: "center", gap: "8px" }}>
-                          AI Data Filter
-                          <span className="badge badge-violet" style={{ fontSize: "9px" }}>Groq Powered</span>
-                        </h3>
-
-                        <div style={{ display: "flex", gap: "10px" }}>
-                          <input
-                            type="text"
-                            className="oracle-input"
-                            style={{ flex: 1, padding: "10px 14px", fontSize: "13px" }}
-                            placeholder="e.g., 'Show me rows where Revenue is over 1000 and the month is November'"
-                            value={nlFilterQuery}
-                            onChange={(e) => setNlFilterQuery(e.target.value)}
-                            onKeyDown={(e) => e.key === "Enter" && applyNlFilter()}
-                            disabled={nlFilterLoading}
-                          />
-                          <button
-                            className="btn-primary"
-                            style={{ padding: "10px 20px" }}
-                            onClick={applyNlFilter}
-                            disabled={nlFilterLoading || !nlFilterQuery.trim() || !apiKey || apiKey === "demo"}
-                          >
-                            {nlFilterLoading ? "Thinking..." : "Filter"}
-                          </button>
-
-                          {activeNlFilter && (
-                            <button className="btn-ghost" onClick={clearNlFilter}>Clear Filter</button>
-                          )}
-                        </div>
-
-                        {nlFilterError && <div style={{ color: "#FF3C3C", fontSize: "12px", marginTop: "8px" }}>{nlFilterError}</div>}
-                        {(!apiKey || apiKey === "demo") && <div style={{ marginTop: "10px" }}><KeyNudge setPage={setPage} /></div>}
-
-                        {activeNlFilter && (
-                          <div style={{ marginTop: "12px", padding: "10px", background: "#050914", borderRadius: "8px", border: "1px solid #1e2d5c", fontSize: "11px" }}>
-                            <div style={{ color: "#00E5A0", marginBottom: "4px" }}>✓ Filter Applied: "{activeNlFilter.query}"</div>
-                            <div style={{ color: "#8892b0" }}>
-                              <span style={{ color: "#7B4FE8" }}>Showing rows where:</span> {activeNlFilter.description}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "16px", marginBottom: "24px" }}>
-                    <div className="metric-card cyan">
-                      <div style={{ fontSize: "11px", fontFamily: "'DM Mono', monospace", color: "#8892b0", marginBottom: "8px", textTransform: "uppercase" }}>{metricRule === "avg" ? "Average" : "Total"} · {metric}</div>
-                      <div className="stat-number">{formatTileValue(headlineVal, ds.columnTypes?.[metric], metricRule)}</div>
-                      <MiniLineChart data={processedData} yKey={metric} color="#00D4FF" />
-                    </div>
-                    <div className="metric-card gold">
-                      <div style={{ fontSize: "11px", fontFamily: "'DM Mono', monospace", color: "#8892b0", marginBottom: "8px", textTransform: "uppercase" }}>{metricRule === "avg" ? "Median" : "Average"}</div>
-                      <div className="stat-number">{formatTileValue(metricRule === "avg" ? medianVal : avgVal, ds.columnTypes?.[metric], "avg")}</div>
-                      <MiniBarChart data={processedData} xKey={ds.columns[0]} yKey={metric} color="#FFB627" />
-                    </div>
-                    <div className="metric-card violet">
-                      <div style={{ fontSize: "11px", fontFamily: "'DM Mono', monospace", color: "#8892b0", marginBottom: "8px", textTransform: "uppercase" }}>Peak Value</div>
-                      <div className="stat-number">{formatTileValue(maxVal, ds.columnTypes?.[metric], metricRule)}</div>
-                      <div style={{ display: "flex", gap: "8px", marginTop: "10px" }}>
-                        {numericCols.slice(0, 3).map((c, i) => {
-                          // Blank cells are skipped in both average and max
-                          const colVals = processedData.map(r => r[c]);
-                          const colAvg = meanValues(colVals) ?? 0;
-                          const colMax = maxValues(colVals) ?? 0;
-
-                          return (
-                            <DonutChart key={c} value={colAvg} max={colMax} color={["#7B4FE8", "#00D4FF", "#00E5A0"][i]} label={c.length > 10 ? c.slice(0, 8) + "…" : c} />
-                          );
-                        })}
-                      </div>
-
-                    </div>
-                    <div className="metric-card green">
-                      <div style={{ fontSize: "11px", fontFamily: "'DM Mono', monospace", color: "#8892b0", marginBottom: "8px", textTransform: "uppercase" }}>Filtered Rows</div>
-                      <div className="stat-number">{processedData.length} <span style={{ fontSize: "12px", color: "#8892b0", fontWeight: "400" }}>/ {ds.data.length}</span></div>
-                      <div style={{ marginTop: "10px", display: "flex", flexWrap: "wrap", gap: "4px" }}>
-                        {ds.columns.slice(0, 4).map((c) => <span key={c} className="data-pill" style={{ fontSize: "10px" }}>{c}</span>)}
-                        {ds.columns.length > 4 && <span className="data-pill" style={{ fontSize: "10px" }}>+{ds.columns.length - 4}</span>}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 280px", gap: "20px", marginBottom: "24px" }}>
-                    <div className="glass-card" style={{ padding: "24px" }}>
-                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "20px" }}>
-                        <h3 style={{ fontFamily: "'Syne', sans-serif", fontSize: "15px", fontWeight: 700 }}>Visualization</h3>
-                        <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-                          <select value={metric} onChange={(e) => setSelectedMetric(e.target.value)}>{numericCols.map((c) => <option key={c} value={c}>{c}</option>)}</select>
-                          <select value={chartType} onChange={(e) => setChartType(e.target.value)}><option value="bar">Bar</option><option value="line">Line</option><option value="area">Area</option></select>
-                          {forecastTime ? (
-                            <button
-                              className={forecastEnabled ? "btn-primary" : "btn-ghost"}
-                              style={{ fontSize: "11px", padding: "5px 12px", display: "flex", alignItems: "center", gap: "4px" }}
-                              onClick={() => {
-                                const next = !forecastEnabled;
-                                setForecastEnabled(next);
-                                if (next) {
-                                  // Points in time order (never table order);
-                                  // blank cells are skipped, not fed in as zeros
-                                  const rawVals = forecastSeries(ds, processedData, metric) || [];
-                                  const reg = calcLinearRegression(rawVals);
-                                  runForecast(metric, reg);
-                                } else {
-                                  forecastAbortRef.current?.abort();
-                                  setForecastNarrative("");
-                                }
-                              }}
-                            >
-                              🔮 {forecastEnabled ? "Forecast ON" : "Forecast"}
-                            </button>
-                          ) : (
-                            <button
-                              className="btn-ghost"
-                              disabled
-                              title="Forecast needs a date or month column"
-                              style={{ fontSize: "11px", padding: "5px 12px", opacity: 0.4, cursor: "default" }}
-                            >
-                              🔮 Forecast
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                      <div style={{ position: "relative", height: "260px" }}>
-                        {(() => {
-                          // Rows with a blank metric are skipped, never charted
-                          // as 0. With Forecast on, the series follows the time
-                          // column — sorting the table cannot change it.
-                          const rawVals = forecastEnabled && forecastTime
-                            ? (forecastSeries(ds, processedData, metric) || [])
-                            : numericValues(processedData.map((d) => d[metric]));
-                          const vals = downsample(rawVals, 60);
-                          const regression = forecastEnabled ? calcLinearRegression(rawVals) : null;
-                          const forecastVals = regression ? regression.forecast : [];
-                          const allVals = forecastEnabled ? [...vals, ...forecastVals] : vals;
-                          let globalMax = -Infinity, globalMin = Infinity;
-                          for (const v of allVals) { if (v > globalMax) globalMax = v; if (v < globalMin) globalMin = v; }
-                          if (forecastEnabled && regression) {
-                            for (let i = 0; i < forecastVals.length; i++) {
-                              const upper = forecastVals[i] + regression.confidence[i];
-                              const lower = forecastVals[i] - regression.confidence[i];
-                              if (upper > globalMax) globalMax = upper;
-                              if (lower < globalMin) globalMin = lower;
-                            }
-                          }
-                          const maxV = globalMax; const minV = globalMin; const range = maxV - minV || 1;
-                          const padL = 14; const padR = 2; const padT = 5; const padB = 14;
-                          const totalPts = forecastEnabled ? vals.length + forecastVals.length : vals.length;
-                          const w = 120; const chartW = w - padL - padR;
-                          const h = 100; const chartH = h - padT - padB;
-                          const yTicks = 5;
-                          const pts = vals.map((v, i) => `${padL + (i / Math.max(totalPts - 1, 1)) * chartW},${padT + chartH - ((v - minV) / range) * chartH}`).join(" ");
-                          const xLabelCount = Math.min(6, vals.length);
-                          const totalRows = processedData.length;
-
-                          // Forecast points for the dashed line
-                          let forecastPts = "";
-                          let confidenceArea = "";
-                          if (forecastEnabled && forecastVals.length > 0) {
-                            const startIdx = vals.length - 1;
-                            const lastRealPt = `${padL + (startIdx / Math.max(totalPts - 1, 1)) * chartW},${padT + chartH - ((vals[startIdx] - minV) / range) * chartH}`;
-                            const fPts = forecastVals.map((v, i) => {
-                              const idx = vals.length + i;
-                              return `${padL + (idx / Math.max(totalPts - 1, 1)) * chartW},${padT + chartH - ((v - minV) / range) * chartH}`;
-                            });
-                            forecastPts = `${lastRealPt} ${fPts.join(" ")}`;
-
-                            // Confidence band polygon
-                            const upperPts = forecastVals.map((v, i) => {
-                              const idx = vals.length + i;
-                              const upper = v + regression.confidence[i];
-                              return `${padL + (idx / Math.max(totalPts - 1, 1)) * chartW},${padT + chartH - ((upper - minV) / range) * chartH}`;
-                            });
-                            const lowerPts = [...forecastVals].reverse().map((v, i) => {
-                              const origIdx = forecastVals.length - 1 - i;
-                              const idx = vals.length + origIdx;
-                              const lower = v - regression.confidence[origIdx];
-                              return `${padL + (idx / Math.max(totalPts - 1, 1)) * chartW},${padT + chartH - ((lower - minV) / range) * chartH}`;
-                            });
-                            confidenceArea = [...upperPts, ...lowerPts].join(" ");
-                          }
-
-                          return (
-                            <svg viewBox={`0 0 ${w} ${h}`} style={{ width: "100%", height: "100%" }} preserveAspectRatio="xMidYMid meet">
-                              <defs>
-                                <linearGradient id="chart-fill" x1="0" y1="0" x2="0" y2="1">
-                                  <stop offset="0%" stopColor="#00D4FF" stopOpacity="0.35" />
-                                  <stop offset="100%" stopColor="#00D4FF" stopOpacity="0.02" />
-                                </linearGradient>
-                              </defs>
-                              {/* Y-axis grid lines + labels */}
-                              {Array.from({ length: yTicks + 1 }).map((_, i) => {
-                                const frac = i / yTicks;
-                                const yPos = padT + chartH * (1 - frac);
-                                const val = minV + range * frac;
-                                return (
-                                  <g key={i}>
-                                    <line x1={padL} y1={yPos} x2={w - padR} y2={yPos} stroke="#1e2d5c" strokeWidth="0.2" />
-                                    <text x={padL - 1} y={yPos + 1} textAnchor="end" fill="#3d4f7c" fontSize="3" fontFamily="DM Mono">{fmtNum(val)}</text>
-                                  </g>
-                                );
-                              })}
-                              {/* Forecast boundary line */}
-                              {forecastEnabled && vals.length > 0 && (
-                                <line
-                                  x1={padL + ((vals.length - 1) / Math.max(totalPts - 1, 1)) * chartW}
-                                  y1={padT}
-                                  x2={padL + ((vals.length - 1) / Math.max(totalPts - 1, 1)) * chartW}
-                                  y2={padT + chartH}
-                                  stroke="#FFB627"
-                                  strokeWidth="0.3"
-                                  strokeDasharray="1,1"
-                                />
-                              )}
-                              {/* Confidence band */}
-                              {forecastEnabled && confidenceArea && (
-                                <polygon points={confidenceArea} fill="#7B4FE8" opacity="0.15" />
-                              )}
-                              {/* Chart data */}
-                              {chartType === "bar" ? vals.map((v, i) => {
-                                const bH = ((v - minV) / range) * chartH;
-                                const gap = 0.4;
-                                const bW = Math.max(chartW / totalPts - gap, 0.5);
-                                const x = padL + (i / totalPts) * chartW + gap / 2;
-                                return <rect key={i} x={x} y={padT + chartH - bH} width={bW} height={bH} fill="#00D4FF" opacity={0.65 + (i / vals.length) * 0.35} rx="0.3" />;
-                              }) : (
-                                <>
-                                  <polyline points={`${padL},${padT + chartH} ${pts} ${padL + ((vals.length - 1) / Math.max(totalPts - 1, 1)) * chartW},${padT + chartH}`} fill={chartType === "area" ? "url(#chart-fill)" : "none"} stroke="none" />
-                                  <polyline points={pts} fill="none" stroke="#00D4FF" strokeWidth="0.8" strokeLinecap="round" strokeLinejoin="round" />
-                                  {vals.length <= 80 && vals.map((v, i) => {
-                                    const px = padL + (i / Math.max(totalPts - 1, 1)) * chartW;
-                                    const py = padT + chartH - ((v - minV) / range) * chartH;
-                                    return <circle key={i} cx={px} cy={py} r="0.6" fill="#00D4FF" />;
-                                  })}
-                                </>
-                              )}
-                              {/* Forecast dashed line + points */}
-                              {forecastEnabled && forecastPts && (
-                                <>
-                                  <polyline points={forecastPts} fill="none" stroke="#FFB627" strokeWidth="0.8" strokeDasharray="1.5,1" strokeLinecap="round" />
-                                  {forecastVals.map((v, i) => {
-                                    const idx = vals.length + i;
-                                    const px = padL + (idx / Math.max(totalPts - 1, 1)) * chartW;
-                                    const py = padT + chartH - ((v - minV) / range) * chartH;
-                                    return <circle key={`f${i}`} cx={px} cy={py} r="0.8" fill="#FFB627" stroke="#050914" strokeWidth="0.3" />;
-                                  })}
-                                  <text x={w - padR} y={padT + 2} textAnchor="end" fill="#FFB627" fontSize="2.5" fontFamily="DM Mono">
-                                    🔮 Forecast ({forecastVals.length} pts) | R²={regression?.r2.toFixed(2)}
-                                  </text>
-                                </>
-                              )}
-                              {/* Forecast bars */}
-                              {forecastEnabled && chartType === "bar" && forecastVals.map((v, i) => {
-                                const bH = ((v - minV) / range) * chartH;
-                                const gap = 0.4;
-                                const idx = vals.length + i;
-                                const bW = Math.max(chartW / totalPts - gap, 0.5);
-                                const x = padL + (idx / totalPts) * chartW + gap / 2;
-                                return <rect key={`fb${i}`} x={x} y={padT + chartH - bH} width={bW} height={bH} fill="#FFB627" opacity="0.6" rx="0.3" strokeDasharray="1,0.5" stroke="#FFB627" strokeWidth="0.15" />;
-                              })}
-                              {/* X-axis labels */}
-                              {Array.from({ length: xLabelCount }).map((_, i) => {
-                                const dataIdx = Math.floor((i / Math.max(xLabelCount - 1, 1)) * (totalRows - 1));
-                                const px = padL + (i / Math.max(xLabelCount - 1, 1)) * (chartW * (vals.length / totalPts));
-                                const label = totalRows > 100 ? `#${dataIdx + 1}` : String(ds.data[dataIdx]?.[ds.columns[0]] || "").slice(0, 6);
-                                return <text key={i} x={px} y={h - 1} textAnchor="middle" fill="#3d4f7c" fontSize="3" fontFamily="DM Mono">{label}</text>;
-                              })}
-                              {/* Dataset info */}
-                              {totalRows > 60 && <text x={w - padR} y={padT + 4} textAnchor="end" fill="#3d4f7c44" fontSize="3" fontFamily="DM Mono">{totalRows.toLocaleString()} rows (avg per bucket)</text>}
-                            </svg>
-                          );
-                        })()}
-                      </div>
-
-                      {/* Forecast Narrative */}
-                      {forecastEnabled && (
-                        <div style={{ marginTop: "16px", padding: "14px", background: "#0a0f22", borderRadius: "10px", border: "1px solid #FFB62744" }}>
-                          <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
-                            <span style={{ fontSize: "16px" }}>🔮</span>
-                            <span style={{ fontFamily: "'Syne', sans-serif", fontWeight: 700, fontSize: "13px" }}>Forecast</span>
-                            <span className="badge badge-gold" style={{ fontSize: "9px" }}>{forecastLoading ? "Analyzing..." : "AI Insight"}</span>
-                          </div>
-                          <p style={{ fontSize: "12px", color: "#ccd6f6", lineHeight: 1.6 }}>{forecastNarrative || "Generating forecast..."}</p>
-                        </div>
-                      )}
-                    </div>
-                    <div>
-                      <h3 style={{ fontFamily: "'Syne', sans-serif", fontSize: "13px", fontWeight: 700, marginBottom: "12px", color: "#8892b0", textTransform: "uppercase", letterSpacing: "0.5px" }}>Auto Insights</h3>
-                      <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-                        {insights.length > 0 ? insights.map((ins, i) => (
-                          <div key={i} className="insight-card" style={{ animationDelay: `${i * 0.1}s` }}>
-                            <div style={{ display: "flex", alignItems: "flex-start", gap: "10px" }}>
-                              <span style={{ fontSize: "18px" }}>{{ trend_up: "📈", trend_down: "📉", top: "🏆", unusual: "⚠️" }[ins.type] || "✨"}</span>
-                              <div>
-                                <div style={{ fontSize: "12px", fontWeight: 600, fontFamily: "'Syne', sans-serif", marginBottom: "4px" }}>{ins.title}</div>
-                                <p style={{ fontSize: "11px", color: "#8892b0", lineHeight: 1.5 }}>{ins.description}</p>
-                              </div>
-                            </div>
-                          </div>
-                        )) : <div style={{ textAlign: "center", padding: "20px", color: "#3d4f7c", fontSize: "12px" }}>Not enough data for automatic insights</div>}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="glass-card" style={{ padding: "20px" }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
-                      <h3 style={{ fontFamily: "'Syne', sans-serif", fontSize: "14px", fontWeight: 700 }}>Interactive Data Explorer</h3>
-                      <input
-                        type="text"
-                        placeholder="Search dataset..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        style={{ padding: "6px 12px", fontSize: "12px", width: "200px" }}
-                      />
-                    </div>
-                    <div style={{ overflowX: "auto", minHeight: "300px" }}>
-                      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "12px" }}>
-                        <thead>
-                          <tr>
-                            {ds.columns.map((col) => (
-                              <th
-                                key={col}
-                                onClick={() => handleSort(col)}
-                                style={{ padding: "8px 12px", textAlign: "left", fontFamily: "'DM Mono', monospace", fontSize: "10px", color: "#8892b0", borderBottom: "1px solid #1e2d5c", textTransform: "uppercase", whiteSpace: "nowrap", cursor: "pointer", userSelect: "none" }}
-                              >
-                                {col}
-                                {sortConfig?.key === col && (
-                                  <span style={{ marginLeft: "4px", color: "#00D4FF" }}>
-                                    {sortConfig.dir === 'asc' ? '↑' : '↓'}
-                                  </span>
-                                )}
-                              </th>
-                            ))}
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {paginatedData.length > 0 ? paginatedData.map((row, i) => (
-                            <tr key={i} style={{ borderBottom: "1px solid #1e2d5c11" }}>
-                              {ds.columns.map((col) => (
-                                <td key={col} style={{ padding: "8px 12px", color: typeof row[col] === "number" ? "#00D4FF" : "#ccd6f6", fontFamily: typeof row[col] === "number" ? "'DM Mono', monospace" : "inherit", fontSize: "12px", whiteSpace: "nowrap" }}>
-                                  {formatCell(row[col], ds.columnTypes?.[col])}
-                                </td>
-                              ))}
-                            </tr>
-                          )) : (
-                            <tr>
-                              <td colSpan={ds.columns.length} style={{ textAlign: "center", padding: "40px", color: "#8892b0" }}>
-                                No results found for "{searchQuery}"
-                              </td>
-                            </tr>
-                          )}
-                        </tbody>
-                      </table>
-                    </div>
-
-                    {/* Pagination Controls */}
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "16px", paddingTop: "12px", borderTop: "1px solid #1e2d5c33" }}>
-                      <div style={{ fontSize: "11px", color: "#8892b0" }}>
-                        Showing {paginatedData.length > 0 ? pageIdx * rowsPerPage + 1 : 0} to {Math.min((pageIdx + 1) * rowsPerPage, processedData.length)} of {processedData.length} entries
-                      </div>
-                      <div style={{ display: "flex", gap: "8px" }}>
-                        <button
-                          className="btn-ghost"
-                          style={{ padding: "4px 12px", fontSize: "11px" }}
-                          disabled={pageIdx === 0}
-                          onClick={() => setPageIdx(p => Math.max(0, p - 1))}
-                        >
-                          Previous
-                        </button>
-                        <span style={{ fontSize: "11px", color: "#ccd6f6", display: "flex", alignItems: "center" }}>
-                          Page {pageIdx + 1} of {Math.max(1, totalPages)}
-                        </span>
-                        <button
-                          className="btn-ghost"
-                          style={{ padding: "4px 12px", fontSize: "11px" }}
-                          disabled={pageIdx >= totalPages - 1}
-                          onClick={() => setPageIdx(p => Math.min(totalPages - 1, p + 1))}
-                        >
-                          Next
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </>
-              )}
-            </div>
-          )}
+          {activeTab === "canvas" && <OverviewScreen ds={ds} apiKey={apiKey} setPage={setPage} nlFilter={nlFilter} processedData={processedData} insights={insights} metric={metric} metricRule={metricRule} setSelectedMetric={setSelectedMetric} chartType={chartType} setChartType={setChartType} numericCols={numericCols} headlineVal={headlineVal} avgVal={avgVal} medianVal={medianVal} maxVal={maxVal} forecast={forecast} forecastTime={forecastTime} sortConfig={sortConfig} handleSort={handleSort} searchQuery={searchQuery} setSearchQuery={setSearchQuery} paginatedData={paginatedData} pageIdx={pageIdx} setPageIdx={setPageIdx} totalPages={totalPages} rowsPerPage={rowsPerPage} />}
 
           {activeTab === "oracle" && <AskScreen ds={ds} apiKey={apiKey} setPage={setPage} oracleMessages={oracleMessages} oracleInput={oracleInput} setOracleInput={setOracleInput} oracleLoading={oracleLoading} sendOracleMessage={sendOracleMessage} oracleAbortRef={oracleAbortRef} oracleLastFailed={oracleLastFailed} chatEndRef={chatEndRef} />}
 
