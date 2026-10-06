@@ -4,7 +4,7 @@
 
 <br />
 
-> **Data that talks back.**
+> **Ask your spreadsheet a question in plain words and get an answer you can check.**
 
 <br />
 
@@ -28,137 +28,70 @@
 
 ## ✨ What is LUMIQ?
 
-**LUMIQ** *(Luminous Intelligence Queries)* is a zero-backend, browser-native AI analytics platform that transforms raw datasets into **living, breathing intelligence**. No servers. No database. No bloat. Just your data and a Groq API key — and suddenly your spreadsheets start talking.
+**LUMIQ** is a browser-only data app: drop in a CSV or Excel file and ask questions in plain English. The rule that makes it different: **numbers come from code, words come from AI**. Every figure on screen is calculated in your browser on all of your rows; the AI only decides *what* to calculate and words the result — and every number it states is checked against the real calculation before you see it.
 
-Built on **Groq's fast inference engine** running **Llama 3.3 70B**, LUMIQ streams AI responses directly in the browser. You ask questions in plain English. Oracle streams the answer back as it is generated.
-
-> *Not just charts. Decision intelligence.*
+There is no backend. Your rows never leave your device (see [Privacy](#-privacy)).
 
 <br />
 
 ---
 
-## 🔗 Quick Links
+## 📏 Measured, not promised
 
-| | |
+Every performance or quality claim in this README was measured on this build (Oct 6, 2026 — dev machine, Node 24 / Chromium 153; CI re-runs the same suites on every push):
+
+| Claim | Measured |
 |---|---|
-| 🚀 **Live Application** | [https://lumiq-silk.vercel.app/](https://lumiq-silk.vercel.app/) |
+| Answer accuracy | **23 of 23** hand-computed accuracy cases exactly right (totals, averages, groupings, shares, medians, filters across the 3 samples) |
+| Unverified AI numbers | Always marked — a number the checker cannot match to the calculation gets a visible "not verified" warning |
+| 100,000 × 20 file (12.9 MB) | Load + type detection **1,772 ms** in Node, **1,751–1,889 ms** in Chromium (parsed in a Web Worker — the page never freezes; target was 3,000 ms) |
+| Main bundle | **98.76 kB gzip** (plus a 26.9 kB worker chunk; the Excel reader is its own 163 kB gzip chunk fetched only when you open an Excel file) |
+| Accessibility | Lighthouse accessibility **100** on the production preview; axe reports **0 serious/critical** violations on all 8 screens; AA contrast measured in-browser on every screen |
+| Tests | **252 unit tests + 6 Playwright end-to-end flows**, run in CI on every push |
+
+Reproduce them yourself: `npm test`, `npm run build && node scripts/perf.mjs`, `npm run test:e2e`.
 
 <br />
 
 ---
 
-## 🌟 Feature Showcase
+## 🌟 What each screen does
 
-### ⬡ Overview — Your Data, Alive
+### ⬡ Overview
+Metric tiles (totals summed, rate-like columns averaged — a profit margin is never "totalled"), a hand-drawn SVG chart with PNG export, honest auto-insights computed on the filtered rows, and a windowed data table that keeps ~30 DOM rows even with 100,000 loaded. The AI Data Filter turns "revenue over 300,000 in North" into a validated filter plan — never code — and applies it to everything at once.
 
-The Overview is LUMIQ's command center. The moment you load a dataset, it transforms into a real-time analytics dashboard:
+### 🗣️ Ask
+The proof-flow screen. Your question goes out with a **schema summary only** (column names, types, per-column stats — no rows). The AI returns a small calculation plan; LUMIQ validates it against your real columns, runs it on **every row in your browser**, streams the AI's wording of the result, and marks any number that doesn't match the result table as *not verified*. **Show the work** lists the steps, the result table and "Based on N of M rows"; **What was sent** shows the exact text that left your browser. Follow-ups ("and by category?") modify the previous plan; **New topic** starts fresh.
 
-- **Smart KPI tiles** — Total, Average, Peak Value with sparklines and donut breakdowns
-- **Interactive charts** — Bar, Line, and Area views with adaptive downsampling for massive datasets
-- **Sortable, searchable data table** with pagination
-- **Auto-Insights engine** — detects statistically significant trends (>20% change) automatically, no prompting needed
+### 📄 Report
+One printable page. Every headline number is computed by the engine and carries a numbered footnote saying exactly how ("Sum of revenue across all 12 rows (blank cells skipped)."). With a key, an optional AI summary is worded only from those footnoted numbers and re-checked by the number checker. **🖨 Print or save as PDF** uses a real A4 print stylesheet.
 
----
+### 🌐 What-if
+A calculator, not a guess. Pick a measure, a change ("+10%") and optionally a group ("only North"); the browser recalculates before/after/change for every group and the total. No invented probabilities — with a key, "Explain this" lets the AI word the already-calculated table.
 
-### 🔮 Forecast — Trend Projections
+### 🔮 Forecast (on the Overview chart)
+Only offered when the data has a real time column with at least 8 points. It trains on all but the last 3 points, tests itself on those 3, and tells you the result in plain words ("Checked on the last 3 points: off by about 12%"). More than 30% off → it says the data is too irregular and refuses, with no AI call. The band widens the further out it projects.
 
-Toggle the Forecast overlay on any metric and watch LUMIQ project the future:
+### 🔬 Data health
+One screen, no key needed: a 100-point score where **every lost point is listed in plain words** ("6 of 100 cells in revenue are empty", "1 unusual value in avg_order_value"), per-column profile cards, and a deep dive with a correlation heatmap and a median-based unusual-value scatter. Honest by design — even our own Sales sample scores 98, not 100.
 
-- **Linear regression trendlines** with confidence bands rendered directly on the chart
-- **R² goodness-of-fit** displayed inline so you know exactly how much to trust the forecast
-- **Groq-generated forecast narrative** — Oracle explains in plain English what the numbers predict, what it means for your business, and what to watch out for
+### 🗃️ Files
+Drop a **CSV or Excel** file. Big files parse in a Web Worker with a live row-count progress bar and a Cancel button. Excel (.xlsx/.xls, SheetJS pinned from the official CDN build) gets a sheet picker, real dates instead of serial numbers, and "Column 3" names for blank headers. Every upload shows a preview first — row/column counts, detected types you can override, plain warnings — and nothing loads until you confirm. Your datasets, Ask history and open screen persist in the browser (IndexedDB); one button deletes everything.
 
----
+### ♿ Accessibility
+Everything clickable is a real button, reachable by keyboard with a visible focus ring. Every chart has a **"View as table"** toggle and a text description. Text is at least 12 px, contrast meets WCAG AA, animations stop under `prefers-reduced-motion`, and the layout works at 360 px with no sideways scrolling.
 
-### 💬 AI Data Filter — Natural Language Querying
-
-Forget filter dropdowns. Just *describe* what you want:
-
-```
-"Show me rows where revenue is over 300,000 and the region is North"
-"Find all months with profit margin below 25%"
-"Give me the top performing categories only"
-```
-
-LUMIQ sends your request and the column names to Groq, which returns a structured filter plan — never code. LUMIQ validates the plan against your real columns (anything else is rejected with a plain error), applies it instantly to every chart, metric, and table on the Overview, and shows the applied filter in plain words, e.g. *revenue is more than 300,000 and region is "North"*.
+<br />
 
 ---
 
-### 🗣️ Ask — Answers With Proof
+## 🔒 Privacy
 
-Ask questions in plain English. The AI never sees your rows and never does the maths:
-
-- Your question goes out with a **schema summary** only — column names, types and per-column statistics computed on all rows
-- The AI returns a **calculation plan**; LUMIQ validates it against your real columns and runs it on every row **in your browser**
-- The AI words the result, streamed in real time — and every number it states is **checked against the result table**; anything unmatched is marked *not verified*
-- **Show the work** under each answer lists the plain-English steps, the result table and "Based on N of M rows"; **What was sent** shows the exact text that left the browser
-- **Follow-up questions** work: "and by category?" or "only for North" modifies your previous question''s plan (the context carries the question, plan and steps — never rows); **New topic** starts fresh
-- Answers render with **clean formatting** — bold, lists and tables instead of raw `**` marks — and verified-number markers survive the formatting
-
----
-
-### 📄 Report — One-Click Decision Briefs
-
-One click. One executive-grade report. Oracle structures its analysis into:
-
-```
-HEADLINE        → The single most important thing
-WHAT HAPPENED   → Real numbers, real trends  
-WHY IT MATTERS  → Business implication
-THE RISK        → What could go wrong
-RECOMMENDED ACTION → One concrete next step
-```
-
-Copy to clipboard or regenerate with a fresh perspective.
-
----
-
-### 🌐 What-if — Scenario Cards
-
-Ask anything — hypothetical or factual. Oracle returns structured scenario cards:
-
-- **What-if scenarios** → Optimistic / Base Case / Pessimistic cards
-- **Direct questions** → Overview / Key Insight / What To Watch
-- Every scenario includes a key driver and an impact indicator — no invented probabilities
-- Grounded in a summary of all your rows; raw rows are never sent to the AI
-
----
-
-### 🔬 Data health — Deep Statistical Analysis
-
-Data health runs a full statistical teardown and sends it to Groq for interpretation:
-
-- **Pearson Correlation Heatmap** — a full N×N matrix showing how every numeric column relates to every other. Positive correlations in cyan. Negative in red.
-- **Z-Score Anomaly Detection** — flags outliers with Z-score > 2.8 and plots them as a scatter chart with anomalies highlighted in red
-- **AI Interpretation** — Groq reads the raw statistics and writes an executive summary with plain-English business findings
-
----
-
-### 🧬 Column details — Column Profiler
-
-A deep X-ray of every column in your dataset:
-
-- **Type detection** — Numeric vs Categorical, auto-detected
-- **Completeness** — non-null ratio, unique value count
-- **Statistics** — min, max, mean, median, std deviation for numeric columns
-- **Top Values** — frequency ranking for categorical columns
-- **Distribution Histogram** — 10-bin visual distribution per column
-- **Data Quality Score** — 0–100 composite score based on completeness, variety, and coverage
-- Animated donut ring for every column's quality score
-
----
-
-### 🗃️ Files — Upload Your Own Data
-
-Drop any CSV file and LUMIQ handles the rest:
-
-- **Upload preview before loading**: row and column counts, the first 10 rows, each column''s detected type with a dropdown to change it, and plain warnings ("2 empty cells in revenue")
-- Proper CSV parsing (papaparse): quoted commas, CRLF line endings, a UTF-8 BOM, quoted newlines; drag and drop works
-- Column types (number, percent, money, date, text) decided from **all rows**, never the first row; `1,20,000`, `₹1,200` and `12.5%` parse as numbers and blanks stay blank
-- Immediately activates it as a live dataset across all 7 features
-- **Your work stays on this device between visits**: datasets, per-dataset Ask history and your selected screen are saved in the browser (IndexedDB); keep several files and switch between them; "Delete everything stored on this device" wipes it all, including the remembered key
-- Three curated sample datasets included: **E-Commerce Sales**, **Marketing Campaign**, **Customer Churn**
+- **Your rows stay on this device.** Files are parsed, stored (IndexedDB) and calculated entirely in your browser. There is no server.
+- **What is sent to the AI** (only when you connect your own Groq key, and only for AI features): your question, the column names/types with small per-column summaries, the validated calculation plan, and the small result table the engine produced. Never the rows. Every Ask answer has a **"What was sent"** link showing the exact text that left the browser.
+- **Your key** is held in memory for the session; "Remember on this device" (opt-in) stores it in your browser's localStorage. It is sent only to `api.groq.com` — the Content-Security-Policy forbids the page from talking to anywhere else.
+- **Delete everything stored on this device** (on Files) removes saved datasets, Ask history and the remembered key in one click.
+- No key? Demo Mode keeps working: every chart, tile, insight, health score, what-if calculation and report number is computed locally.
 
 <br />
 
@@ -167,15 +100,15 @@ Drop any CSV file and LUMIQ handles the rest:
 ## ⚡ Tech Stack
 
 ```
-Frontend    →  React 18 + Vite 5   (runtime deps: React + papaparse)
-AI Engine   →  Groq API            (Llama 3.3 70B, streaming)
-Charts      →  Pure SVG            (hand-crafted, no chart library)
-Styling     →  Vanilla CSS-in-JS   (no Tailwind, no styled-components)
-Fonts       →  Syne + DM Mono + DM Sans (Google Fonts)
-Deployment  →  Vercel only (production from main, previews from branches)
+Frontend    →  React 18 + Vite 5
+Runtime deps→  react, react-dom, papaparse, xlsx (SheetJS 0.20.3, pinned
+               from cdn.sheetjs.com, loaded only when an Excel file is opened)
+AI          →  Groq API (Llama 3.3 70B, streaming), your own key, browser → Groq directly
+Charts      →  Hand-written SVG (no chart library)
+Workers     →  Parsing, type detection and plan running run off the main thread
+Tests       →  Vitest (252) + Playwright (6 flows, Chromium, Groq mocked)
+Deployment  →  Vercel only (production from main, previews from branches), CSP in vercel.json
 ```
-
-Zero external UI libraries. Every chart — bar, line, area, donut, heatmap, scatter — is handwritten SVG. That's intentional. It keeps the bundle tiny and the visuals perfectly on-brand.
 
 <br />
 
@@ -186,45 +119,32 @@ Zero external UI libraries. Every chart — bar, line, area, donut, heatmap, sca
 ### Prerequisites
 
 - Node.js 18+
-- A free Groq API key from [console.groq.com](https://console.groq.com)
+- Optional: a free Groq API key from [console.groq.com](https://console.groq.com) for the AI features
 
 ### Run Locally
 
 ```bash
-# Clone the repo
 git clone https://github.com/saksham653/LUMIQ.git
 cd LUMIQ
-
-# Install dependencies
 npm install
-
-# Start dev server
 npm run dev
 ```
 
-Open `http://localhost:3000` (the dev server port set in `vite.config.js`) and enter your Groq API key when prompted.
+Open `http://localhost:3000` (the dev server port set in `vite.config.js`). Try the demo without a key, or connect yours.
 
-### Build for Production
+### Checks
 
 ```bash
-npm run build
-npm run preview
+npm test               # 252 unit tests
+npm run build          # production build
+npm run preview        # serves the build with the real CSP headers
+node scripts/perf.mjs  # 100k×20 speed + bundle-size measurements
+npm run test:e2e       # 6 Playwright flows against the production build
 ```
-
-<br />
-
----
 
 ### Deploy
 
-LUMIQ deploys to **Vercel only**: every push to `main` becomes the production deployment and every branch push gets a preview URL. `vercel.json` sets the security headers — a Content-Security-Policy that lets the page talk only to itself and `https://api.groq.com` (scripts from itself only; styles and fonts only from Google Fonts; `frame-ancestors 'none'`), plus `X-Content-Type-Options: nosniff` and `Referrer-Policy: no-referrer`. `npm run preview` serves the built app with the same headers so the CSP can be checked locally. Tests and the build run in CI on every push and pull request to `main`.
-
-<br />
-
----
-## 🗺️ Roadmap
-
-The full fix plan (audit, requirements, targets) is in [docs/PRD.md](docs/PRD.md).
+LUMIQ deploys to **Vercel only**: every push to `main` is production, every branch push gets a preview URL. `vercel.json` sets the security headers — a Content-Security-Policy that lets the page talk only to itself and `https://api.groq.com` (scripts from itself only, which also covers the module Web Worker; styles/fonts only from Google Fonts; `frame-ancestors 'none'`), plus `X-Content-Type-Options: nosniff` and `Referrer-Policy: no-referrer`. CI runs the unit tests, the build and the Playwright suite on every push.
 
 <br />
 
@@ -235,20 +155,24 @@ The full fix plan (audit, requirements, targets) is in [docs/PRD.md](docs/PRD.md
 ```
 LUMIQ/
 ├── src/
-│   ├── App.jsx          # Entire application (single-file architecture)
-│   ├── lib/             # Filter-plan validator, stream reader, blank-aware stats (+ unit tests)
-│   └── main.jsx         # React entry point
-├── docs/
-│   └── PRD.md           # Fix PRD: audit, requirements and roadmap
-├── public/
-│   └── lumiq-icon.svg   # Prism logo
-├── index.html
-├── vite.config.js
-├── LICENSE
-└── package.json
+│   ├── App.jsx            # Shell: state, routing between screens
+│   ├── screens/           # Overview, Ask, Report, What-if, Data health, Files, setup
+│   ├── components/        # Tiles, tables, chart/table toggle, upload preview, …
+│   ├── charts/            # Hand-written SVG charts
+│   ├── engine/            # runPlan, validatePlan, insights, forecast, whatIf,
+│   │                      #   dataHealth, reportData (+ accuracy tests)
+│   ├── ai/                # Groq client, prompts, schema summary, number checker
+│   ├── data/              # CSV (papaparse), Excel (SheetJS), types, samples
+│   ├── worker/            # The data worker + client (parse/type/plan off-thread)
+│   ├── hooks/             # Oracle chat, narrative, forecast, persistence, …
+│   └── lib/               # Stats, filter plans, stream reader, exports, styles
+├── e2e/                   # Playwright flows (Groq mocked by route interception)
+├── scripts/perf.mjs       # The measured speed numbers
+├── docs/PRD.md            # The fix plan, with a Status line per requirement
+└── vercel.json            # CSP + deploy headers
 ```
 
-LUMIQ is intentionally a **single-file React app** — `App.jsx` contains every component, every chart, every AI integration, and every screen. No route files, no component folders, no abstraction overhead. Just code.
+No file is longer than 300 lines.
 
 <br />
 
@@ -261,7 +185,7 @@ LUMIQ is intentionally a **single-file React app** — `App.jsx` contains every 
 | `#050914` | Deep Navy | App background |
 | `#00D4FF` | Cyan | Primary accent, numeric values |
 | `#FFB627` | Gold | Forecasts, narrative highlights |
-| `#7B4FE8` | Violet | AI features, Oracle |
+| `#7B4FE8` | Violet | AI features (text uses `#a78bfa` for AA contrast) |
 | `#00E5A0` | Emerald | Positive trends, success states |
 | `Syne 800` | Display font | Headings, labels |
 | `DM Mono` | Monospace | Numbers, data, code |
@@ -273,13 +197,13 @@ LUMIQ is intentionally a **single-file React app** — `App.jsx` contains every 
 
 ## 🔑 API Key
 
-LUMIQ uses the **Groq API** for all AI features. Getting a key is free and takes 30 seconds:
+AI features use the **Groq API** with your own free key:
 
 1. Go to [console.groq.com](https://console.groq.com)
 2. Sign up and create an API key
 3. Paste it into LUMIQ's setup screen
 
-All API calls are made **directly from your browser** — your key never touches any server. The key is kept in memory for the session; tick **"Remember on this device"** on the setup screen to save it in your browser's localStorage. You can also run LUMIQ in **Demo Mode** without a key to explore the UI — AI features are disabled in Demo Mode and show a notice asking you to connect a key.
+Calls go **directly from your browser to Groq** — no server in between. The key stays in memory unless you tick **"Remember on this device"**. Demo Mode works without any key; AI-only controls explain what a key would add.
 
 <br />
 
