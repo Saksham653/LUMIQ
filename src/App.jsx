@@ -16,6 +16,9 @@ import {
   numericEntries,
 } from "./lib/stats.js";
 import { createStreamReader } from "./lib/streamReader.js";
+import { SAMPLE_DATASETS } from "./data/sampleDatasets.js";
+import { datasetFromCsv, numericColumns } from "./data/dataset.js";
+import { formatCell, aggregationRule, NUMERIC_TYPES } from "./data/columnTypes.js";
 
 // ============================================================
 // LUMIQ — Luminous Intelligence Queries (Groq Edition)
@@ -151,63 +154,10 @@ async function callGroq(apiKey, messages, onStream, { signal, temperature = 0.7 
   }
 }
 
-// ─── Sample Datasets ────────────────────────────────────────
-const SAMPLE_DATASETS = {
-  sales: {
-    name: "E-Commerce Sales",
-    icon: "🛒",
-    description: "12 months of online sales data",
-    columns: ["month", "revenue", "orders", "avg_order_value", "region", "category", "returns", "profit_margin"],
-    data: [
-      { month: "Jan", revenue: 245000, orders: 1820, avg_order_value: 134.6, region: "North", category: "Electronics", returns: 4.2, profit_margin: 23.1 },
-      { month: "Feb", revenue: 198000, orders: 1540, avg_order_value: 128.6, region: "South", category: "Clothing", returns: 6.8, profit_margin: 31.2 },
-      { month: "Mar", revenue: 312000, orders: 2210, avg_order_value: 141.2, region: "East", category: "Electronics", returns: 3.9, profit_margin: 22.7 },
-      { month: "Apr", revenue: 289000, orders: 2050, avg_order_value: 140.9, region: "West", category: "Home", returns: 5.1, profit_margin: 28.4 },
-      { month: "May", revenue: 334000, orders: 2380, avg_order_value: 140.3, region: "North", category: "Clothing", returns: 7.2, profit_margin: 29.8 },
-      { month: "Jun", revenue: 378000, orders: 2720, avg_order_value: 138.9, region: "East", category: "Electronics", returns: 4.4, profit_margin: 21.9 },
-      { month: "Jul", revenue: 421000, orders: 3010, avg_order_value: 139.9, region: "South", category: "Electronics", returns: 3.7, profit_margin: 20.8 },
-      { month: "Aug", revenue: 398000, orders: 2890, avg_order_value: 137.7, region: "West", category: "Home", returns: 5.8, profit_margin: 27.3 },
-      { month: "Sep", revenue: 356000, orders: 2540, avg_order_value: 140.2, region: "North", category: "Clothing", returns: 6.3, profit_margin: 30.5 },
-      { month: "Oct", revenue: 445000, orders: 3210, avg_order_value: 138.6, region: "East", category: "Electronics", returns: 4.1, profit_margin: 22.4 },
-      { month: "Nov", revenue: 589000, orders: 4320, avg_order_value: 136.3, region: "West", category: "Electronics", returns: 5.2, profit_margin: 19.7 },
-      { month: "Dec", revenue: 712000, orders: 5180, avg_order_value: 137.4, region: "South", category: "Clothing", returns: 8.9, profit_margin: 26.1 },
-    ],
-  },
-  marketing: {
-    name: "Marketing Campaign",
-    icon: "📊",
-    description: "Multi-channel campaign performance",
-    columns: ["channel", "spend", "impressions", "clicks", "conversions", "cac", "roas", "week"],
-    data: [
-      { channel: "Google Ads", spend: 45000, impressions: 2100000, clicks: 42000, conversions: 1260, cac: 35.7, roas: 4.2, week: "W1" },
-      { channel: "Meta Ads", spend: 38000, impressions: 3400000, clicks: 51000, conversions: 918, cac: 41.4, roas: 3.6, week: "W1" },
-      { channel: "Email", spend: 8000, impressions: 890000, clicks: 71200, conversions: 2136, cac: 3.7, roas: 12.8, week: "W1" },
-      { channel: "SEO", spend: 12000, impressions: 560000, clicks: 28000, conversions: 840, cac: 14.3, roas: 8.4, week: "W1" },
-      { channel: "Google Ads", spend: 52000, impressions: 2380000, clicks: 47600, conversions: 1428, cac: 36.4, roas: 4.1, week: "W2" },
-      { channel: "Meta Ads", spend: 41000, impressions: 3700000, clicks: 55500, conversions: 999, cac: 41.0, roas: 3.7, week: "W2" },
-      { channel: "Email", spend: 8000, impressions: 950000, clicks: 76000, conversions: 2280, cac: 3.5, roas: 13.2, week: "W2" },
-      { channel: "SEO", spend: 12000, impressions: 610000, clicks: 30500, conversions: 915, cac: 13.1, roas: 9.1, week: "W2" },
-    ],
-  },
-  churn: {
-    name: "Customer Churn",
-    icon: "👥",
-    description: "SaaS customer retention analysis",
-    columns: ["cohort", "customers", "churned", "churn_rate", "ltv", "mrr", "support_tickets", "nps"],
-    data: [
-      { cohort: "2024-Q1", customers: 1240, churned: 87, churn_rate: 7.0, ltv: 2840, mrr: 186000, support_tickets: 3.2, nps: 42 },
-      { cohort: "2024-Q2", customers: 1580, churned: 95, churn_rate: 6.0, ltv: 3120, mrr: 237000, support_tickets: 2.8, nps: 48 },
-      { cohort: "2024-Q3", customers: 1920, churned: 115, churn_rate: 5.9, ltv: 3450, mrr: 288000, support_tickets: 2.5, nps: 54 },
-      { cohort: "2024-Q4", customers: 2340, churned: 140, churn_rate: 5.9, ltv: 3780, mrr: 351000, support_tickets: 2.1, nps: 61 },
-      { cohort: "2025-Q1", customers: 2890, churned: 130, churn_rate: 4.5, ltv: 4210, mrr: 433500, support_tickets: 1.9, nps: 67 },
-    ],
-  },
-};
-
 function generateAutoInsights(dataset) {
   const data = dataset.data;
   const insights = [];
-  const numericCols = dataset.columns.filter((c) => typeof data[0][c] === "number");
+  const numericCols = numericColumns(dataset);
   numericCols.forEach((col) => {
     // Blank cells are skipped, never counted as 0
     const vals = numericValues(data.map((d) => d[col]));
@@ -324,7 +274,7 @@ function calcLinearRegression(vals) {
 }
 
 // Column profiler for Data DNA
-function profileColumn(data, colName) {
+function profileColumn(data, colName, typeInfo) {
   const values = data.map(r => r[colName]);
   const total = values.length;
   const nonNull = values.filter(v => v !== null && v !== undefined && v !== "").length;
@@ -332,9 +282,11 @@ function profileColumn(data, colName) {
   const uniqueVals = new Set(values.filter(v => v !== null && v !== undefined && v !== ""));
   const uniqueCount = uniqueVals.size;
 
-  // Detect type
-  const sampleNonNull = values.find(v => v !== null && v !== undefined && v !== "");
-  const isNumeric = typeof sampleNonNull === "number";
+  // Type comes from the shared all-rows detection; fall back to a
+  // value sniff only when no columnTypes map is available.
+  const isNumeric = typeInfo
+    ? NUMERIC_TYPES.includes(typeInfo.type)
+    : typeof values.find(v => v !== null && v !== undefined && v !== "") === "number";
 
   const profile = {
     name: colName,
@@ -985,7 +937,7 @@ Write a concise 3-4 sentence forecast narrative. Include: trend direction and st
 
     try {
       const columnHints = ds.columns
-        .map((c) => `${c} (${typeof ds.data[0]?.[c] === "number" ? "number" : "text"})`)
+        .map((c) => `${c} (${ds.columnTypes?.[c]?.type || "text"})`)
         .join(", ");
       const prompt = `You translate a user's request into a JSON filter plan for a data table.
 Columns: ${columnHints}
@@ -1052,7 +1004,7 @@ Rules:
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       result = result.filter(row =>
-        Object.values(row).some(v => String(v).toLowerCase().includes(q))
+        Object.values(row).some(v => v != null && String(v).toLowerCase().includes(q))
       );
     }
 
@@ -1082,7 +1034,7 @@ Rules:
     setSortConfig({ key, dir });
   };
 
-  const numericCols = ds ? ds.columns.filter((c) => typeof ds.data[0]?.[c] === "number") : [];
+  const numericCols = numericColumns(ds);
   const metric = selectedMetric || numericCols[0] || "";
   // Blank cells stay blank: totals, averages and peaks are computed
   // over real numbers only (null when the column has none).
@@ -1099,18 +1051,15 @@ Rules:
     const reader = new FileReader();
     reader.onload = (ev) => {
       try {
-        const text = ev.target.result;
-        const lines = text.trim().split("\n");
-        const headers = lines[0].split(",").map((h) => h.trim().replace(/"/g, ""));
-        const data = lines.slice(1).map((line) => {
-          const vals = line.split(",").map((v) => v.trim().replace(/"/g, ""));
-          return Object.fromEntries(headers.map((h, i) => { const v = vals[i]; return [h, isNaN(v) || v === "" ? v : parseFloat(v)]; }));
-        }).filter((row) => Object.values(row).some((v) => v !== "" && v !== undefined));
-        const dataset = { name: file.name.replace(".csv", ""), icon: "📁", description: `${data.length} rows • ${headers.length} columns`, columns: headers, data };
+        // papaparse-backed: quoted commas, CRLF and a BOM are fine,
+        // and column types are decided from all rows (see src/data/)
+        const dataset = datasetFromCsv(ev.target.result, file.name.replace(/\.csv$/i, ""));
         setUploadedData(dataset);
         setActiveDataset(dataset);
         setActiveTab("canvas");
-      } catch { setUploadError("Could not parse CSV. Please check the format."); }
+      } catch (err) {
+        setUploadError(err?.message || "Could not parse CSV. Please check the format.");
+      }
     };
     reader.readAsText(file);
   };
@@ -1135,7 +1084,7 @@ Rules:
           setOracleMessages((prev) => { const u = [...prev]; u[u.length - 1] = { role: "assistant", content: text, streaming: true }; return u; });
         }, { signal: controller.signal });
       } else {
-        const demo = `I'm running in demo mode — connect a real Groq API key to get live AI analysis!\n\nBased on the data structure I can see:\n• Your dataset has ${ds?.data.length || 0} rows across ${ds?.columns.length || 0} columns\n→ Key numeric metrics: ${ds?.columns.filter(c => typeof ds.data[0]?.[c] === 'number').join(", ") || "none detected"}\n\nWith a real Groq key, I'd give you deep analysis of this question instantly. Get yours free at console.groq.com`;
+        const demo = `I'm running in demo mode — connect a real Groq API key to get live AI analysis!\n\nBased on the data structure I can see:\n• Your dataset has ${ds?.data.length || 0} rows across ${ds?.columns.length || 0} columns\n→ Key numeric metrics: ${numericColumns(ds).join(", ") || "none detected"}\n\nWith a real Groq key, I'd give you deep analysis of this question instantly. Get yours free at console.groq.com`;
         let current = "";
         for (const char of demo) { await new Promise(r => setTimeout(r, 15)); current += char; setOracleMessages((prev) => { const u = [...prev]; u[u.length - 1] = { role: "assistant", content: current, streaming: true }; return u; }); }
       }
@@ -1680,7 +1629,7 @@ Provide a short "Executive Summary" paragraph, then a "Key Findings" bulleted li
                             <tr key={i} style={{ borderBottom: "1px solid #1e2d5c11" }}>
                               {ds.columns.map((col) => (
                                 <td key={col} style={{ padding: "8px 12px", color: typeof row[col] === "number" ? "#00D4FF" : "#ccd6f6", fontFamily: typeof row[col] === "number" ? "'DM Mono', monospace" : "inherit", fontSize: "12px", whiteSpace: "nowrap" }}>
-                                  {typeof row[col] === "number" ? (row[col] >= 1000 ? row[col].toLocaleString() : row[col].toFixed(1)) : String(row[col])}
+                                  {formatCell(row[col], ds.columnTypes?.[col])}
                                 </td>
                               ))}
                             </tr>
@@ -1931,7 +1880,7 @@ Provide a short "Executive Summary" paragraph, then a "Key Findings" bulleted li
               ) : (
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: "16px" }}>
                   {ds.columns.map((colName) => {
-                    const p = profileColumn(ds.data, colName);
+                    const p = profileColumn(ds.data, colName, ds.columnTypes?.[colName]);
                     const qualityColor = p.qualityScore >= 80 ? "#00E5A0" : p.qualityScore >= 50 ? "#FFB627" : "#FF3C3C";
                     const qualityPct = p.qualityScore / 100;
                     const r = 22; const circ = 2 * Math.PI * r;
