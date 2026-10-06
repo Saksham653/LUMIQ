@@ -5,6 +5,7 @@ import { render, cleanup, act, waitFor } from "@testing-library/react";
 import React, { useState } from "react";
 import { usePersistence } from "./usePersistence.js";
 import { storageGet, storageSet, storageClear, storageKeys } from "../lib/storage.js";
+import { SAMPLE_DATASETS } from "../data/sampleDatasets.js";
 
 const api = {};
 
@@ -25,11 +26,17 @@ function Harness() {
   return null;
 }
 
-const DS = {
-  name: "mine", icon: "📁", description: "2 rows • 2 columns",
+const makeDs = (id, name) => ({
+  id, name, icon: "📁", description: "2 rows • 2 columns",
   columns: ["a", "b"],
   data: [{ a: 1, b: "x" }, { a: 2, b: "y" }],
   columnTypes: { a: { type: "number" }, b: { type: "text" } },
+});
+const DS = makeDs("ds-mine", "mine");
+
+const mountReady = async () => {
+  render(<Harness />);
+  await waitFor(() => expect(api.ready).toBe(true));
 };
 
 afterEach(async () => {
@@ -41,13 +48,12 @@ afterEach(async () => {
 
 describe("usePersistence (F16)", () => {
   it("saves work and a remount (reload) restores it", async () => {
-    render(<Harness />);
-    await waitFor(() => expect(api.ready).toBe(true));
+    await mountReady();
     await act(async () => { api.setUploadedDatasets([DS]); });
     await act(async () => { api.setActiveDataset(DS); api.setActiveTab("oracle"); });
     await waitFor(async () => {
       expect(await storageGet("datasets")).toEqual([DS]);
-      expect(await storageGet("selected")).toEqual({ datasetName: "mine", activeTab: "oracle" });
+      expect(await storageGet("selected")).toEqual({ datasetId: "ds-mine", activeTab: "oracle" });
     });
 
     cleanup(); // "reload"
@@ -55,14 +61,14 @@ describe("usePersistence (F16)", () => {
     render(<Harness />);
     await waitFor(() => {
       expect(api.uploadedDatasets).toEqual([DS]);
-      expect(api.activeDataset?.name).toBe("mine");
+      expect(api.activeDataset?.id).toBe("ds-mine");
     });
   });
 
-  it("Ask history is kept per dataset across a reload", async () => {
+  it("Ask history is kept per dataset id across a reload", async () => {
     await storageSet("datasets", [DS]);
-    await storageSet("selected", { datasetName: "mine", activeTab: "oracle" });
-    await storageSet("askHistory:mine", [{ role: "user", content: "old question" }]);
+    await storageSet("selected", { datasetId: "ds-mine", activeTab: "oracle" });
+    await storageSet("askHistory:ds-mine", [{ role: "user", content: "old question" }]);
 
     render(<Harness />);
     await waitFor(() => {
@@ -70,10 +76,66 @@ describe("usePersistence (F16)", () => {
     });
   });
 
+  it("two uploads with the same name keep separate histories (B5-7)", async () => {
+    const A = makeDs("id-a", "sales");
+    const B = makeDs("id-b", "sales"); // same display name, different id
+    await mountReady();
+    await act(async () => { api.setUploadedDatasets([A, B]); api.setActiveDataset(A); });
+    await act(async () => { api.setOracleMessages([{ role: "user", content: "question for A" }]); });
+
+    await act(async () => { api.setActiveDataset(B); }); // saves A's chat, loads B's (empty)
+    await waitFor(() => expect(api.oracleMessages).toEqual([]));
+    await act(async () => { api.setOracleMessages([{ role: "user", content: "question for B" }]); });
+
+    await act(async () => { api.setActiveDataset(A); });
+    await waitFor(() => expect(api.oracleMessages).toEqual([{ role: "user", content: "question for A" }]));
+    expect(await storageGet("askHistory:id-a")).toEqual([{ role: "user", content: "question for A" }]);
+    expect(await storageGet("askHistory:id-b")).toEqual([{ role: "user", content: "question for B" }]);
+  });
+
+  it("a sample and an upload with the same name don't collide (B5-7)", async () => {
+    const sample = SAMPLE_DATASETS.sales;
+    const clone = makeDs("id-up", sample.name); // upload named exactly like the sample
+    await mountReady();
+    await act(async () => { api.setUploadedDatasets([clone]); api.setActiveDataset(sample); });
+    await act(async () => { api.setOracleMessages([{ role: "user", content: "sample chat" }]); });
+    await act(async () => { api.setActiveDataset(clone); });
+    await waitFor(() => expect(api.oracleMessages).toEqual([]));
+    await act(async () => { api.setOracleMessages([{ role: "user", content: "upload chat" }]); });
+    await act(async () => { api.setActiveDataset(sample); });
+    await waitFor(() => expect(api.oracleMessages).toEqual([{ role: "user", content: "sample chat" }]));
+    expect(await storageGet(`askHistory:${sample.id}`)).toEqual([{ role: "user", content: "sample chat" }]);
+    expect(await storageGet("askHistory:id-up")).toEqual([{ role: "user", content: "upload chat" }]);
+  });
+
+  it("old name-keyed data is migrated on first load without losing anything (B5-7)", async () => {
+    // pre-B5-7 shape: no ids anywhere
+    const legacy = { ...makeDs(undefined, "legacy") };
+    delete legacy.id;
+    await storageSet("datasets", [legacy]);
+    await storageSet("selected", { datasetName: "legacy", activeTab: "oracle" });
+    await storageSet("askHistory:legacy", [{ role: "user", content: "legacy question" }]);
+    await storageSet(`askHistory:${SAMPLE_DATASETS.sales.name}`, [{ role: "user", content: "legacy sample chat" }]);
+
+    render(<Harness />);
+    await waitFor(() => {
+      expect(api.uploadedDatasets).toHaveLength(1);
+      expect(api.uploadedDatasets[0].id).toBeTruthy();
+      expect(api.activeDataset?.name).toBe("legacy");
+      expect(api.oracleMessages).toEqual([{ role: "user", content: "legacy question" }]);
+    });
+    const id = api.uploadedDatasets[0].id;
+    expect(await storageGet(`askHistory:${id}`)).toEqual([{ role: "user", content: "legacy question" }]);
+    expect(await storageGet("askHistory:legacy")).toBeUndefined();
+    expect((await storageGet("selected")).datasetId).toBe(id);
+    // the sample's old name-keyed chat moved to its stable id
+    expect(await storageGet(`askHistory:${SAMPLE_DATASETS.sales.id}`)).toEqual([{ role: "user", content: "legacy sample chat" }]);
+    expect(await storageGet(`askHistory:${SAMPLE_DATASETS.sales.name}`)).toBeUndefined();
+  });
+
   it("delete everything leaves nothing stored (IndexedDB and the key)", async () => {
     try { localStorage.setItem("lumiq_groq_api_key", "remembered"); } catch { }
-    render(<Harness />);
-    await waitFor(() => expect(api.ready).toBe(true));
+    await mountReady();
     await act(async () => { api.setUploadedDatasets([DS]); api.setActiveDataset(DS); });
     await act(async () => { api.setOracleMessages([{ role: "user", content: "q" }]); });
     await waitFor(async () => { expect(await storageGet("datasets")).toEqual([DS]); });

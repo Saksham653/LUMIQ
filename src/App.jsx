@@ -49,7 +49,7 @@ export default function LumiqApp() {
   const [askContext, setAskContext] = useState([]); // follow-up context (B5-3)
   const [uploadedDatasets, setUploadedDatasets] = useState([]);
   const [uploadError, setUploadError] = useState("");
-  const addUploadedDataset = (d) => setUploadedDatasets((prev) => [...prev.filter((x) => x.name !== d.name), d]);
+  const addUploadedDataset = (d) => setUploadedDatasets((prev) => [...prev.filter((x) => x.id !== d.id), d]);
   const chatEndRef = useRef(null);
   const fileInputRef = useRef(null);
 

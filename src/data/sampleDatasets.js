@@ -58,6 +58,6 @@ const RAW = {
 export const SAMPLE_DATASETS = Object.fromEntries(
   Object.entries(RAW).map(([key, d]) => [
     key,
-    buildDataset({ name: d.name, icon: d.icon, description: d.description, columns: d.columns, rows: d.rows }),
+    buildDataset({ id: `sample:${key}`, name: d.name, icon: d.icon, description: d.description, columns: d.columns, rows: d.rows }),
   ])
 );

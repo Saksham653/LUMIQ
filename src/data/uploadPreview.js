@@ -56,6 +56,7 @@ export function previewWarnings(preview, types) {
 export function datasetFromPreview(preview, types) {
   const data = coerceRows(preview.rows, preview.columns, types);
   return {
+    id: crypto.randomUUID(),
     name: preview.name,
     icon: "📁",
     description: `${preview.rows.length} rows • ${preview.columns.length} columns`,
