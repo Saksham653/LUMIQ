@@ -19,7 +19,7 @@ import {
 import { createStreamReader } from "./lib/streamReader.js";
 import { SAMPLE_DATASETS } from "./data/sampleDatasets.js";
 import { datasetFromCsv, numericColumns } from "./data/dataset.js";
-import { formatCell, aggregationRule, NUMERIC_TYPES } from "./data/columnTypes.js";
+import { formatCell, formatTileValue, aggregationRule, NUMERIC_TYPES } from "./data/columnTypes.js";
 import { validatePlan } from "./engine/validatePlan.js";
 import { runPlan } from "./engine/runPlan.js";
 import { buildSchemaSummary, renderSchemaSummary, schemaNumberCandidates } from "./ai/schemaSummary.js";
@@ -1446,20 +1446,17 @@ Provide a short "Executive Summary" paragraph, then a "Key Findings" bulleted li
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "16px", marginBottom: "24px" }}>
                     <div className="metric-card cyan">
                       <div style={{ fontSize: "11px", fontFamily: "'DM Mono', monospace", color: "#8892b0", marginBottom: "8px", textTransform: "uppercase" }}>{metricRule === "avg" ? "Average" : "Total"} · {metric}</div>
-                      <div className="stat-number">{headlineVal == null ? "—" : headlineVal >= 1e6 ? `${(headlineVal / 1e6).toFixed(1)} M` : headlineVal >= 1000 ? `${(headlineVal / 1000).toFixed(0)} K` : headlineVal.toFixed(metricRule === "avg" ? 1 : 0)}</div>
+                      <div className="stat-number">{formatTileValue(headlineVal, ds.columnTypes?.[metric], metricRule)}</div>
                       <MiniLineChart data={processedData} yKey={metric} color="#00D4FF" />
                     </div>
                     <div className="metric-card gold">
                       <div style={{ fontSize: "11px", fontFamily: "'DM Mono', monospace", color: "#8892b0", marginBottom: "8px", textTransform: "uppercase" }}>{metricRule === "avg" ? "Median" : "Average"}</div>
-                      {(() => {
-                        const v = metricRule === "avg" ? medianVal : avgVal;
-                        return <div className="stat-number">{v == null ? "—" : v >= 1e6 ? `${(v / 1e6).toFixed(2)}M` : v >= 1000 ? `${(v / 1000).toFixed(1)}K` : v.toFixed(1)}</div>;
-                      })()}
+                      <div className="stat-number">{formatTileValue(metricRule === "avg" ? medianVal : avgVal, ds.columnTypes?.[metric], "avg")}</div>
                       <MiniBarChart data={processedData} xKey={ds.columns[0]} yKey={metric} color="#FFB627" />
                     </div>
                     <div className="metric-card violet">
                       <div style={{ fontSize: "11px", fontFamily: "'DM Mono', monospace", color: "#8892b0", marginBottom: "8px", textTransform: "uppercase" }}>Peak Value</div>
-                      <div className="stat-number">{maxVal == null ? "—" : maxVal >= 1e6 ? `${(maxVal / 1e6).toFixed(2)}M` : maxVal >= 1000 ? `${(maxVal / 1000).toFixed(0)}K` : maxVal.toFixed(0)}</div>
+                      <div className="stat-number">{formatTileValue(maxVal, ds.columnTypes?.[metric], metricRule)}</div>
                       <div style={{ display: "flex", gap: "8px", marginTop: "10px" }}>
                         {numericCols.slice(0, 3).map((c, i) => {
                           // Blank cells are skipped in both average and max

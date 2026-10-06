@@ -4,6 +4,7 @@ import {
   detectColumnTypes,
   coerceRows,
   formatCell,
+  formatTileValue,
   aggregationRule,
   looksLikeDate,
 } from "./columnTypes.js";
@@ -101,6 +102,27 @@ describe("formatCell", () => {
     expect(formatCell(1200, { type: "money", symbol: "₹" })).toBe(`₹${(1200).toLocaleString()}`);
     expect(formatCell(12.5, { type: "percent" })).toBe("12.5%");
     expect(formatCell(42, { type: "number" })).toBe("42");
+  });
+});
+
+describe("formatTileValue (B3-4)", () => {
+  it("percent and averaged values keep one decimal — 12.5, never 13", () => {
+    expect(formatTileValue(12.5, { type: "percent" }, "avg")).toBe("12.5%");
+    expect(formatTileValue(12.5, { type: "number" }, "avg")).toBe("12.5");
+    expect(formatTileValue(25.325, { type: "number" }, "avg")).toBe("25.3");
+  });
+
+  it("money carries its symbol, counts show no decimals", () => {
+    expect(formatTileValue(240000, { type: "money", symbol: "₹" }, "sum")).toBe("₹240K");
+    expect(formatTileValue(33870, { type: "number" }, "sum")).toBe("34K");
+    expect(formatTileValue(42, { type: "number" }, "sum")).toBe("42");
+    expect(formatTileValue(42.4, { type: "number" }, "sum")).toBe("42");
+  });
+
+  it("large values compress to K and M; null shows an em dash", () => {
+    expect(formatTileValue(4677000, { type: "number" }, "sum")).toBe("4.7M");
+    expect(formatTileValue(2822.5, { type: "number" }, "avg")).toBe("2.8K");
+    expect(formatTileValue(null, { type: "number" }, "sum")).toBe("—");
   });
 });
 
