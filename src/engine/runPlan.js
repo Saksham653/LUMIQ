@@ -3,14 +3,7 @@
 // steps list says in plain English exactly what was done.
 
 import { applyFilterPlan, describeFilterPlan } from "../lib/filterPlan.js";
-import { numericValues, sum, mean, min, max, isBlank } from "../lib/stats.js";
-
-function median(values) {
-  const nums = numericValues(values).sort((a, b) => a - b);
-  if (nums.length === 0) return null;
-  const mid = Math.floor(nums.length / 2);
-  return nums.length % 2 ? nums[mid] : (nums[mid - 1] + nums[mid]) / 2;
-}
+import { sum, mean, min, max, median, isBlank } from "../lib/stats.js";
 
 const round2 = (x) => Math.round(x * 100) / 100;
 

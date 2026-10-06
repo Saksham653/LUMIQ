@@ -43,6 +43,15 @@ export function max(values) {
   return m;
 }
 
+// Middle value; the average of the two central values on even
+// counts. Blanks are skipped like everywhere else.
+export function median(values) {
+  const nums = numericValues(values).sort((a, b) => a - b);
+  if (nums.length === 0) return null;
+  const mid = Math.floor(nums.length / 2);
+  return nums.length % 2 ? nums[mid] : (nums[mid - 1] + nums[mid]) / 2;
+}
+
 // Pairs where BOTH columns hold real numbers — a row with a blank in
 // either column is left out of a correlation entirely.
 export function numericPairs(rows, colA, colB) {

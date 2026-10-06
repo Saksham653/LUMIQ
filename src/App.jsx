@@ -12,6 +12,7 @@ import {
   sum as sumValues,
   mean as meanValues,
   max as maxValues,
+  median as medianValue,
   numericPairs,
   numericEntries,
 } from "./lib/stats.js";
@@ -883,6 +884,7 @@ const AppShell = ({
 
   // Reset pagination/sort/filters when dataset changes
   useEffect(() => {
+    setSelectedMetric("");
     setSortConfig(null);
     setSearchQuery("");
     setPageIdx(0);
@@ -1036,12 +1038,18 @@ Rules:
 
   const numericCols = numericColumns(ds);
   const metric = selectedMetric || numericCols[0] || "";
-  // Blank cells stay blank: totals, averages and peaks are computed
-  // over real numbers only (null when the column has none).
-  const primaryVals = processedData ? processedData.map((r) => r[numericCols[0]]) : [];
+  // Tiles follow the metric picked in the chart dropdown (F9) and the
+  // column's aggregation rule: rate-like columns (percent type, or
+  // names with rate/margin/ratio/pct/avg/score/nps) are averaged —
+  // summing a margin is meaningless — while amounts are summed.
+  // Blank cells stay blank: every figure uses real numbers only.
+  const metricRule = metric ? aggregationRule(metric, ds?.columnTypes?.[metric]) : "sum";
+  const primaryVals = processedData ? processedData.map((r) => r[metric]) : [];
   const totalVal = sumValues(primaryVals);
   const avgVal = meanValues(primaryVals);
   const maxVal = maxValues(primaryVals);
+  const medianVal = medianValue(primaryVals);
+  const headlineVal = metricRule === "avg" ? avgVal : totalVal;
 
   const handleFileUpload = (e) => {
     const file = e.target.files[0];
@@ -1352,14 +1360,17 @@ Provide a short "Executive Summary" paragraph, then a "Key Findings" bulleted li
 
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "16px", marginBottom: "24px" }}>
                     <div className="metric-card cyan">
-                      <div style={{ fontSize: "11px", fontFamily: "'DM Mono', monospace", color: "#8892b0", marginBottom: "8px", textTransform: "uppercase" }}>Total · {numericCols[0]}</div>
-                      <div className="stat-number">{totalVal == null ? "—" : totalVal >= 1e6 ? `${(totalVal / 1e6).toFixed(1)} M` : totalVal >= 1000 ? `${(totalVal / 1000).toFixed(0)} K` : totalVal.toFixed(0)}</div>
-                      <MiniLineChart data={processedData} yKey={numericCols[0]} color="#00D4FF" />
+                      <div style={{ fontSize: "11px", fontFamily: "'DM Mono', monospace", color: "#8892b0", marginBottom: "8px", textTransform: "uppercase" }}>{metricRule === "avg" ? "Average" : "Total"} · {metric}</div>
+                      <div className="stat-number">{headlineVal == null ? "—" : headlineVal >= 1e6 ? `${(headlineVal / 1e6).toFixed(1)} M` : headlineVal >= 1000 ? `${(headlineVal / 1000).toFixed(0)} K` : headlineVal.toFixed(metricRule === "avg" ? 1 : 0)}</div>
+                      <MiniLineChart data={processedData} yKey={metric} color="#00D4FF" />
                     </div>
                     <div className="metric-card gold">
-                      <div style={{ fontSize: "11px", fontFamily: "'DM Mono', monospace", color: "#8892b0", marginBottom: "8px", textTransform: "uppercase" }}>Average</div>
-                      <div className="stat-number">{avgVal == null ? "—" : avgVal >= 1e6 ? `${(avgVal / 1e6).toFixed(2)}M` : avgVal >= 1000 ? `${(avgVal / 1000).toFixed(1)}K` : avgVal.toFixed(1)}</div>
-                      <MiniBarChart data={processedData} xKey={ds.columns[0]} yKey={numericCols[0]} color="#FFB627" />
+                      <div style={{ fontSize: "11px", fontFamily: "'DM Mono', monospace", color: "#8892b0", marginBottom: "8px", textTransform: "uppercase" }}>{metricRule === "avg" ? "Median" : "Average"}</div>
+                      {(() => {
+                        const v = metricRule === "avg" ? medianVal : avgVal;
+                        return <div className="stat-number">{v == null ? "—" : v >= 1e6 ? `${(v / 1e6).toFixed(2)}M` : v >= 1000 ? `${(v / 1000).toFixed(1)}K` : v.toFixed(1)}</div>;
+                      })()}
+                      <MiniBarChart data={processedData} xKey={ds.columns[0]} yKey={metric} color="#FFB627" />
                     </div>
                     <div className="metric-card violet">
                       <div style={{ fontSize: "11px", fontFamily: "'DM Mono', monospace", color: "#8892b0", marginBottom: "8px", textTransform: "uppercase" }}>Peak Value</div>
