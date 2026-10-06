@@ -1,5 +1,5 @@
 import { numericValues } from "../lib/stats.js";
-import { fmtNum } from "../lib/format.js";
+import { fmtNum, fitLabel } from "../lib/format.js";
 import { downsample, calcLinearRegression } from "../lib/analysis.js";
 import { forecastSeries } from "../engine/insights.js";
 
@@ -171,7 +171,8 @@ export default function MainChart({ ds, processedData, numericCols, metric, setS
                     return <circle key={`f${i}`} cx={px} cy={py} r="0.8" fill="#FFB627" stroke="#050914" strokeWidth="0.3" />;
                   })}
                   <text x={w - padR} y={padT + 2} textAnchor="end" fill="#FFB627" fontSize="2.5" fontFamily="DM Mono">
-                    🔮 Forecast ({forecastVals.length} pts) | R²={regression?.r2.toFixed(2)}
+                    <title>R² = {regression?.r2.toFixed(3)}</title>
+                    🔮 Forecast ({forecastVals.length} pts) | Fit: {fitLabel(regression?.r2)}
                   </text>
                 </>
               )}
