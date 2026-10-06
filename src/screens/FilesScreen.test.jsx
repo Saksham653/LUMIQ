@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { render, screen, fireEvent, cleanup } from "@testing-library/react";
+import { render, screen, fireEvent, cleanup, waitFor } from "@testing-library/react";
 import React from "react";
 import FilesScreen from "./FilesScreen.jsx";
 import { numericColumns } from "../data/dataset.js";
@@ -57,7 +57,8 @@ describe("FilesScreen upload preview (B5-4)", () => {
     fireEvent.change(select, { target: { value: "text" } });
     fireEvent.click(screen.getByText("Load"));
 
-    expect(setActiveDataset).toHaveBeenCalledTimes(1);
+    // loading is async now (the worker path, F13) — wait for it
+    await waitFor(() => expect(setActiveDataset).toHaveBeenCalledTimes(1));
     const ds = setActiveDataset.mock.calls[0][0];
     expect(ds.columnTypes.amount.type).toBe("text");
     expect(numericColumns(ds)).toEqual([]); // the tiles would have no numeric metric

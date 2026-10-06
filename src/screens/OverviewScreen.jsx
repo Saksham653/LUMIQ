@@ -15,7 +15,6 @@ export default function OverviewScreen(props) {
     headlineVal, avgVal, medianVal, maxVal,
     forecast, forecastTime,
     sortConfig, handleSort, searchQuery, setSearchQuery,
-    paginatedData, pageIdx, setPageIdx, totalPages, rowsPerPage,
   } = props;
 
   if (!ds) {
@@ -81,15 +80,10 @@ export default function OverviewScreen(props) {
       <DataTable
         ds={ds}
         processedData={processedData}
-        paginatedData={paginatedData}
         sortConfig={sortConfig}
         handleSort={handleSort}
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
-        pageIdx={pageIdx}
-        setPageIdx={setPageIdx}
-        totalPages={totalPages}
-        rowsPerPage={rowsPerPage}
       />
     </div>
   );

@@ -11,7 +11,7 @@ import {
   FILTER_ACTIONS,
 } from "../lib/filterPlan.js";
 
-export function useNlFilter({ apiKey, ds, setPageIdx }) {
+export function useNlFilter({ apiKey, ds }) {
   const [nlFilterQuery, setNlFilterQuery] = useState("");
   const [nlFilterLoading, setNlFilterLoading] = useState(false);
   const [nlFilterError, setNlFilterError] = useState("");
@@ -62,7 +62,6 @@ Rules:
         plan: checked.plan,
         description: describeFilterPlan(checked.plan),
       });
-      setPageIdx(0);
       setNlFilterQuery("");
     } catch (e) {
       setNlFilterError(e?.message || "The AI filter request failed.");
@@ -75,7 +74,6 @@ Rules:
   const clearNlFilter = () => {
     setActiveNlFilter(null);
     setNlFilterError("");
-    setPageIdx(0);
   };
 
   return {

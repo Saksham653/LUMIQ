@@ -121,25 +121,22 @@ const AppShell = ({
   const [selectedMetric, setSelectedMetric] = useState("");
   const [chartType, setChartType] = useState("bar");
 
-  // Data Explorer State
+  // Data Explorer State (the table windows its own rows — F13)
   const [sortConfig, setSortConfig] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [pageIdx, setPageIdx] = useState(0);
-  const rowsPerPage = 10;
 
   // AI filter + Forecast state and runners (hooks keep them at shell
   // level so they survive tab switches)
-  const nlFilter = useNlFilter({ apiKey, ds, setPageIdx });
+  const nlFilter = useNlFilter({ apiKey, ds });
   const forecast = useForecast({ apiKey });
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  // Reset pagination/sort/filters when dataset changes
+  // Reset sort/filters when dataset changes
   useEffect(() => {
     setSelectedMetric("");
     setSortConfig(null);
     setSearchQuery("");
-    setPageIdx(0);
     nlFilter.setNlFilterQuery("");
     nlFilter.setNlFilterError("");
     nlFilter.setActiveNlFilter(null);
@@ -186,9 +183,6 @@ const AppShell = ({
   // least 6 points (same detection as the insights).
   const forecastTime = useMemo(() => forecastTimeColumn(ds), [ds]);
 
-  const totalPages = Math.ceil((processedData?.length || 0) / rowsPerPage);
-  const paginatedData = processedData.slice(pageIdx * rowsPerPage, (pageIdx + 1) * rowsPerPage);
-
   const handleSort = (key) => {
     let dir = 'asc';
     if (sortConfig && sortConfig.key === key && sortConfig.dir === 'asc') dir = 'desc';
@@ -229,7 +223,7 @@ const AppShell = ({
         <TopBar ds={ds} apiKey={apiKey} setPage={setPage} activeTab={activeTab} setActiveTab={setActiveTab} setIsMobileMenuOpen={setIsMobileMenuOpen} storageOk={storageOk} />
 
         <div style={{ padding: "24px" }}>
-          {activeTab === "canvas" && <ErrorBoundary onRecover={() => setActiveTab("canvas")}><OverviewScreen ds={ds} apiKey={apiKey} setPage={setPage} nlFilter={nlFilter} processedData={processedData} insights={insights} metric={metric} metricRule={metricRule} setSelectedMetric={setSelectedMetric} chartType={chartType} setChartType={setChartType} numericCols={numericCols} headlineVal={headlineVal} avgVal={avgVal} medianVal={medianVal} maxVal={maxVal} forecast={forecast} forecastTime={forecastTime} sortConfig={sortConfig} handleSort={handleSort} searchQuery={searchQuery} setSearchQuery={setSearchQuery} paginatedData={paginatedData} pageIdx={pageIdx} setPageIdx={setPageIdx} totalPages={totalPages} rowsPerPage={rowsPerPage} /></ErrorBoundary>}
+          {activeTab === "canvas" && <ErrorBoundary onRecover={() => setActiveTab("canvas")}><OverviewScreen ds={ds} apiKey={apiKey} setPage={setPage} nlFilter={nlFilter} processedData={processedData} insights={insights} metric={metric} metricRule={metricRule} setSelectedMetric={setSelectedMetric} chartType={chartType} setChartType={setChartType} numericCols={numericCols} headlineVal={headlineVal} avgVal={avgVal} medianVal={medianVal} maxVal={maxVal} forecast={forecast} forecastTime={forecastTime} sortConfig={sortConfig} handleSort={handleSort} searchQuery={searchQuery} setSearchQuery={setSearchQuery} /></ErrorBoundary>}
 
           {activeTab === "oracle" && <ErrorBoundary onRecover={() => setActiveTab("canvas")}><AskScreen ds={ds} apiKey={apiKey} setPage={setPage} oracleMessages={oracleMessages} oracleInput={oracleInput} setOracleInput={setOracleInput} oracleLoading={oracleLoading} sendOracleMessage={sendOracleMessage} oracleAbortRef={oracleAbortRef} oracleLastFailed={oracleLastFailed} chatEndRef={chatEndRef} clearContext={clearContext} contextActive={contextActive} /></ErrorBoundary>}
 
