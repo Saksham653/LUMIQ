@@ -31,6 +31,7 @@ import {
   exampleQuestions,
 } from "./ai/oraclePlanner.js";
 import { collectCandidates, verifyNumbers } from "./ai/numberCheck.js";
+import { computeInsights } from "./engine/insights.js";
 
 // ============================================================
 // LUMIQ — Luminous Intelligence Queries (Groq Edition)
@@ -165,37 +166,6 @@ async function callGroq(apiKey, messages, onStream, { signal, temperature = 0.7 
     if (signal) signal.removeEventListener("abort", abortFromCaller);
   }
 }
-
-function generateAutoInsights(dataset) {
-  const data = dataset.data;
-  const insights = [];
-  const numericCols = numericColumns(dataset);
-  numericCols.forEach((col) => {
-    // Blank cells are skipped, never counted as 0
-    const vals = numericValues(data.map((d) => d[col]));
-    if (vals.length === 0) return;
-    let max = -Infinity, min = Infinity;
-    for (const v of vals) { if (v > max) max = v; if (v < min) min = v; }
-    // Compare first 10% vs last 10% for trend detection (more robust for large datasets)
-    const headSize = Math.max(1, Math.floor(vals.length * 0.1));
-    const tailSize = Math.max(1, Math.floor(vals.length * 0.1));
-    const headAvg = vals.slice(0, headSize).reduce((a, b) => a + b, 0) / headSize;
-    const tailAvg = vals.slice(-tailSize).reduce((a, b) => a + b, 0) / tailSize;
-    const change = headAvg !== 0 ? ((tailAvg - headAvg) / Math.abs(headAvg)) * 100 : 0;
-    if (Math.abs(change) > 20) {
-      insights.push({
-        type: change > 0 ? "trend_up" : "trend_down",
-        title: `${col} ${change > 0 ? "surged" : "dropped"} ${Math.abs(change).toFixed(1)}%`,
-        description: `From ${min.toLocaleString()} to ${max.toLocaleString()} — a significant ${change > 0 ? "growth" : "decline"} trend.`,
-        metric: col,
-        value: change.toFixed(1),
-        severity: Math.abs(change) > 50 ? "high" : "medium",
-      });
-    }
-  });
-  return insights.slice(0, 4);
-}
-
 
 // Smart downsampling: bucket N data points into maxBuckets averaged bins
 function downsample(values, maxBuckets = 60) {
@@ -530,7 +500,6 @@ export default function LumiqApp() {
   const [scenarioInput, setScenarioInput] = useState("");
   const [labAnalysis, setLabAnalysis] = useState(null);
   const [labLoading, setLabLoading] = useState(false);
-  const [insights, setInsights] = useState([]);
   const [uploadedData, setUploadedData] = useState(null);
   const [uploadError, setUploadError] = useState("");
   const chatEndRef = useRef(null);
@@ -540,7 +509,6 @@ export default function LumiqApp() {
   // Reset lab analysis when dataset changes
   useEffect(() => {
     if (activeDataset) {
-      setInsights(generateAutoInsights(activeDataset));
       setLabAnalysis(null);
     }
   }, [activeDataset]);
@@ -672,7 +640,6 @@ export default function LumiqApp() {
           setLabAnalysis={setLabAnalysis}
           labLoading={labLoading}
           setLabLoading={setLabLoading}
-          insights={insights}
           uploadedData={uploadedData}
           setUploadedData={setUploadedData}
           uploadError={uploadError}
@@ -854,7 +821,6 @@ const AppShell = ({
   setLabAnalysis,
   labLoading,
   setLabLoading,
-  insights,
   uploadedData,
   setUploadedData,
   uploadError,
@@ -1033,6 +999,10 @@ Rules:
     }
     return result;
   }, [ds, sortConfig, searchQuery, activeNlFilter]);
+
+  // Auto Insights run on the filtered rows (engine + robust stats),
+  // so the AI filter and search change them too.
+  const insights = useMemo(() => computeInsights(ds, processedData), [ds, processedData]);
 
   const totalPages = Math.ceil((processedData?.length || 0) / rowsPerPage);
   const paginatedData = processedData.slice(pageIdx * rowsPerPage, (pageIdx + 1) * rowsPerPage);
@@ -1702,14 +1672,14 @@ Provide a short "Executive Summary" paragraph, then a "Key Findings" bulleted li
                         {insights.length > 0 ? insights.map((ins, i) => (
                           <div key={i} className="insight-card" style={{ animationDelay: `${i * 0.1}s` }}>
                             <div style={{ display: "flex", alignItems: "flex-start", gap: "10px" }}>
-                              <span style={{ fontSize: "18px" }}>{ins.type === "trend_up" ? "📈" : "📉"}</span>
+                              <span style={{ fontSize: "18px" }}>{{ trend_up: "📈", trend_down: "📉", top: "🏆", unusual: "⚠️" }[ins.type] || "✨"}</span>
                               <div>
                                 <div style={{ fontSize: "12px", fontWeight: 600, fontFamily: "'Syne', sans-serif", marginBottom: "4px" }}>{ins.title}</div>
                                 <p style={{ fontSize: "11px", color: "#8892b0", lineHeight: 1.5 }}>{ins.description}</p>
                               </div>
                             </div>
                           </div>
-                        )) : <div style={{ textAlign: "center", padding: "20px", color: "#3d4f7c", fontSize: "12px" }}>No significant trends detected</div>}
+                        )) : <div style={{ textAlign: "center", padding: "20px", color: "#3d4f7c", fontSize: "12px" }}>Not enough data for automatic insights</div>}
                       </div>
                     </div>
                   </div>
