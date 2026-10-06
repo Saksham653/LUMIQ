@@ -15,7 +15,10 @@
     "react-dom": "^18.2.0"
   },
   "devDependencies": {
+    "@testing-library/dom": "^10.4.2",
+    "@testing-library/react": "^16.3.3",
     "@vitejs/plugin-react": "^4.2.1",
+    "jsdom": "^29.1.1",
     "vite": "^5.0.8",
     "vitest": "^3.2.7"
   }
