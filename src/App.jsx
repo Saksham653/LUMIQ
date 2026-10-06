@@ -1221,7 +1221,9 @@ Rules:
     const controller = new AbortController();
     narrativeAbortRef.current = controller;
     setNarrativeLoading(true); setNarrativeText("");
-    const prompt = `You are a senior business analyst. Write a DECISION BRIEF for:\nDataset: ${ds.name}\nColumns: ${ds.columns.join(", ")}\nData (first 8 rows): ${JSON.stringify(ds.data.slice(0, 8))}\nTotal: ${ds.data.length} rows\n\nFormat:\nHEADLINE: [one sentence]\n\nWHAT HAPPENED: [2-3 sentences with real numbers]\n\nWHY IT MATTERS: [business implication]\n\nTHE RISK: [what could go wrong]\n\nRECOMMENDED ACTION: [one concrete next step]\n\nUnder 280 words. Be direct.`;
+    // The brief sees the schema summary (computed on all rows), never
+    // raw rows.
+    const prompt = `You are a senior business analyst. Write a DECISION BRIEF from this dataset summary. It was computed on all rows; you have no access to the rows themselves, so use only figures that appear in the summary.\n\n${renderSchemaSummary(buildSchemaSummary(ds))}\n\nFormat:\nHEADLINE: [one sentence]\n\nWHAT HAPPENED: [2-3 sentences with real numbers from the summary]\n\nWHY IT MATTERS: [business implication]\n\nTHE RISK: [what could go wrong]\n\nRECOMMENDED ACTION: [one concrete next step]\n\nUnder 280 words. Be direct.`;
     try {
       if (apiKey && apiKey !== "demo") {
         await callGroq(apiKey, [{ role: "user", content: prompt }], (text) => setNarrativeText(text), { signal: controller.signal });
@@ -1245,18 +1247,21 @@ Rules:
     if (!ds || !scenarioInput.trim()) return;
     setScenarioLoading(true); setScenarios([]);
     const isScenario = /what if|if we|suppose|assume|scenario|increase|decrease|double|halve|drop|rise|grow|shrink|change|impact|affect/i.test(scenarioInput);
+    // Scenario Forge sees the schema summary (all rows, no raw rows)
+    // and no longer asks for invented probability figures.
+    const scenarioSummary = renderSchemaSummary(buildSchemaSummary(ds));
     const prompt = isScenario
-      ? `Quantitative strategist. Scenario: "${scenarioInput}"\nDataset: ${ds.name}, columns: ${ds.columns.join(", ")}, sample: ${JSON.stringify(ds.data.slice(0, 5))}, total: ${ds.data.length} rows\nReturn ONLY valid JSON array, no markdown:\n[{"label":"Optimistic","probability":25,"impact":"+X%","description":"...","key_driver":"..."},{"label":"Base Case","probability":55,"impact":"+X%","description":"...","key_driver":"..."},{"label":"Pessimistic","probability":20,"impact":"-X%","description":"...","key_driver":"..."}]`
-      : `Expert data analyst. Question: "${scenarioInput}"\nDataset: ${ds.name}, columns: ${ds.columns.join(", ")}, sample (10 rows): ${JSON.stringify(ds.data.slice(0, 10))}, total: ${ds.data.length} rows\nReturn ONLY valid JSON array, no markdown:\n[{"label":"Overview","probability":100,"impact":"—","description":"Direct answer using actual data","key_driver":"context"},{"label":"Key Insight","probability":100,"impact":"—","description":"Most important finding","key_driver":"primary signal"},{"label":"What To Watch","probability":100,"impact":"—","description":"Critical risk or variable","key_driver":"risk factor"}]`;
+      ? `Quantitative strategist. Scenario: "${scenarioInput}"\n\nDataset summary, computed on all rows (you have no access to the rows; use only figures from this summary):\n${scenarioSummary}\n\nReturn ONLY a valid JSON array, no markdown. Do not state probabilities or invent figures that are not in the summary:\n[{"label":"Optimistic","impact":"+X%","description":"...","key_driver":"..."},{"label":"Base Case","impact":"+X%","description":"...","key_driver":"..."},{"label":"Pessimistic","impact":"-X%","description":"...","key_driver":"..."}]`
+      : `Expert data analyst. Question: "${scenarioInput}"\n\nDataset summary, computed on all rows (you have no access to the rows; use only figures from this summary):\n${scenarioSummary}\n\nReturn ONLY a valid JSON array, no markdown:\n[{"label":"Overview","impact":"—","description":"Direct answer using the summary figures","key_driver":"context"},{"label":"Key Insight","impact":"—","description":"Most important finding","key_driver":"primary signal"},{"label":"What To Watch","impact":"—","description":"Critical risk or variable","key_driver":"risk factor"}]`;
     try {
       let result = "";
       if (apiKey && apiKey !== "demo") {
         result = await callGroq(apiKey, [{ role: "user", content: prompt }], () => { });
       } else {
         result = JSON.stringify([
-          { label: "Demo Mode", probability: 0, impact: "\u2014", description: "Connect a Groq API key to get real AI scenario analysis. Get yours free at console.groq.com", key_driver: "Groq API required" },
-          { label: "Dataset Ready", probability: 100, impact: "\u2014", description: `Your "${ds.name}" dataset with ${ds.data.length} rows is loaded and ready for analysis.`, key_driver: "Data loaded successfully" },
-          { label: "Next Step", probability: 100, impact: "\u2014", description: "Add your Groq API key in Settings \u2192 the Oracle will analyze your exact scenario with real data.", key_driver: "API key setup" },
+          { label: "Demo Mode", impact: "\u2014", description: "Connect a Groq API key to get real AI scenario analysis. Get yours free at console.groq.com", key_driver: "Groq API required" },
+          { label: "Dataset Ready", impact: "\u2014", description: `Your "${ds.name}" dataset with ${ds.data.length} rows is loaded and ready for analysis.`, key_driver: "Data loaded successfully" },
+          { label: "Next Step", impact: "\u2014", description: "Add your Groq API key in Settings \u2192 the Oracle will analyze your exact scenario with real data.", key_driver: "API key setup" },
         ]);
       }
       const match = result.replace(/```json|```/g, "").trim().match(/\[[\s\S]*\]/);
@@ -1948,14 +1953,10 @@ Provide a short "Executive Summary" paragraph, then a "Key Findings" bulleted li
                     const color = colorMap[s.label] || "#8892b0";
                     return (
                       <div key={i} className="scenario-card" style={{ borderLeft: `3px solid ${color}` }}>
-                        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: "10px" }}>
-                          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                            <span style={{ fontFamily: "'Syne', sans-serif", fontWeight: 700, color }}>{s.label}</span>
-                            <span style={{ fontFamily: "'DM Mono', monospace", fontSize: "20px", fontWeight: 500, color }}>{s.impact}</span>
-                          </div>
-                          {s.probability > 0 && <div style={{ textAlign: "right" }}><div style={{ fontFamily: "'DM Mono', monospace", fontSize: "22px", fontWeight: 500, color }}>{s.probability}%</div><div style={{ fontSize: "10px", color: "#8892b0" }}>probability</div></div>}
+                        <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "10px" }}>
+                          <span style={{ fontFamily: "'Syne', sans-serif", fontWeight: 700, color }}>{s.label}</span>
+                          <span style={{ fontFamily: "'DM Mono', monospace", fontSize: "20px", fontWeight: 500, color }}>{s.impact}</span>
                         </div>
-                        {s.probability > 0 && <div style={{ background: "#1e2d5c", borderRadius: "4px", height: "4px", marginBottom: "12px" }}><div style={{ background: color, width: `${s.probability}%`, height: "100%", borderRadius: "4px" }} /></div>}
                         <p style={{ fontSize: "13px", color: "#ccd6f6", lineHeight: 1.6, marginBottom: "8px" }}>{s.description}</p>
                         <div style={{ fontSize: "11px", color: "#8892b0" }}><span style={{ color: "#3d4f7c" }}>Key driver: </span>{s.key_driver}</div>
                       </div>
