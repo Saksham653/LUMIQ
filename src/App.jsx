@@ -47,6 +47,8 @@ import LandingPage from "./screens/LandingPage.jsx";
 import ApiKeySetup from "./screens/ApiKeySetup.jsx";
 import FilesScreen from "./screens/FilesScreen.jsx";
 import ColumnDetailsScreen from "./screens/ColumnDetailsScreen.jsx";
+import DataHealthScreen from "./screens/DataHealthScreen.jsx";
+import { useDeepDive } from "./hooks/useDeepDive.js";
 
 // ============================================================
 // LUMIQ — Luminous Intelligence Queries (Groq Edition)
@@ -644,84 +646,7 @@ Rules:
     setScenarioLoading(false);
   };
 
-  // The correlation matrix and anomaly stats are computed locally and
-  // work without a key; only the written interpretation needs Groq.
-  const runDeepDive = async () => {
-    if (!ds) return;
-    setLabLoading(true);
-    setLabAnalysis(null);
-
-    try {
-      // 1. Calculate Correlation Matrix
-      const matrix = [];
-      for (let i = 0; i < numericCols.length; i++) {
-        const row = [];
-        for (let j = 0; i < numericCols.length && j < numericCols.length; j++) {
-          if (i === j) row.push(1);
-          else {
-            // Only rows where BOTH columns have real numbers count;
-            // blanks are skipped instead of entering as zeros.
-            const { xs, ys } = numericPairs(ds.data, numericCols[i], numericCols[j]);
-            row.push(xs.length >= 2 ? calcPearsonCorrelation(xs, ys) : 0);
-          }
-        }
-        matrix.push(row);
-      }
-
-      // 2. Find Top Anomalies across all metrics
-      let allAnomalies = [];
-      numericCols.forEach(col => {
-        // Outlier detection skips blank cells; indices map back to the
-        // original rows so a blank never shifts which row is flagged.
-        const entries = numericEntries(ds.data, col);
-        const { anomalies } = getAnomalies(entries.map(e => e.value), 2.8); // High threshold
-        anomalies.forEach(a => {
-          allAnomalies.push({ metric: col, rowIdx: entries[a.index].index, value: a.value, zScore: a.zScore });
-        });
-      });
-      allAnomalies.sort((a, b) => b.zScore - a.zScore);
-      const topAnomalies = allAnomalies.slice(0, 5);
-
-      // 3. Find strongest correlations (positive or negative)
-      const strongCorrelations = [];
-      for (let i = 0; i < numericCols.length; i++) {
-        for (let j = i + 1; j < numericCols.length; j++) {
-          const val = matrix[i][j];
-          if (Math.abs(val) > 0.6) {
-            strongCorrelations.push({ col1: numericCols[i], col2: numericCols[j], val });
-          }
-        }
-      }
-
-      // 4. Send the derived statistics (never rows) to Groq for the
-      // written interpretation — only when a real key is connected.
-      let analysisText = null;
-      if (apiKey && apiKey !== "demo") {
-        const prompt = `Act as an expert Data Scientist. I have analyzed the dataset "${ds.name}" and found these statistical patterns.
-Explain what they mean in plain, non-technical business English.
-
-STRONGEST CORRELATIONS (1 = perfect positive, -1 = perfect negative):
-${strongCorrelations.length ? strongCorrelations.map(c => `- ${c.col1} vs ${c.col2}: ${c.val.toFixed(2)}`).join('\n') : "None detected above 0.6"}
-
-TOP ANOMALIES (Z-Score > 2.8):
-${topAnomalies.length ? topAnomalies.map(a => `- Row #${a.rowIdx}: ${a.metric} was ${a.value.toFixed(1)} (Z-score: ${a.zScore.toFixed(1)})`).join('\n') : "No significant anomalies found."}
-
-Provide a short "Executive Summary" paragraph, then a "Key Findings" bulleted list. Do NOT output markdown code blocks, just raw text with markdown formatting (bold/italics).`;
-
-        analysisText = await callGroq(apiKey, [{ role: "user", content: prompt }], () => { });
-      }
-
-      setLabAnalysis({
-        matrix,
-        columns: numericCols,
-        anomalies: topAnomalies,
-        analysisText
-      });
-    } catch (e) {
-      setLabAnalysis({ error: e.message });
-    }
-    setLabLoading(false);
-  };
+  const { runDeepDive } = useDeepDive({ apiKey, ds, setLabAnalysis, setLabLoading });
 
   return (
     <div style={{ display: "flex", height: "100vh", overflow: "hidden" }}>
@@ -1364,70 +1289,7 @@ Provide a short "Executive Summary" paragraph, then a "Key Findings" bulleted li
             </div>
           )}
 
-          {activeTab === "ailab" && (
-            <div style={{ maxWidth: "900px", margin: "0 auto", animation: "fadeSlide 0.3s ease" }}>
-              <div style={{ marginBottom: "24px", display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
-                <div>
-                  <h2 style={{ fontFamily: "'Syne', sans-serif", fontSize: "20px", fontWeight: 800, marginBottom: "8px" }}>Data health</h2>
-                  <p style={{ color: "#8892b0", fontSize: "13px" }}>Deep statistical analysis and Groq-powered interpretations.</p>
-                </div>
-                <button className="btn-primary" onClick={runDeepDive} disabled={labLoading || !ds}>
-                  {labLoading ? "Analyzing..." : "Run Deep Dive"}
-                </button>
-              </div>
-
-              {!ds && <div style={{ color: "#FFB627", fontSize: "13px", marginBottom: "16px" }}>⚠ Select a dataset from the sidebar first</div>}
-
-              {labAnalysis && !labAnalysis.error && (
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px", marginBottom: "24px" }}>
-                  <div className="glass-card" style={{ padding: "24px" }}>
-                    <h3 style={{ fontFamily: "'Syne', sans-serif", fontSize: "15px", fontWeight: 700, marginBottom: "16px" }}>Correlation Matrix</h3>
-                    <p style={{ fontSize: "11px", color: "#8892b0", marginBottom: "20px" }}>Identifies how strongly numeric columns are related to each other. <span style={{ color: "rgba(0, 212, 255, 1)" }}>Blue = Positive</span>, <span style={{ color: "rgba(255, 60, 60, 1)" }}>Red = Negative</span></p>
-                    <div style={{ overflowX: "auto", paddingBottom: "20px" }}>
-                      <HeatmapChart matrix={labAnalysis.matrix} columns={labAnalysis.columns} />
-                    </div>
-                  </div>
-
-                  <div className="glass-card" style={{ padding: "24px" }}>
-                    <h3 style={{ fontFamily: "'Syne', sans-serif", fontSize: "15px", fontWeight: 700, marginBottom: "16px" }}>Anomaly Detection</h3>
-                    <p style={{ fontSize: "11px", color: "#8892b0", marginBottom: "20px" }}>Highlights top statistical outliers (Z-Score &gt; 2.8) across your dataset. Anomalies are shown in <span style={{ color: "#FF3C3C", fontWeight: "bold" }}>Red</span>.</p>
-                    <div style={{ height: "200px" }}>
-                      {labAnalysis.anomalies.length > 0 ? (
-                        <AnomalyScatterChart
-                          data={ds.data}
-                          metric={labAnalysis.anomalies[0].metric}
-                          anomalies={labAnalysis.anomalies.filter(a => a.metric === labAnalysis.anomalies[0].metric)}
-                        />
-                      ) : (
-                        <div style={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: "#8892b0", fontSize: "12px" }}>No extreme anomalies detected.</div>
-                      )}
-                    </div>
-                    {labAnalysis.anomalies.length > 0 && (
-                      <div style={{ marginTop: "12px", fontSize: "11px", color: "#ccd6f6" }}>
-                        Currently viewing anomalous metric: <span className="data-pill">{labAnalysis.anomalies[0].metric}</span>
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="glass-card" style={{ padding: "24px", gridColumn: "1 / -1" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "16px" }}>
-                      <span className="badge badge-violet">AI INTERPRETATION</span>
-                      <span style={{ fontSize: "11px", color: "#3d4f7c", fontFamily: "'DM Mono', monospace" }}>Powered by Groq</span>
-                    </div>
-                    {labAnalysis.analysisText
-                      ? <div className="narrative-box" style={{ borderRadius: "12px", borderLeft: "3px solid #7B4FE8" }}>{labAnalysis.analysisText}</div>
-                      : <KeyNudge setPage={setPage} />}
-                  </div>
-                </div>
-              )}
-
-              {labAnalysis?.error && (
-                <div style={{ padding: "20px", background: "#ff444411", color: "#ff4444", border: "1px solid #ff444444", borderRadius: "12px" }}>
-                  <strong>Analysis Failed:</strong> {labAnalysis.error}. Make sure your Groq API key is valid.
-                </div>
-              )}
-            </div>
-          )}
+          {activeTab === "ailab" && <DataHealthScreen ds={ds} setPage={setPage} labAnalysis={labAnalysis} labLoading={labLoading} runDeepDive={runDeepDive} />}
 
           {activeTab === "datadna" && <ColumnDetailsScreen ds={ds} />}
 
