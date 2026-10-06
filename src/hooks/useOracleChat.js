@@ -17,7 +17,7 @@ import {
 } from "../ai/oraclePlanner.js";
 import { collectCandidates, verifyNumbers } from "../ai/numberCheck.js";
 
-export function useOracleChat({ apiKey, ds, oracleInput, setOracleInput, oracleLoading, setOracleLoading, setOracleMessages }) {
+export function useOracleChat({ apiKey, ds, oracleInput, setOracleInput, oracleLoading, setOracleLoading, setOracleMessages, askContext, setAskContext }) {
   const oracleAbortRef = useRef(null);
   const [oracleLastFailed, setOracleLastFailed] = useState(null);
 
@@ -41,9 +41,13 @@ export function useOracleChat({ apiKey, ds, oracleInput, setOracleInput, oracleL
     const summary = buildSchemaSummary(ds);
     const schemaText = renderSchemaSummary(summary);
     const sent = [];
+    // Follow-ups: the last 3 exchanges (question + validated plan +
+    // plain-English steps) go into the plan prompt. Never rows.
+    const context = Array.isArray(askContext) ? askContext.slice(-3) : [];
+    const hadContext = context.length > 0;
 
     updateLastOracle({ content: "Planning the calculation…" });
-    const planPrompt = buildPlanPrompt(question, schemaText);
+    const planPrompt = buildPlanPrompt(question, schemaText, context);
     sent.push({ label: "Plan request (schema summary only — no rows)", text: planPrompt });
     const planReply = await callGroq(apiKey, [{ role: "user", content: planPrompt }], null, { signal: controller.signal, temperature: 0 });
     let parsed = parsePlannerReply(planReply);
@@ -112,9 +116,12 @@ export function useOracleChat({ apiKey, ds, oracleInput, setOracleInput, oracleL
       content: answer,
       candidates,
       unverified: check.unverified,
-      proof: { steps: result.steps, table: result.table, rowsUsed: result.rowsUsed, totalRows: result.totalRows, sent },
+      proof: { steps: result.steps, table: result.table, rowsUsed: result.rowsUsed, totalRows: result.totalRows, sent, followUp: hadContext },
     });
+    setAskContext((prev) => [...(prev || []), { question, plan: checked.plan, steps: result.steps }].slice(-3));
   };
+
+  const clearContext = () => setAskContext([]);
 
   // Pass retryText to re-send a failed question (the Retry button);
   // otherwise the textarea content is sent.
@@ -152,5 +159,5 @@ export function useOracleChat({ apiKey, ds, oracleInput, setOracleInput, oracleL
     setOracleLoading(false);
   };
 
-  return { sendOracleMessage, oracleAbortRef, oracleLastFailed };
+  return { sendOracleMessage, oracleAbortRef, oracleLastFailed, clearContext, contextActive: Array.isArray(askContext) && askContext.length > 0 };
 }

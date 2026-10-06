@@ -54,7 +54,8 @@ describe("screen smoke tests (no key, Sales sample)", () => {
   it("Ask shows data-driven chips, the hint line and an honest demo reply", async () => {
     enterDemo();
     goTab("Ask");
-    expect(screen.getByText(/Each question is answered on its own/)).toBeTruthy();
+    expect(screen.getByText(/You can ask follow-ups like/)).toBeTruthy();
+    expect(screen.getByText("New topic")).toBeTruthy();
     expect(screen.getByText("Which month has the highest revenue?")).toBeTruthy();
     const input = screen.getByPlaceholderText("Ask Oracle anything about your data...");
     fireEvent.change(input, { target: { value: "total revenue" } });

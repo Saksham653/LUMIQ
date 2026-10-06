@@ -6,6 +6,9 @@ export default function ShowTheWork({ proof }) {
     <div style={{ maxWidth: "85%", display: "flex", flexDirection: "column", gap: "4px" }}>
       <details style={{ background: "#0a1128", border: "1px solid #1e2d5c", borderRadius: "8px", padding: "8px 12px", fontSize: "12px" }}>
         <summary style={{ cursor: "pointer", color: "#8892b0", fontSize: "11px" }}>Show the work</summary>
+        {proof.followUp && (
+          <div style={{ marginTop: "8px", fontSize: "10px", color: "#7B4FE8", fontFamily: "'DM Mono', monospace" }}>↳ Built on your previous question</div>
+        )}
         <ol style={{ margin: "8px 0 0 18px", color: "#ccd6f6", lineHeight: 1.7, fontSize: "12px" }}>
           {proof.steps.map((s, j) => <li key={j}>{s}</li>)}
         </ol>

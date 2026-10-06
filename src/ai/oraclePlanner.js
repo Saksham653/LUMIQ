@@ -10,10 +10,27 @@ import { aggregationRule } from "../data/columnTypes.js";
 
 export const EXPLAIN_TABLE_LIMIT = 50;
 
-export function buildPlanPrompt(question, schemaText) {
+// context: up to the last 3 exchanges as { question, plan, steps } —
+// the validated plan and plain-English steps only, never result rows
+// or raw data.
+function renderContext(context) {
+  if (!Array.isArray(context) || context.length === 0) return "";
+  const items = context
+    .map((c, i) => `${i + 1}. Question: "${c.question}"\n   Plan: ${JSON.stringify(c.plan)}\n   Steps: ${(c.steps || []).join("; ")}`)
+    .join("\n");
+  return `
+Earlier questions in this conversation (most recent last):
+${items}
+
+A short follow-up like "and by category?" or "only for North" refers to the MOST RECENT plan above: change or add only what the user asked (the grouping, a filter, the measure) and keep the rest of that plan the same.
+`;
+}
+
+export function buildPlanPrompt(question, schemaText, context) {
   return `You turn a question about a data table into a JSON calculation plan. You never see the rows — only this summary:
 
 ${schemaText}
+${renderContext(context)}
 
 Reply with ONLY one JSON object, no markdown and no explanations. One of:
 1. {"type":"plan","plan":{"filter":{"logic":"and","conditions":[{"column":"<name>","action":"<action>","value":<value>}]},"groupBy":["<name>"],"measures":[{"op":"<op>","column":"<name>","as":"<result name>"}],"sort":{"by":"<result name or groupBy column>","dir":"asc|desc"},"limit":<n>}}
