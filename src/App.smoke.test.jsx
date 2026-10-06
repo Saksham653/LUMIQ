@@ -107,7 +107,7 @@ describe("screen smoke tests (no key, Sales sample)", () => {
   it("Files shows the upload zone and samples", () => {
     enterDemo();
     goTab("Files");
-    expect(screen.getByText("Drop your CSV here")).toBeTruthy();
+    expect(screen.getByText("Drop your CSV or Excel file here")).toBeTruthy();
     expect(screen.getByText("Sample Datasets")).toBeTruthy();
   });
 });

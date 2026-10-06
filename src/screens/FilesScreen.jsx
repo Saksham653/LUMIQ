@@ -1,6 +1,8 @@
 import { useState, useRef } from "react";
 import { SAMPLE_DATASETS } from "../data/sampleDatasets.js";
 import { uniqueDatasetName } from "../data/dataset.js";
+import { buildPreviewFromGrid } from "../data/uploadPreview.js";
+import { isExcelFile, readExcelWorkbook, excelSheetToGrid } from "../data/excel.js";
 import { buildPreviewAsync, datasetFromPreviewAsync, dropPreviewAsync, cancelAllWork } from "../worker/workerClient.js";
 import UploadPreview from "../components/UploadPreview.jsx";
 
@@ -8,17 +10,57 @@ export default function FilesScreen({ activeDataset, setActiveDataset, setActive
   const [preview, setPreview] = useState(null);
   const [previewTypes, setPreviewTypes] = useState(null);
   const [parsing, setParsing] = useState(null); // { stage, rows, pct }
+  const [sheetPick, setSheetPick] = useState(null); // { book, baseName }
   const parseToken = useRef(null);
 
+  const showPreview = (p) => {
+    setParsing(null);
+    setPreview(p);
+    setPreviewTypes(p.types);
+  };
+
+  // One Excel sheet → the same preview a CSV gets. SheetJS itself
+  // (pinned from cdn.sheetjs.com) loads inside excel.js via dynamic
+  // import(), only when an Excel file is actually chosen (B7-2).
+  const pickSheet = async (book, sheetName, baseName) => {
+    setSheetPick(null);
+    setParsing({ stage: `Reading sheet "${sheetName}"`, rows: 0, pct: 50 });
+    try {
+      const grid = await excelSheetToGrid(book, sheetName);
+      showPreview(buildPreviewFromGrid(grid.columns, grid.rows, book.sheetNames.length > 1 ? `${baseName} — ${sheetName}` : baseName));
+    } catch (err) {
+      setParsing(null);
+      setUploadError(err?.message || "Could not read this sheet.");
+    }
+  };
+
   // Reads a chosen or dropped file into the preview — nothing is
-  // loaded until the user confirms. Parsing and type detection run
-  // in the data worker (F13), with live row-count progress.
+  // loaded until the user confirms. CSV parsing and type detection
+  // run in the data worker (F13), with live row-count progress.
   const handleFile = (file) => {
     if (!file) return;
     setUploadError("");
-    if (!/\.csv$/i.test(file.name)) { setUploadError("Please upload a CSV file."); return; }
+    const isExcel = isExcelFile(file.name);
+    if (!isExcel && !/\.csv$/i.test(file.name)) { setUploadError("Please upload a CSV or Excel (.xlsx / .xls) file."); return; }
     const reader = new FileReader();
     reader.onload = async (ev) => {
+      if (isExcel) {
+        setParsing({ stage: "Reading Excel file", rows: 0, pct: 30 });
+        try {
+          const book = await readExcelWorkbook(ev.target.result);
+          const baseName = file.name.replace(/\.(xlsx|xls)$/i, "");
+          if (book.sheetNames.length > 1) {
+            setParsing(null);
+            setSheetPick({ book, baseName });
+          } else {
+            await pickSheet(book, book.sheetNames[0], baseName);
+          }
+        } catch (err) {
+          setParsing(null);
+          setUploadError(err?.message || "Could not read this Excel file.");
+        }
+        return;
+      }
       const token = crypto.randomUUID();
       parseToken.current = token;
       setParsing({ stage: "Reading rows", rows: 0, pct: 0 });
@@ -28,16 +70,15 @@ export default function FilesScreen({ activeDataset, setActiveDataset, setActive
           setParsing({ stage: m.stage === "typing" ? "Detecting column types" : "Reading rows", rows: m.rows, pct: m.pct });
         });
         if (parseToken.current !== token) return; // cancelled meanwhile
-        setParsing(null);
-        setPreview(p);
-        setPreviewTypes(p.types);
+        showPreview(p);
       } catch (err) {
         if (parseToken.current !== token || err?.cancelled) return;
         setParsing(null);
         setUploadError(err?.message || "Could not parse CSV. Please check the format.");
       }
     };
-    reader.readAsText(file);
+    if (isExcel) reader.readAsArrayBuffer(file);
+    else reader.readAsText(file);
   };
 
   const cancelParsing = () => {
@@ -88,8 +129,24 @@ export default function FilesScreen({ activeDataset, setActiveDataset, setActive
     <div style={{ maxWidth: "780px", margin: "0 auto", animation: "fadeSlide 0.3s ease" }}>
       <div style={{ marginBottom: "24px" }}>
         <h2 style={{ fontFamily: "'Syne', sans-serif", fontSize: "20px", fontWeight: 800, marginBottom: "8px" }}>Files</h2>
-        <p style={{ color: "#8892b0", fontSize: "13px" }}>Upload your own CSV or choose from sample datasets. Your files and chats stay on this device.</p>
+        <p style={{ color: "#8892b0", fontSize: "13px" }}>Upload a CSV or Excel file, or choose from sample datasets. Your files and chats stay on this device.</p>
       </div>
+      {sheetPick && (
+        <div className="glass-card" style={{ padding: "20px", marginBottom: "24px" }}>
+          <div style={{ fontFamily: "'Syne', sans-serif", fontWeight: 700, fontSize: "14px", marginBottom: "6px" }}>This file has {sheetPick.book.sheetNames.length} sheets</div>
+          <p style={{ color: "#8892b0", fontSize: "12px", marginBottom: "12px" }}>Pick the one to load:</p>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
+            {sheetPick.book.sheetNames.map((s) => (
+              <button key={s} className="btn-ghost" style={{ fontSize: "12px", padding: "8px 14px" }} onClick={() => pickSheet(sheetPick.book, s, sheetPick.baseName)}>
+                📄 {s}
+              </button>
+            ))}
+            <button className="btn-ghost" style={{ fontSize: "12px", padding: "8px 14px", borderColor: "#FF3C3C44", color: "#FF8888" }} onClick={() => { setSheetPick(null); if (fileInputRef.current) fileInputRef.current.value = ""; }}>
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
       {parsing && (
         <div className="glass-card" style={{ padding: "20px", marginBottom: "24px" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px", gap: "10px" }}>
@@ -113,9 +170,9 @@ export default function FilesScreen({ activeDataset, setActiveDataset, setActive
         onDragOver={(e) => e.preventDefault()}
         onDrop={(e) => { e.preventDefault(); handleFile(e.dataTransfer?.files?.[0]); }}
       >
-        <input type="file" ref={fileInputRef} accept=".csv" style={{ display: "none" }} onChange={(e) => handleFile(e.target.files[0])} />
+        <input type="file" ref={fileInputRef} accept=".csv,.xlsx,.xls" style={{ display: "none" }} onChange={(e) => handleFile(e.target.files[0])} aria-label="Choose a CSV or Excel file" />
         <div style={{ fontSize: "36px", marginBottom: "12px" }}>📂</div>
-        <div style={{ fontFamily: "'Syne', sans-serif", fontWeight: 700, fontSize: "16px", marginBottom: "8px" }}>Drop your CSV here</div>
+        <div style={{ fontFamily: "'Syne', sans-serif", fontWeight: 700, fontSize: "16px", marginBottom: "8px" }}>Drop your CSV or Excel file here</div>
         <p style={{ color: "#8892b0", fontSize: "13px" }}>or click to browse files</p>
         {uploadError && <p style={{ color: "#ff4444", fontSize: "12px", marginTop: "10px" }}>{uploadError}</p>}
       </div>

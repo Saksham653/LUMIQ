@@ -76,7 +76,7 @@ describe("FilesScreen upload preview (B5-4)", () => {
 
   it("drag and drop reaches the same preview", async () => {
     setup();
-    const zone = screen.getByText("Drop your CSV here").closest(".upload-zone");
+    const zone = screen.getByText("Drop your CSV or Excel file here").closest(".upload-zone");
     fireEvent.drop(zone, { dataTransfer: { files: [csvFile()] } });
     expect(await screen.findByText("3 rows · 2 columns")).toBeTruthy();
   });

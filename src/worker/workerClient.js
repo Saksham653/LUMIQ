@@ -68,7 +68,7 @@ export async function buildPreviewAsync(text, name, token, onProgress) {
     return { ...p, token };
   }
   const r = await workerCall("buildPreview", { token, text }, onProgress);
-  return { name, columns: r.columns, rows: r.rows, rowCount: r.rowCount, types: r.types, token };
+  return { name, columns: r.columns, rows: r.rows, rowCount: r.rowCount, types: r.types, token, workerHeld: true };
 }
 
 // Coerce the previewed rows into the final dataset. The worker still
@@ -78,7 +78,10 @@ export async function datasetFromPreviewAsync(preview, types) {
   if (!workerSupported()) return datasetFromPreview(preview, types);
   const id = crypto.randomUUID();
   try {
-    const r = await workerCall("finishDataset", { token: preview.token, dsId: id, types });
+    // An Excel preview was built on the main thread, so the worker
+    // has no cached rows for it — send them along once.
+    const fallback = preview.workerHeld ? {} : { rows: preview.rows, columns: preview.columns };
+    const r = await workerCall("finishDataset", { token: preview.token, dsId: id, types, ...fallback });
     planCachedId = id;
     return {
       id,
