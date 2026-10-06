@@ -20,7 +20,7 @@ const LandingPage = ({ setPage, startDemo }) => (
     <div style={{ maxWidth: "900px", margin: "0 auto", padding: "80px 40px 60px", textAlign: "center", position: "relative", zIndex: 5 }}>
       <div className="prism-logo" style={{ margin: "0 auto 40px", display: "inline-block" }}><PrismLogo size={100} /></div>
       <div style={{ marginBottom: "16px" }}>
-        <span className="badge badge-violet" style={{ fontSize: "11px" }}>⚡ Powered by Groq Ultra-Fast Inference · Llama 3 70B</span>
+        <span className="badge badge-violet" style={{ fontSize: "12px" }}>⚡ Powered by Groq Ultra-Fast Inference · Llama 3 70B</span>
       </div>
       <h1 style={{ fontFamily: "'Syne', sans-serif", fontSize: "clamp(48px, 7vw, 84px)", fontWeight: 800, lineHeight: 1.05, letterSpacing: "-3px", marginBottom: "24px" }}>
         Data that<br />
@@ -64,8 +64,8 @@ const LandingPage = ({ setPage, startDemo }) => (
     </div>
     <div style={{ textAlign: "center", padding: "40px", borderTop: "1px solid #1e2d5c22" }}>
       <button className="btn-primary" style={{ fontSize: "15px", padding: "14px 40px" }} onClick={() => setPage("setup")}>Start Analyzing for Free →</button>
-      <p style={{ marginTop: "12px", fontSize: "12px", color: "#3d4f7c" }}>Free Groq API key at console.groq.com · Llama 3 70B</p>
-      <p style={{ marginTop: "24px", fontSize: "11px", color: "#56689d" }}>
+      <p style={{ marginTop: "12px", fontSize: "12px", color: "#8892b0" }}>Free Groq API key at console.groq.com · Llama 3 70B</p>
+      <p style={{ marginTop: "24px", fontSize: "12px", color: "#8892b0" }}>
         &copy; {new Date().getFullYear()} Saksham Srivastava<br />
         Email: sakshamsrivastava7000@gmail.com
       </p>

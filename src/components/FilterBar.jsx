@@ -9,7 +9,7 @@ export default function FilterBar({ apiKey, setPage, nlFilterQuery, setNlFilterQ
         <div style={{ flex: 1 }}>
           <h3 style={{ fontFamily: "'Syne', sans-serif", fontSize: "14px", fontWeight: 700, marginBottom: "8px", display: "flex", alignItems: "center", gap: "8px" }}>
             AI Data Filter
-            <span className="badge badge-violet" style={{ fontSize: "9px" }}>Groq Powered</span>
+            <span className="badge badge-violet" style={{ fontSize: "12px" }}>Groq Powered</span>
           </h3>
 
           <div style={{ display: "flex", gap: "10px" }}>
@@ -17,7 +17,7 @@ export default function FilterBar({ apiKey, setPage, nlFilterQuery, setNlFilterQ
               type="text"
               className="oracle-input"
               style={{ flex: 1, padding: "10px 14px", fontSize: "13px" }}
-              placeholder="e.g., 'Show me rows where Revenue is over 1000 and the month is November'"
+              aria-label="AI data filter request" placeholder="e.g., 'Show me rows where Revenue is over 1000 and the month is November'"
               value={nlFilterQuery}
               onChange={(e) => setNlFilterQuery(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && applyNlFilter()}
@@ -41,10 +41,10 @@ export default function FilterBar({ apiKey, setPage, nlFilterQuery, setNlFilterQ
           {(!apiKey || apiKey === "demo") && <div style={{ marginTop: "10px" }}><KeyNudge setPage={setPage} /></div>}
 
           {activeNlFilter && (
-            <div style={{ marginTop: "12px", padding: "10px", background: "#050914", borderRadius: "8px", border: "1px solid #1e2d5c", fontSize: "11px" }}>
+            <div style={{ marginTop: "12px", padding: "10px", background: "#050914", borderRadius: "8px", border: "1px solid #1e2d5c", fontSize: "12px" }}>
               <div style={{ color: "#00E5A0", marginBottom: "4px" }}>✓ Filter Applied: "{activeNlFilter.query}"</div>
               <div style={{ color: "#8892b0" }}>
-                <span style={{ color: "#7B4FE8" }}>Showing rows where:</span> {activeNlFilter.description}
+                <span style={{ color: "#a78bfa" }}>Showing rows where:</span> {activeNlFilter.description}
               </div>
             </div>
           )}

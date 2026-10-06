@@ -41,7 +41,7 @@ export default function AnomalyScatterChart({ data, metric, anomalies }) {
         return (
           <g key={i}>
             <line x1={padL} y1={yPos} x2={w - padR} y2={yPos} stroke="#1e2d5c" strokeWidth="0.5" />
-            <text x={padL - 4} y={yPos + 3} textAnchor="end" fill="#3d4f7c" fontSize="10" fontFamily="DM Mono">{fmtNum(val)}</text>
+            <text x={padL - 4} y={yPos + 3} textAnchor="end" fill="#8892b0" fontSize="10" fontFamily="DM Mono">{fmtNum(val)}</text>
           </g>
         );
       })}

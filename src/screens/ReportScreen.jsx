@@ -34,7 +34,7 @@ export default function ReportScreen({ ds, apiKey, setPage, narrativeText, narra
           <div className="glass-card" style={{ padding: "24px", marginBottom: "20px" }}>
             <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "16px" }}>
               <span className="badge badge-gold">REPORT</span>
-              <span style={{ fontSize: "12px", color: "#3d4f7c", fontFamily: "'DM Mono', monospace" }}>{ds.name} · calculated in your browser</span>
+              <span style={{ fontSize: "12px", color: "#8892b0", fontFamily: "'DM Mono', monospace" }}>{ds.name} · calculated in your browser</span>
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))", gap: "16px" }}>
               {report.items.map((item, i) => (

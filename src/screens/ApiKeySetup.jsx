@@ -29,7 +29,7 @@ const ApiKeySetup = ({ setPage, apiKeyInput, setApiKeyInput, setApiKey, startDem
         <input type="checkbox" checked={rememberKey} onChange={(e) => setRememberKey(e.target.checked)} style={{ accentColor: "#00D4FF" }} />
         Remember on this device
       </label>
-      <p style={{ fontSize: "11px", color: "#3d4f7c", marginBottom: "16px", lineHeight: 1.5 }}>
+      <p style={{ fontSize: "12px", color: "#8892b0", marginBottom: "16px", lineHeight: 1.5 }}>
         Your key stays in this browser. Unticked, it is kept in memory for this session only; ticked, it is saved in this browser's local storage. Avoid ticking it on a shared computer.
       </p>
       <button className="btn-primary" style={{ width: "100%" }} onClick={launch} disabled={!apiKeyInput.trim()}>Launch LUMIQ →</button>
@@ -39,7 +39,7 @@ const ApiKeySetup = ({ setPage, apiKeyInput, setApiKeyInput, setApiKey, startDem
       {["Free tier", "Llama 3 70B", "Privacy-first"].map((t) => (<div key={t} className="data-pill">{t}</div>))}
     </div>
     <div style={{ marginTop: "16px", textAlign: "center" }}>
-      <button onClick={() => setPage("landing")} style={{ background: "none", border: "none", color: "#3d4f7c", cursor: "pointer", fontSize: "12px" }}>← Back to home</button>
+      <button onClick={() => setPage("landing")} style={{ background: "none", border: "none", color: "#8892b0", cursor: "pointer", fontSize: "12px" }}>← Back to home</button>
     </div>
   </div>
   );

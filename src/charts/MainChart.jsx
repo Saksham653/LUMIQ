@@ -5,6 +5,7 @@ import { chartSeries } from "../engine/chartSeries.js";
 import { useRef } from "react";
 import { exportSvgToPng } from "../lib/exportChart.js";
 import { downloadBlob } from "../lib/exportData.js";
+import ChartWithTable from "../components/ChartWithTable.jsx";
 
 // The Overview's main visualization card: metric and chart-type
 // selectors, the Forecast toggle, the SVG chart and the forecast
@@ -19,18 +20,25 @@ export default function MainChart({ ds, processedData, numericCols, metric, setS
     try { downloadBlob(`${ds.name}-${metric}.png`, await exportSvgToPng(svg)); } catch (e) { console.error("PNG export failed:", e); }
   };
   const check = forecastEnabled ? buildForecast(chartSeries(ds, processedData, metric, { timeOrdered: !!forecastTime }).values) : null;
+  // The accessible twin of the chart (B7-3): same series as a table
+  const tableSeries = chartSeries(ds, processedData, metric, { timeOrdered: forecastEnabled && !!forecastTime });
+  const tableRows = tableSeries.values.map((v, i) => [String(tableSeries.labels[i] ?? `#${i + 1}`), v]);
+  if (forecastEnabled && check?.ok && !check.tooIrregular) {
+    check.forecast.forEach((v, i) => tableRows.push([`forecast +${i + 1}`, Math.round(v * 100) / 100]));
+  }
+  const chartLabel = `${chartType === "bar" ? "Bar" : chartType === "line" ? "Line" : "Area"} chart of ${metric} across ${tableSeries.values.length} rows${forecastEnabled && check?.ok && !check.tooIrregular ? ", plus a 5-point forecast" : ""}`;
   return (
     <div className="glass-card" style={{ padding: "24px" }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "20px" }}>
         <h3 style={{ fontFamily: "'Syne', sans-serif", fontSize: "15px", fontWeight: 700 }}>Visualization</h3>
         <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-          <select value={metric} onChange={(e) => setSelectedMetric(e.target.value)}>{numericCols.map((c) => <option key={c} value={c}>{c}</option>)}</select>
-          <select value={chartType} onChange={(e) => setChartType(e.target.value)}><option value="bar">Bar</option><option value="line">Line</option><option value="area">Area</option></select>
+          <select aria-label="Metric to chart" value={metric} onChange={(e) => setSelectedMetric(e.target.value)}>{numericCols.map((c) => <option key={c} value={c}>{c}</option>)}</select>
+          <select aria-label="Chart type" value={chartType} onChange={(e) => setChartType(e.target.value)}><option value="bar">Bar</option><option value="line">Line</option><option value="area">Area</option></select>
           <button className="btn-ghost" style={{ fontSize: "12px", padding: "5px 12px" }} onClick={downloadPng} aria-label="Download chart as PNG">⬇ PNG</button>
           {forecastTime ? (
             <button
               className={forecastEnabled ? "btn-primary" : "btn-ghost"}
-              style={{ fontSize: "11px", padding: "5px 12px", display: "flex", alignItems: "center", gap: "4px" }}
+              style={{ fontSize: "12px", padding: "5px 12px", display: "flex", alignItems: "center", gap: "4px" }}
               onClick={() => {
                 const next = !forecastEnabled;
                 setForecastEnabled(next);
@@ -52,13 +60,14 @@ export default function MainChart({ ds, processedData, numericCols, metric, setS
               className="btn-ghost"
               disabled
               title="Forecast needs a date or month column with at least 8 points"
-              style={{ fontSize: "11px", padding: "5px 12px", opacity: 0.4, cursor: "default" }}
+              style={{ fontSize: "12px", padding: "5px 12px", opacity: 0.4, cursor: "default" }}
             >
               🔮 Forecast
             </button>
           )}
         </div>
       </div>
+      <ChartWithTable label={chartLabel} columns={["Label", metric]} rows={tableRows} maxHeight={260}>
       <div ref={chartRef} style={{ position: "relative", height: "260px" }}>
         {(() => {
           // Rows with a blank metric are skipped, never charted
@@ -133,7 +142,7 @@ export default function MainChart({ ds, processedData, numericCols, metric, setS
                 return (
                   <g key={i}>
                     <line x1={padL} y1={yPos} x2={w - padR} y2={yPos} stroke="#1e2d5c" strokeWidth="0.2" />
-                    <text x={padL - 1} y={yPos + 1} textAnchor="end" fill="#3d4f7c" fontSize="3" fontFamily="DM Mono">{fmtNum(val)}</text>
+                    <text x={padL - 1} y={yPos + 1} textAnchor="end" fill="#8892b0" fontSize="3" fontFamily="DM Mono">{fmtNum(val)}</text>
                   </g>
                 );
               })}
@@ -201,7 +210,7 @@ export default function MainChart({ ds, processedData, numericCols, metric, setS
                 const dataIdx = Math.floor((i / Math.max(xLabelCount - 1, 1)) * (totalRows - 1));
                 const px = padL + (i / Math.max(xLabelCount - 1, 1)) * (chartW * (vals.length / totalPts));
                 const label = totalRows > 100 ? `#${dataIdx + 1}` : String(series.labels[dataIdx] || "").slice(0, 6);
-                return <text key={i} x={px} y={h - 1} textAnchor="middle" fill="#3d4f7c" fontSize="3" fontFamily="DM Mono">{label}</text>;
+                return <text key={i} x={px} y={h - 1} textAnchor="middle" fill="#8892b0" fontSize="3" fontFamily="DM Mono">{label}</text>;
               })}
               {/* Dataset info */}
               {totalRows > 60 && <text x={w - padR} y={padT + 4} textAnchor="end" fill="#3d4f7c44" fontSize="3" fontFamily="DM Mono">{totalRows.toLocaleString()} rows (avg per bucket)</text>}
@@ -209,6 +218,7 @@ export default function MainChart({ ds, processedData, numericCols, metric, setS
           );
         })()}
       </div>
+      </ChartWithTable>
 
       {/* Forecast Narrative */}
       {forecastEnabled && (
@@ -222,7 +232,7 @@ export default function MainChart({ ds, processedData, numericCols, metric, setS
           <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
             <span style={{ fontSize: "16px" }}>🔮</span>
             <span style={{ fontFamily: "'Syne', sans-serif", fontWeight: 700, fontSize: "13px" }}>Forecast</span>
-            <span className="badge badge-gold" style={{ fontSize: "9px" }}>{forecastLoading ? "Analyzing..." : "AI Insight"}</span>
+            <span className="badge badge-gold" style={{ fontSize: "12px" }}>{forecastLoading ? "Analyzing..." : "AI Insight"}</span>
           </div>
           <p style={{ fontSize: "12px", color: "#ccd6f6", lineHeight: 1.6 }}>{forecastNarrative || "Generating forecast..."}</p>
         </div>
