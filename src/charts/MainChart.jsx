@@ -1,7 +1,6 @@
-import { numericValues } from "../lib/stats.js";
 import { fmtNum, fitLabel } from "../lib/format.js";
 import { downsample, calcLinearRegression } from "../lib/analysis.js";
-import { forecastSeries } from "../engine/insights.js";
+import { chartSeries } from "../engine/chartSeries.js";
 
 // The Overview's main visualization card: metric and chart-type
 // selectors, the Forecast toggle, the SVG chart and the forecast
@@ -24,7 +23,7 @@ export default function MainChart({ ds, processedData, numericCols, metric, setS
                 if (next) {
                   // Points in time order (never table order);
                   // blank cells are skipped, not fed in as zeros
-                  const rawVals = forecastSeries(ds, processedData, metric) || [];
+                  const rawVals = chartSeries(ds, processedData, metric, { timeOrdered: true }).values;
                   const reg = calcLinearRegression(rawVals);
                   runForecast(metric, reg);
                 } else {
@@ -52,9 +51,8 @@ export default function MainChart({ ds, processedData, numericCols, metric, setS
           // Rows with a blank metric are skipped, never charted
           // as 0. With Forecast on, the series follows the time
           // column — sorting the table cannot change it.
-          const rawVals = forecastEnabled && forecastTime
-            ? (forecastSeries(ds, processedData, metric) || [])
-            : numericValues(processedData.map((d) => d[metric]));
+          const series = chartSeries(ds, processedData, metric, { timeOrdered: forecastEnabled && !!forecastTime });
+          const rawVals = series.values;
           const vals = downsample(rawVals, 60);
           const regression = forecastEnabled ? calcLinearRegression(rawVals) : null;
           const forecastVals = regression ? regression.forecast : [];
@@ -77,7 +75,7 @@ export default function MainChart({ ds, processedData, numericCols, metric, setS
           const yTicks = 5;
           const pts = vals.map((v, i) => `${padL + (i / Math.max(totalPts - 1, 1)) * chartW},${padT + chartH - ((v - minV) / range) * chartH}`).join(" ");
           const xLabelCount = Math.min(6, vals.length);
-          const totalRows = processedData.length;
+          const totalRows = series.values.length;
 
           // Forecast points for the dashed line
           let forecastPts = "";
@@ -189,7 +187,7 @@ export default function MainChart({ ds, processedData, numericCols, metric, setS
               {Array.from({ length: xLabelCount }).map((_, i) => {
                 const dataIdx = Math.floor((i / Math.max(xLabelCount - 1, 1)) * (totalRows - 1));
                 const px = padL + (i / Math.max(xLabelCount - 1, 1)) * (chartW * (vals.length / totalPts));
-                const label = totalRows > 100 ? `#${dataIdx + 1}` : String(ds.data[dataIdx]?.[ds.columns[0]] || "").slice(0, 6);
+                const label = totalRows > 100 ? `#${dataIdx + 1}` : String(series.labels[dataIdx] || "").slice(0, 6);
                 return <text key={i} x={px} y={h - 1} textAnchor="middle" fill="#3d4f7c" fontSize="3" fontFamily="DM Mono">{label}</text>;
               })}
               {/* Dataset info */}
