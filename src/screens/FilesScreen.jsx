@@ -115,14 +115,15 @@ export default function FilesScreen({ activeDataset, setActiveDataset, setActive
     }
   };
 
+  // A real button (B7-3): keyboard-reachable, announced as one.
   const datasetCard = (d) => (
-    <div key={d.id} className={`glass-card`} style={{ padding: "20px", cursor: "pointer", transition: "all 0.2s", borderColor: activeDataset?.id === d.id ? "#00D4FF44" : "#1e2d5c" }} onClick={() => { setActiveDataset(d); setActiveTab("canvas"); }}>
-      <div style={{ fontSize: "28px", marginBottom: "10px" }}>{d.icon}</div>
-      <div style={{ fontFamily: "'Syne', sans-serif", fontWeight: 700, fontSize: "14px", marginBottom: "6px" }}>{d.name}</div>
-      <p style={{ color: "#8892b0", fontSize: "12px", marginBottom: "12px" }}>{d.description}</p>
-      <div style={{ display: "flex", flexWrap: "wrap", gap: "4px" }}>{d.columns.slice(0, 3).map((c) => <span key={c} className="data-pill" style={{ fontSize: "10px" }}>{c}</span>)}</div>
-      {activeDataset?.id === d.id && <div style={{ marginTop: "10px" }}><span className="badge badge-cyan">Active</span></div>}
-    </div>
+    <button key={d.id} type="button" className={`glass-card`} style={{ padding: "20px", cursor: "pointer", transition: "all 0.2s", textAlign: "left", color: "inherit", font: "inherit", background: "transparent", borderColor: activeDataset?.id === d.id ? "#00D4FF44" : "#1e2d5c" }} onClick={() => { setActiveDataset(d); setActiveTab("canvas"); }}>
+      <span aria-hidden="true" style={{ display: "block", fontSize: "28px", marginBottom: "10px" }}>{d.icon}</span>
+      <span style={{ display: "block", fontFamily: "'Syne', sans-serif", fontWeight: 700, fontSize: "14px", marginBottom: "6px" }}>{d.name}</span>
+      <span style={{ display: "block", color: "#8892b0", fontSize: "12px", marginBottom: "12px" }}>{d.description}</span>
+      <span style={{ display: "flex", flexWrap: "wrap", gap: "4px" }}>{d.columns.slice(0, 3).map((c) => <span key={c} className="data-pill" style={{ fontSize: "12px" }}>{c}</span>)}</span>
+      {activeDataset?.id === d.id && <span style={{ display: "block", marginTop: "10px" }}><span className="badge badge-cyan">Active</span></span>}
+    </button>
   );
 
   return (
@@ -163,18 +164,21 @@ export default function FilesScreen({ activeDataset, setActiveDataset, setActive
       {preview && (
         <UploadPreview preview={preview} types={previewTypes} setTypes={setPreviewTypes} onLoad={loadPreview} onCancel={cancelPreview} />
       )}
-      <div
+      <input type="file" ref={fileInputRef} accept=".csv,.xlsx,.xls" style={{ display: "none" }} onChange={(e) => handleFile(e.target.files[0])} aria-label="Choose a CSV or Excel file" />
+      <button
+        type="button"
         className="upload-zone"
-        style={{ marginBottom: "24px" }}
+        style={{ display: "block", width: "100%", marginBottom: "8px", background: "transparent", color: "inherit", font: "inherit" }}
         onClick={() => fileInputRef.current?.click()}
         onDragOver={(e) => e.preventDefault()}
         onDrop={(e) => { e.preventDefault(); handleFile(e.dataTransfer?.files?.[0]); }}
       >
-        <input type="file" ref={fileInputRef} accept=".csv,.xlsx,.xls" style={{ display: "none" }} onChange={(e) => handleFile(e.target.files[0])} aria-label="Choose a CSV or Excel file" />
-        <div style={{ fontSize: "36px", marginBottom: "12px" }}>📂</div>
-        <div style={{ fontFamily: "'Syne', sans-serif", fontWeight: 700, fontSize: "16px", marginBottom: "8px" }}>Drop your CSV or Excel file here</div>
-        <p style={{ color: "#8892b0", fontSize: "13px" }}>or click to browse files</p>
-        {uploadError && <p style={{ color: "#ff4444", fontSize: "12px", marginTop: "10px" }}>{uploadError}</p>}
+        <span aria-hidden="true" style={{ display: "block", fontSize: "36px", marginBottom: "12px" }}>📂</span>
+        <span style={{ display: "block", fontFamily: "'Syne', sans-serif", fontWeight: 700, fontSize: "16px", marginBottom: "8px" }}>Drop your CSV or Excel file here</span>
+        <span style={{ display: "block", color: "#8892b0", fontSize: "13px" }}>or click to browse files</span>
+      </button>
+      <div role="alert" style={{ marginBottom: "16px" }}>
+        {uploadError && <p style={{ color: "#FF8888", fontSize: "12px", margin: 0 }}>{uploadError}</p>}
       </div>
       {(uploadedDatasets || []).length > 0 && (
         <>
@@ -192,7 +196,7 @@ export default function FilesScreen({ activeDataset, setActiveDataset, setActive
         <button className="btn-ghost" style={{ borderColor: "#FF3C3C44", color: "#FF8888" }} onClick={confirmDeleteAll}>
           Delete everything stored on this device
         </button>
-        <p style={{ fontSize: "11px", color: "#3d4f7c", marginTop: "8px" }}>Removes saved datasets, Ask chats and the remembered API key from this browser.</p>
+        <p style={{ fontSize: "12px", color: "#8892b0", marginTop: "8px" }}>Removes saved datasets, Ask chats and the remembered API key from this browser.</p>
       </div>
     </div>
   );

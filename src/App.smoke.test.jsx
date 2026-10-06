@@ -7,6 +7,7 @@
 
 import { describe, it, expect, afterEach, beforeAll } from "vitest";
 import { render, screen, fireEvent, cleanup } from "@testing-library/react";
+import { axe } from "vitest-axe";
 import React from "react";
 import App from "./App.jsx";
 
@@ -109,6 +110,44 @@ describe("screen smoke tests (no key, Sales sample)", () => {
     goTab("Files");
     expect(screen.getByText("Drop your CSV or Excel file here")).toBeTruthy();
     expect(screen.getByText("Sample Datasets")).toBeTruthy();
+  });
+});
+
+describe("accessibility (B7-3): axe on every screen", () => {
+  // Serious/critical axe violations fail the build. (jsdom cannot
+  // compute color contrast — that is checked in the real browser.)
+  const expectClean = async (container) => {
+    const results = await axe(container);
+    const bad = results.violations.filter((v) => v.impact === "serious" || v.impact === "critical");
+    expect(bad.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(" ")).slice(0, 3).join(" | ")}`)).toEqual([]);
+  };
+
+  it("landing page", async () => {
+    const { container } = render(<App />);
+    await expectClean(container);
+  });
+
+  it("key setup", async () => {
+    const { container } = render(<App />);
+    fireEvent.click(screen.getByText("Launch LUMIQ"));
+    await expectClean(container);
+  });
+
+  for (const tab of ["Overview", "Ask", "Report", "What-if", "Data health", "Files"]) {
+    it(tab, async () => {
+      const { container } = render(<App />);
+      fireEvent.click(screen.getByText("Try the demo"));
+      goTab(tab);
+      await expectClean(container);
+    });
+  }
+
+  it("chart table twin: View as table shows the series", () => {
+    enterDemo();
+    const toggles = screen.getAllByText("⊞ View as table");
+    expect(toggles.length).toBeGreaterThanOrEqual(3); // main chart + tile sparklines + donuts
+    fireEvent.click(toggles[0]);
+    expect(screen.getAllByText("📈 View as chart").length).toBe(1);
   });
 });
 

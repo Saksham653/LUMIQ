@@ -17,25 +17,25 @@ export default function AskScreen({ ds, apiKey, setPage, oracleMessages, oracleI
       </div>
       <div style={{ background: "#050914", border: "1px solid #1e2d5c", borderRadius: "16px", height: "420px", overflow: "auto", padding: "20px", marginBottom: "16px", display: "flex", flexDirection: "column", gap: "16px" }}>
         {oracleMessages.length === 0 ? (
-          <div style={{ margin: "auto", textAlign: "center", color: "#3d4f7c" }}>
+          <div style={{ margin: "auto", textAlign: "center", color: "#8892b0" }}>
             <div style={{ fontSize: "36px", marginBottom: "12px" }}>🔮</div>
             <p style={{ fontSize: "14px" }}>Oracle is ready. Ask your first question.</p>
             <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", justifyContent: "center", marginTop: "16px" }}>
               {(ds ? exampleQuestions(ds) : []).map((q) => (
-                <button key={q} className="btn-ghost" style={{ fontSize: "11px", padding: "6px 12px" }} onClick={() => setOracleInput(q)}>{q}</button>
+                <button key={q} className="btn-ghost" style={{ fontSize: "12px", padding: "6px 12px" }} onClick={() => setOracleInput(q)}>{q}</button>
               ))}
             </div>
           </div>
         ) : oracleMessages.map((msg, i) => (
           <div key={i} style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-            <div style={{ fontSize: "10px", fontFamily: "'DM Mono', monospace", color: "#3d4f7c", marginBottom: "4px", textAlign: msg.role === "user" ? "right" : "left" }}>{msg.role === "user" ? "YOU" : "ORACLE"}</div>
+            <div style={{ fontSize: "12px", fontFamily: "'DM Mono', monospace", color: "#8892b0", marginBottom: "4px", textAlign: msg.role === "user" ? "right" : "left" }}>{msg.role === "user" ? "YOU" : "ORACLE"}</div>
             <div className={msg.role === "user" ? "chat-bubble-user" : `chat-bubble-oracle ${msg.streaming ? "streaming-cursor" : ""}`}>
               {msg.role === "assistant"
                 ? <RichText text={msg.content || (msg.streaming ? "" : "...")} candidates={msg.candidates} />
                 : msg.content}
             </div>
             {msg.unverified > 0 && !msg.streaming && (
-              <div style={{ fontSize: "10px", color: "#FFB627" }}>⚠ {msg.unverified} number{msg.unverified === 1 ? "" : "s"} marked <sup>?</sup> could not be matched to the calculation</div>
+              <div style={{ fontSize: "12px", color: "#FFB627" }}>⚠ {msg.unverified} number{msg.unverified === 1 ? "" : "s"} marked <sup>?</sup> could not be matched to the calculation</div>
             )}
             {msg.proof && !msg.streaming && <ShowTheWork proof={msg.proof} />}
           </div>
@@ -43,18 +43,18 @@ export default function AskScreen({ ds, apiKey, setPage, oracleMessages, oracleI
         <div ref={chatEndRef} />
       </div>
       <div style={{ display: "flex", gap: "10px" }}>
-        <textarea className="oracle-input" value={oracleInput} onChange={(e) => setOracleInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendOracleMessage(); } }} placeholder="Ask Oracle anything about your data..." rows={2} style={{ flex: 1 }} disabled={oracleLoading} />
+        <textarea className="oracle-input" aria-label="Ask a question about your data" value={oracleInput} onChange={(e) => setOracleInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendOracleMessage(); } }} placeholder="Ask Oracle anything about your data..." rows={2} style={{ flex: 1 }} disabled={oracleLoading} />
         {oracleLoading && apiKey && apiKey !== "demo" && (
           <button className="btn-ghost" onClick={() => oracleAbortRef.current?.abort()} style={{ alignSelf: "flex-end", padding: "14px 16px" }}>⏹ Stop</button>
         )}
-        <button className="btn-primary" onClick={() => sendOracleMessage()} disabled={oracleLoading || !oracleInput.trim()} style={{ alignSelf: "flex-end", padding: "14px 20px" }}>{oracleLoading ? "..." : "→"}</button>
+        <button className="btn-primary" onClick={() => sendOracleMessage()} disabled={oracleLoading || !oracleInput.trim()} style={{ alignSelf: "flex-end", padding: "14px 20px" }} aria-label="Send question">{oracleLoading ? "..." : "→"}</button>
       </div>
       {oracleLastFailed && !oracleLoading && (
         <div style={{ marginTop: "10px" }}>
           <button className="btn-ghost" style={{ fontSize: "12px" }} onClick={() => sendOracleMessage(oracleLastFailed)}>↻ Retry last question</button>
         </div>
       )}
-      <div style={{ display: "flex", alignItems: "center", gap: "10px", marginTop: "8px", flexWrap: "wrap" }}><p style={{ fontSize: "11px", color: "#3d4f7c", margin: 0 }}>You can ask follow-ups like "and by category?" Press New topic to start fresh.</p><button className="btn-ghost" style={{ fontSize: "11px", padding: "4px 10px", opacity: contextActive ? 1 : 0.5 }} onClick={clearContext} disabled={!contextActive}>New topic</button></div>
+      <div style={{ display: "flex", alignItems: "center", gap: "10px", marginTop: "8px", flexWrap: "wrap" }}><p style={{ fontSize: "12px", color: "#8892b0", margin: 0 }}>You can ask follow-ups like "and by category?" Press New topic to start fresh.</p><button className="btn-ghost" style={{ fontSize: "12px", padding: "4px 10px", opacity: contextActive ? 1 : 0.5 }} onClick={clearContext} disabled={!contextActive}>New topic</button></div>
       {(!apiKey || apiKey === "demo") && (
         <div style={{ marginTop: "12px" }}>
           <KeyNudge setPage={setPage} />

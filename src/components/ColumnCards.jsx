@@ -17,13 +17,13 @@ export default function ColumnCards({ ds }) {
             <div style={{ marginBottom: "14px" }}>
               <div style={{ fontFamily: "'Syne', sans-serif", fontWeight: 700, fontSize: "14px", marginBottom: "6px" }}>{colName}</div>
               <div style={{ display: "flex", gap: "6px" }}>
-                <span className={`badge ${p.type === "Numeric" ? "badge-cyan" : "badge-violet"}`} style={{ fontSize: "9px" }}>{p.type}</span>
-                <span className="badge" style={{ fontSize: "9px", background: "#1a2244", color: "#8892b0" }}>{p.uniqueCount} unique</span>
+                <span className={`badge ${p.type === "Numeric" ? "badge-cyan" : "badge-violet"}`} style={{ fontSize: "12px" }}>{p.type}</span>
+                <span className="badge" style={{ fontSize: "12px", background: "#1a2244", color: "#8892b0" }}>{p.uniqueCount} unique</span>
               </div>
             </div>
 
             {/* Stats */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px", marginBottom: "12px", fontSize: "11px" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px", marginBottom: "12px", fontSize: "12px" }}>
               <div style={{ color: "#8892b0" }}>Completeness</div>
               <div style={{ color: "#ccd6f6", textAlign: "right" }}>{p.completeness}%</div>
               <div style={{ color: "#8892b0" }}>Non-null</div>
@@ -46,7 +46,7 @@ export default function ColumnCards({ ds }) {
                   {p.topValues.map((tv) => (
                     <Fragment key={tv.val}>
                       <div style={{ color: "#ccd6f6", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{tv.val}</div>
-                      <div style={{ color: "#7B4FE8", textAlign: "right" }}>{tv.count} ({tv.pct}%)</div>
+                      <div style={{ color: "#a78bfa", textAlign: "right" }}>{tv.count} ({tv.pct}%)</div>
                     </Fragment>
                   ))}
                 </>

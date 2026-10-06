@@ -48,7 +48,10 @@ export default function LumiqApp() {
   const chatEndRef = useRef(null);
   const fileInputRef = useRef(null);
 
-  useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [oracleMessages]);
+  useEffect(() => {
+    const reduced = typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
+    chatEndRef.current?.scrollIntoView({ behavior: reduced ? "auto" : "smooth" });
+  }, [oracleMessages]);
   // Reset lab analysis when dataset changes
   useEffect(() => {
     if (activeDataset) {
@@ -216,7 +219,7 @@ const AppShell = ({
 
   return (
     <div style={{ display: "flex", height: "100vh", overflow: "hidden" }}>
-      <div className="sidebar-overlay" style={{ display: isMobileMenuOpen ? "block" : "none" }} onClick={() => setIsMobileMenuOpen(false)} />
+      <div className="sidebar-overlay" aria-hidden="true" style={{ display: isMobileMenuOpen ? "block" : "none" }} onClick={() => setIsMobileMenuOpen(false)} />
       <Sidebar apiKey={apiKey} setPage={setPage} activeTab={activeTab} setActiveTab={setActiveTab} activeDataset={activeDataset} setActiveDataset={setActiveDataset} uploadedDatasets={uploadedDatasets} isMobileMenuOpen={isMobileMenuOpen} setIsMobileMenuOpen={setIsMobileMenuOpen} />
 
       <main style={{ flex: 1, overflow: "auto", background: "#070c1e" }} className="app-main grid-bg">

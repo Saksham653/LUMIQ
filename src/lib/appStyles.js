@@ -11,6 +11,14 @@ export const css = `
     @keyframes beam { 0%, 100% { opacity: 0.4; } 50% { opacity: 1; } }
     @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
     .lumiq-app { min-height: 100vh; background: #050914; color: #e2e8f0; font-family: 'DM Sans', sans-serif; overflow-x: hidden; }
+    /* B7-3: a clear focus ring on everything keyboard-reachable */
+    .lumiq-app :focus-visible { outline: 2px solid #00D4FF; outline-offset: 2px; border-radius: 4px; }
+    /* B7-3: honor the device's reduced-motion request */
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+    }
+    .overview-grid { display: grid; grid-template-columns: 1fr 280px; gap: 20px; margin-bottom: 24px; }
+    @media (max-width: 900px) { .overview-grid { grid-template-columns: 1fr; } }
     .btn-primary { background: linear-gradient(135deg, #00D4FF, #0099bb); color: #050914; border: none; padding: 12px 28px; border-radius: 8px; font-family: 'Syne', sans-serif; font-weight: 700; font-size: 14px; cursor: pointer; transition: all 0.2s; letter-spacing: 0.5px; }
     .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 8px 24px #00D4FF44; }
     .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
@@ -24,13 +32,13 @@ export const css = `
     .tab-btn:hover:not(.active) { color: #ccd6f6; }
     .oracle-input { width: 100%; background: #0a1128; border: 1px solid #1e2d5c; border-radius: 12px; padding: 14px 18px; color: #e2e8f0; font-family: 'DM Sans', sans-serif; font-size: 14px; outline: none; resize: none; transition: border-color 0.2s; }
     .oracle-input:focus { border-color: #00D4FF55; }
-    .oracle-input::placeholder { color: #3d4f7c; }
+    .oracle-input::placeholder { color: #8290b8; }
     .chat-bubble-user { background: linear-gradient(135deg, #00D4FF1a, #00D4FF0d); border: 1px solid #00D4FF33; border-radius: 16px 16px 4px 16px; padding: 12px 16px; font-size: 14px; color: #ccd6f6; max-width: 80%; margin-left: auto; }
     .chat-bubble-oracle { background: #0a1128; border: 1px solid #1e2d5c; border-radius: 4px 16px 16px 16px; padding: 12px 16px; font-size: 14px; color: #e2e8f0; max-width: 85%; line-height: 1.6; }
     .streaming-cursor::after { content: '▋'; animation: blink 0.8s infinite; color: #00D4FF; }
     .stat-number { font-family: 'DM Mono', monospace; font-size: 28px; font-weight: 500; background: linear-gradient(135deg, #ffffff, #a8b4d8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
     .prism-logo { animation: float 4s ease-in-out infinite; }
-    .data-pill { display: inline-flex; align-items: center; gap: 6px; background: #0d1b3e; border: 1px solid #1e2d5c; border-radius: 20px; padding: 4px 12px; font-family: 'DM Mono', monospace; font-size: 11px; color: #8892b0; }
+    .data-pill { display: inline-flex; align-items: center; gap: 6px; background: #0d1b3e; border: 1px solid #1e2d5c; border-radius: 20px; padding: 4px 12px; font-family: 'DM Mono', monospace; font-size: 12px; color: #8892b0; }
     .metric-card { background: linear-gradient(135deg, #0d1b3e, #0a1128); border: 1px solid #1e2d5c; border-radius: 12px; padding: 20px; position: relative; overflow: hidden; }
     .metric-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; }
     .metric-card.cyan::before { background: linear-gradient(90deg, transparent, #00D4FF, transparent); }
@@ -46,15 +54,15 @@ export const css = `
     .upload-zone:hover { border-color: #00D4FF55; background: #00D4FF08; }
     input[type="text"], input[type="password"] { background: #0a1128; border: 1px solid #1e2d5c; border-radius: 8px; color: #e2e8f0; font-family: 'DM Sans', sans-serif; font-size: 14px; padding: 12px 16px; outline: none; transition: border-color 0.2s; }
     input[type="text"]:focus, input[type="password"]:focus { border-color: #00D4FF55; }
-    input::placeholder { color: #3d4f7c; }
+    input::placeholder, textarea::placeholder { color: #8290b8; }
     select { background: #0a1128; border: 1px solid #1e2d5c; border-radius: 8px; color: #e2e8f0; font-family: 'DM Mono', monospace; font-size: 12px; padding: 8px 12px; outline: none; cursor: pointer; }
-    .sidebar-link { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 8px; color: #8892b0; cursor: pointer; transition: all 0.2s; font-size: 13px; font-weight: 500; border: 1px solid transparent; }
+    .sidebar-link { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 8px; color: #8892b0; cursor: pointer; transition: all 0.2s; font-size: 13px; font-weight: 500; border: 1px solid transparent; width: 100%; text-align: left; background: transparent; font-family: inherit; }
     .sidebar-link:hover { color: #ccd6f6; background: #0d1b3e; }
     .sidebar-link.active { color: #00D4FF; background: #00D4FF0d; border-color: #00D4FF22; }
-    .badge { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 20px; font-size: 10px; font-weight: 600; font-family: 'Syne', sans-serif; letter-spacing: 0.5px; }
+    .badge { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 20px; font-size: 12px; font-weight: 600; font-family: 'Syne', sans-serif; letter-spacing: 0.5px; }
     .badge-cyan { background: #00D4FF1a; color: #00D4FF; border: 1px solid #00D4FF33; }
     .badge-gold { background: #FFB6271a; color: #FFB627; border: 1px solid #FFB62733; }
-    .badge-violet { background: #7B4FE81a; color: #7B4FE8; border: 1px solid #7B4FE833; }
+    .badge-violet { background: #7B4FE81a; color: #a78bfa; border: 1px solid #7B4FE833; }
     .badge-green { background: #00E5A01a; color: #00E5A0; border: 1px solid #00E5A033; }
     .mobile-menu-btn { display: none; background: none; border: 1px solid #1e2d5c; border-radius: 8px; color: #8892b0; font-size: 22px; padding: 6px 10px; cursor: pointer; z-index: 100; }
     .mobile-menu-btn:hover { color: #00D4FF; border-color: #00D4FF55; }
@@ -68,7 +76,7 @@ export const css = `
       .app-main { width: 100% !important; }
       .top-tabs { overflow-x: auto; -webkit-overflow-scrolling: touch; gap: 0 !important; }
       .top-tabs::-webkit-scrollbar { display: none; }
-      .tab-btn { padding: 8px 12px; font-size: 11px; white-space: nowrap; flex-shrink: 0; }
+      .tab-btn { padding: 8px 12px; font-size: 12px; white-space: nowrap; flex-shrink: 0; }
       .stat-number { font-size: 20px; }
       .glass-card { border-radius: 12px; }
       .metric-card { padding: 14px; }

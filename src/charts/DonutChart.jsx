@@ -10,7 +10,7 @@ export default function DonutChart({ value, max, color, label }) {
           strokeLinecap="round" transform="rotate(-90 36 36)" style={{ transition: "stroke-dashoffset 1s ease" }} />
         <text x="36" y="40" textAnchor="middle" fill="white" fontSize="11" fontWeight="bold">{(pct * 100).toFixed(0)}%</text>
       </svg>
-      <span style={{ fontSize: "10px", color: "#8892b0", textAlign: "center" }}>{label}</span>
+      <span style={{ fontSize: "12px", color: "#8892b0", textAlign: "center" }}>{label}</span>
     </div>
   );
 }

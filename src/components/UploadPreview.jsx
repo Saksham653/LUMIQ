@@ -31,12 +31,12 @@ export default function UploadPreview({ preview, types, setTypes, onLoad, onCanc
             <tr>
               {preview.columns.map((col) => (
                 <th key={col} style={{ padding: "8px 12px", textAlign: "left", borderBottom: "1px solid #1e2d5c", whiteSpace: "nowrap", verticalAlign: "top" }}>
-                  <div style={{ fontFamily: "'DM Mono', monospace", fontSize: "10px", color: "#8892b0", textTransform: "uppercase", marginBottom: "6px" }}>{col}</div>
+                  <div style={{ fontFamily: "'DM Mono', monospace", fontSize: "12px", color: "#8892b0", textTransform: "uppercase", marginBottom: "6px" }}>{col}</div>
                   <select
                     aria-label={`Type of ${col}`}
                     value={types[col]?.type || "text"}
                     onChange={(e) => setTypes(overrideColumnType(types, col, e.target.value))}
-                    style={{ fontSize: "11px", padding: "4px 8px" }}
+                    style={{ fontSize: "12px", padding: "4px 8px" }}
                   >
                     {COLUMN_TYPE_CHOICES.map((t) => <option key={t} value={t}>{t}</option>)}
                   </select>
@@ -57,7 +57,7 @@ export default function UploadPreview({ preview, types, setTypes, onLoad, onCanc
           </tbody>
         </table>
       </div>
-      {preview.rowCount > 10 && <p style={{ fontSize: "11px", color: "#3d4f7c", marginBottom: "12px" }}>Showing the first 10 of {preview.rowCount} rows.</p>}
+      {preview.rowCount > 10 && <p style={{ fontSize: "12px", color: "#8892b0", marginBottom: "12px" }}>Showing the first 10 of {preview.rowCount} rows.</p>}
 
       <div style={{ display: "flex", gap: "10px" }}>
         <button className="btn-primary" onClick={onLoad}>Load</button>

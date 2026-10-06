@@ -22,6 +22,7 @@
     "fake-indexeddb": "^6.2.5",
     "jsdom": "^29.1.1",
     "vite": "^5.0.8",
-    "vitest": "^3.2.7"
+    "vitest": "^3.2.7",
+    "vitest-axe": "^0.1.0"
   }
 }

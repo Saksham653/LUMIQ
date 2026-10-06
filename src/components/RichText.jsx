@@ -21,7 +21,7 @@ function MarkedText({ text, candidates }) {
   const { segments } = verifyNumbers(text, candidates);
   return segments.map((s, i) =>
     s.number !== undefined && !s.verified ? (
-      <span key={i} title="Not verified — this number does not match the calculation" style={{ color: "#FFB627", borderBottom: "1px dashed #FFB627" }}>{s.text}<sup style={{ fontSize: "9px" }}>?</sup></span>
+      <span key={i} title="Not verified — this number does not match the calculation" style={{ color: "#FFB627", borderBottom: "1px dashed #FFB627" }}>{s.text}<sup style={{ fontSize: "12px" }}>?</sup></span>
     ) : (
       <Fragment key={i}>{s.text}</Fragment>
     )

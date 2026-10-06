@@ -56,7 +56,7 @@ export default function OverviewScreen(props) {
         numericCols={numericCols}
       />
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 280px", gap: "20px", marginBottom: "24px" }}>
+      <div className="overview-grid">
         <MainChart
           ds={ds}
           processedData={processedData}
