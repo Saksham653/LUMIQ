@@ -74,7 +74,8 @@ describe("usePersistence (F16)", () => {
     try { localStorage.setItem("lumiq_groq_api_key", "remembered"); } catch { }
     render(<Harness />);
     await waitFor(() => expect(api.ready).toBe(true));
-    await act(async () => { api.setUploadedDatasets([DS]); });
+    await act(async () => { api.setUploadedDatasets([DS]); api.setActiveDataset(DS); });
+    await act(async () => { api.setOracleMessages([{ role: "user", content: "q" }]); });
     await waitFor(async () => { expect(await storageGet("datasets")).toEqual([DS]); });
 
     await act(async () => { await api.deleteEverything(); });
