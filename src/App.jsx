@@ -744,7 +744,7 @@ const LandingPage = ({ setPage, startDemo }) => (
         { icon: "💬", color: "#00D4FF", badge: "badge-cyan", title: "AI Data Filter", tag: "Natural Language", desc: "Query your data in plain English. LUMIQ translates your questions into precise filters and updates the entire dashboard instantly." },
         { icon: "🔬", color: "#FF6B6B", badge: "badge-cyan", title: "AI Lab", tag: "Deep Analysis", desc: "Correlation heatmaps, Z-score anomaly detection, and AI-powered executive summaries of your statistical findings." },
         { icon: "⚡", color: "#FFB627", badge: "badge-gold", title: "Oracle AI", tag: "Groq-Powered", desc: "Ask questions about your data. Every number is calculated from all your rows, and every answer shows its working." },
-        { icon: "🌐", color: "#7B4FE8", badge: "badge-violet", title: "Scenario Forge", tag: "What-If Engine", desc: "Simulate alternate scenarios by adjusting variables. Groq models probabilistic outcomes and visualizes the impact." },
+        { icon: "🌐", color: "#7B4FE8", badge: "badge-violet", title: "Scenario Forge", tag: "What-If Engine", desc: "Describe a what-if and get a structured take grounded in your dataset summary — no invented probabilities." },
         { icon: "🗃️", color: "#00D4FF", badge: "badge-cyan", title: "Interactive Explorer", tag: "Data Grid", desc: "Searchable, sortable, paginated data grid for exploring every row of your dataset." },
         { icon: "📄", color: "#00E5A0", badge: "badge-green", title: "AI Narrative", tag: "Auto Reports", desc: "One-click AI-generated executive reports that summarize key metrics, trends, and anomalies from your dataset." },
       ].map((f) => (
