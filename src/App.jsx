@@ -49,6 +49,8 @@ import FilesScreen from "./screens/FilesScreen.jsx";
 import ColumnDetailsScreen from "./screens/ColumnDetailsScreen.jsx";
 import DataHealthScreen from "./screens/DataHealthScreen.jsx";
 import { useDeepDive } from "./hooks/useDeepDive.js";
+import WhatIfScreen from "./screens/WhatIfScreen.jsx";
+import { useScenario } from "./hooks/useScenario.js";
 
 // ============================================================
 // LUMIQ — Luminous Intelligence Queries (Groq Edition)
@@ -625,26 +627,7 @@ Rules:
     }
   };
 
-  const runScenario = async () => {
-    if (!ds || !scenarioInput.trim() || !apiKey || apiKey === "demo") return;
-    setScenarioLoading(true); setScenarios([]);
-    const isScenario = /what if|if we|suppose|assume|scenario|increase|decrease|double|halve|drop|rise|grow|shrink|change|impact|affect/i.test(scenarioInput);
-    // Scenario Forge sees the schema summary (all rows, no raw rows)
-    // and no longer asks for invented probability figures.
-    const scenarioSummary = renderSchemaSummary(buildSchemaSummary(ds));
-    const prompt = isScenario
-      ? `Quantitative strategist. Scenario: "${scenarioInput}"\n\nDataset summary, computed on all rows (you have no access to the rows; use only figures from this summary):\n${scenarioSummary}\n\nReturn ONLY a valid JSON array, no markdown. Do not state probabilities or invent figures that are not in the summary:\n[{"label":"Optimistic","impact":"+X%","description":"...","key_driver":"..."},{"label":"Base Case","impact":"+X%","description":"...","key_driver":"..."},{"label":"Pessimistic","impact":"-X%","description":"...","key_driver":"..."}]`
-      : `Expert data analyst. Question: "${scenarioInput}"\n\nDataset summary, computed on all rows (you have no access to the rows; use only figures from this summary):\n${scenarioSummary}\n\nReturn ONLY a valid JSON array, no markdown:\n[{"label":"Overview","impact":"—","description":"Direct answer using the summary figures","key_driver":"context"},{"label":"Key Insight","impact":"—","description":"Most important finding","key_driver":"primary signal"},{"label":"What To Watch","impact":"—","description":"Critical risk or variable","key_driver":"risk factor"}]`;
-    try {
-      const result = await callGroq(apiKey, [{ role: "user", content: prompt }], () => { });
-      const match = result.replace(/```json|```/g, "").trim().match(/\[[\s\S]*\]/);
-      if (!match) throw new Error("No JSON in response");
-      setScenarios(JSON.parse(match[0]));
-    } catch (e) {
-      setScenarios([{ label: "Error", probability: 0, impact: "N/A", description: `Could not process: ${e.message}`, key_driver: "Error" }]);
-    }
-    setScenarioLoading(false);
-  };
+  const { runScenario } = useScenario({ apiKey, ds, scenarioInput, setScenarios, setScenarioLoading });
 
   const { runDeepDive } = useDeepDive({ apiKey, ds, setLabAnalysis, setLabLoading });
 
@@ -1248,46 +1231,7 @@ Rules:
             </div>
           )}
 
-          {activeTab === "scenario" && (
-            <div style={{ maxWidth: "780px", margin: "0 auto", animation: "fadeSlide 0.3s ease" }}>
-              <div style={{ marginBottom: "24px" }}>
-                <h2 style={{ fontFamily: "'Syne', sans-serif", fontSize: "20px", fontWeight: 800, marginBottom: "8px" }}>What-if</h2>
-                <p style={{ color: "#8892b0", fontSize: "13px" }}>Ask any question about your data, or describe a what-if scenario. Oracle reasons from your dataset summary — it does not invent probabilities.</p>
-              </div>
-              <div className="glass-card" style={{ padding: "24px", marginBottom: "20px" }}>
-                <label style={{ display: "block", fontSize: "11px", fontFamily: "'DM Mono', monospace", color: "#8892b0", marginBottom: "8px", textTransform: "uppercase", letterSpacing: "1px" }}>Your Question or Hypothesis</label>
-                <textarea className="oracle-input" style={{ width: "100%", marginBottom: "14px" }} rows={3} placeholder='e.g. "What is this dataset about?" or "What if loan defaults increase 20%?" or "Which metric best predicts churn?"' value={scenarioInput} onChange={(e) => setScenarioInput(e.target.value)} disabled={scenarioLoading} />
-                <div style={{ display: "flex", gap: "10px", alignItems: "center", flexWrap: "wrap" }}>
-                  <button className="btn-primary" onClick={runScenario} disabled={scenarioLoading || !scenarioInput.trim() || !ds || !apiKey || apiKey === "demo"}>{scenarioLoading ? "Analyzing..." : "Run Analysis"}</button>
-                  {!ds && <span style={{ color: "#FFB627", fontSize: "12px" }}>Select a dataset first</span>}
-                  {(!apiKey || apiKey === "demo") && <KeyNudge setPage={setPage} />}
-                </div>
-              </div>
-              {scenarios.length > 0 && (
-                <div>
-                  <div style={{ marginBottom: "12px", display: "flex", alignItems: "center", gap: "8px" }}>
-                    <span className="badge badge-violet">ORACLE ANALYSIS</span>
-                    <span style={{ fontSize: "11px", color: "#3d4f7c" }}>{scenarioInput.slice(0, 60)}{scenarioInput.length > 60 ? "..." : ""}</span>
-                  </div>
-                  {scenarios.map((s, i) => {
-                    const colorMap = { Optimistic: "#00E5A0", "Base Case": "#00D4FF", Pessimistic: "#FFB627", Overview: "#00D4FF", "Key Insight": "#7B4FE8", "What To Watch": "#FFB627", "Demo Mode": "#8892b0", "Dataset Ready": "#00E5A0", "Next Step": "#00D4FF" };
-                    const color = colorMap[s.label] || "#8892b0";
-                    return (
-                      <div key={i} className="scenario-card" style={{ borderLeft: `3px solid ${color}` }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "10px" }}>
-                          <span style={{ fontFamily: "'Syne', sans-serif", fontWeight: 700, color }}>{s.label}</span>
-                          <span style={{ fontFamily: "'DM Mono', monospace", fontSize: "20px", fontWeight: 500, color }}>{s.impact}</span>
-                        </div>
-                        <p style={{ fontSize: "13px", color: "#ccd6f6", lineHeight: 1.6, marginBottom: "8px" }}>{s.description}</p>
-                        <div style={{ fontSize: "11px", color: "#8892b0" }}><span style={{ color: "#3d4f7c" }}>Key driver: </span>{s.key_driver}</div>
-                      </div>
-                    );
-                  })}
-                  <button className="btn-ghost" style={{ marginTop: "16px" }} onClick={() => setScenarios([])}>Clear</button>
-                </div>
-              )}
-            </div>
-          )}
+          {activeTab === "scenario" && <WhatIfScreen ds={ds} apiKey={apiKey} setPage={setPage} scenarios={scenarios} setScenarios={setScenarios} scenarioInput={scenarioInput} setScenarioInput={setScenarioInput} scenarioLoading={scenarioLoading} runScenario={runScenario} />}
 
           {activeTab === "ailab" && <DataHealthScreen ds={ds} setPage={setPage} labAnalysis={labAnalysis} labLoading={labLoading} runDeepDive={runDeepDive} />}
 
