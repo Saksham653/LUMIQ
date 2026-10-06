@@ -4,7 +4,7 @@
 
 import { useRef, useState } from "react";
 import { callGroq } from "../ai/client.js";
-import { fmtNum } from "../lib/format.js";
+import { fmtNum, fitLabel } from "../lib/format.js";
 
 export function useForecast({ apiKey }) {
   const [forecastEnabled, setForecastEnabled] = useState(false);
@@ -19,18 +19,19 @@ export function useForecast({ apiKey }) {
     setForecastLoading(true);
     setForecastNarrative("");
     if (!apiKey || apiKey === "demo") {
-      setForecastNarrative(`📊 Trend Analysis: The metric "${metricName}" shows a ${regression.slope > 0 ? "positive" : "negative"} trend with a slope of ${regression.slope.toFixed(2)} per period. R² = ${regression.r2.toFixed(3)} (${regression.r2 > 0.7 ? "strong" : regression.r2 > 0.4 ? "moderate" : "weak"} fit). Forecast: next 5 values projected at ${regression.forecast.map(f => fmtNum(f)).join(", ")}. Connect a Groq API key for deeper AI analysis.`);
+      setForecastNarrative(`📊 Trend Analysis: The metric "${metricName}" shows a ${regression.slope > 0 ? "positive" : "negative"} trend with a slope of ${regression.slope.toFixed(2)} per period. Fit: ${fitLabel(regression.r2)}. Forecast: next 5 values projected at ${regression.forecast.map(f => fmtNum(f)).join(", ")}. Connect a Groq API key for deeper AI analysis.`);
       setForecastLoading(false);
       return;
     }
     try {
       const prompt = `You are a data forecasting analyst. Analyze this trend:
 Metric: ${metricName}
-Linear Regression: slope=${regression.slope.toFixed(4)}, intercept=${regression.intercept.toFixed(2)}, R²=${regression.r2.toFixed(4)}
+Linear Regression: slope=${regression.slope.toFixed(4)}, intercept=${regression.intercept.toFixed(2)}
+Fit of the trendline: ${fitLabel(regression.r2)} (say it in these plain words; never quote an R² value)
 Residual Std Dev: ${regression.residualStd.toFixed(2)}
 Next 5 forecasted values: ${regression.forecast.map(f => f.toFixed(2)).join(", ")}
 
-Write a concise 3-4 sentence forecast narrative. Include: trend direction and strength, confidence level based on R², specific predicted values, and one business recommendation. Be direct and use actual numbers.`;
+Write a concise 3-4 sentence forecast narrative. Include: trend direction and strength, confidence level based on the fit, specific predicted values, and one business recommendation. Be direct and use actual numbers.`;
 
       await callGroq(apiKey, [{ role: "user", content: prompt }], (text) => {
         setForecastNarrative(text);
