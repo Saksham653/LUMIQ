@@ -170,7 +170,7 @@ AI Engine   →  Groq API            (Llama 3.3 70B, streaming)
 Charts      →  Pure SVG            (hand-crafted, no chart library)
 Styling     →  Vanilla CSS-in-JS   (no Tailwind, no styled-components)
 Fonts       →  Syne + DM Mono + DM Sans (Google Fonts)
-Deployment  →  Vercel (app) + GitHub Pages (landing)
+Deployment  →  Vercel only (production from main, previews from branches)
 ```
 
 Zero external UI libraries. Every chart — bar, line, area, donut, heatmap, scatter — is handwritten SVG. That's intentional. It keeps the bundle tiny and the visuals perfectly on-brand.
@@ -213,6 +213,13 @@ npm run preview
 
 ---
 
+### Deploy
+
+LUMIQ deploys to **Vercel only**: every push to `main` becomes the production deployment and every branch push gets a preview URL. `vercel.json` sets the security headers — a Content-Security-Policy that lets the page talk only to itself and `https://api.groq.com` (scripts from itself only; styles and fonts only from Google Fonts; `frame-ancestors 'none'`), plus `X-Content-Type-Options: nosniff` and `Referrer-Policy: no-referrer`. `npm run preview` serves the built app with the same headers so the CSP can be checked locally. Tests and the build run in CI on every push and pull request to `main`.
+
+<br />
+
+---
 ## 🗺️ Roadmap
 
 The full fix plan (audit, requirements, targets) is in [docs/PRD.md](docs/PRD.md).
