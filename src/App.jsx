@@ -738,7 +738,7 @@ const LandingPage = ({ setPage }) => (
         <span style={{ background: "linear-gradient(135deg, #00D4FF 0%, #7B4FE8 50%, #FFB627 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>talks back</span>
       </h1>
       <p style={{ fontSize: "18px", color: "#8892b0", lineHeight: 1.7, maxWidth: "600px", margin: "0 auto 40px", fontWeight: 300 }}>
-        LUMIQ transforms raw data into living narratives. Not just charts — <strong style={{ color: "#ccd6f6" }}>decision intelligence</strong>. Ask in plain English. Get answers in milliseconds via Groq.
+        LUMIQ transforms raw data into living narratives. Not just charts — <strong style={{ color: "#ccd6f6" }}>decision intelligence</strong>. Ask in plain English. Get answers you can check.
       </p>
       <div style={{ display: "flex", gap: "16px", justifyContent: "center", flexWrap: "wrap" }}>
         <button className="btn-primary" style={{ fontSize: "16px", padding: "14px 36px" }} onClick={() => setPage("setup")}>Launch LUMIQ</button>
@@ -756,9 +756,9 @@ const LandingPage = ({ setPage }) => (
         { icon: "🧬", color: "#00E5A0", badge: "badge-green", title: "Data DNA Profiler", tag: "Column X-Ray", desc: "Deep statistical profile of every column — type detection, completeness, min/max/mean/median, distribution histograms, and data quality scores." },
         { icon: "💬", color: "#00D4FF", badge: "badge-cyan", title: "AI Data Filter", tag: "Natural Language", desc: "Query your data in plain English. LUMIQ translates your questions into precise filters and updates the entire dashboard instantly." },
         { icon: "🔬", color: "#FF6B6B", badge: "badge-cyan", title: "AI Lab", tag: "Deep Analysis", desc: "Correlation heatmaps, Z-score anomaly detection, and AI-powered executive summaries of your statistical findings." },
-        { icon: "⚡", color: "#FFB627", badge: "badge-gold", title: "Oracle AI", tag: "Groq-Powered", desc: "Sub-100ms conversational analysis via Groq. Ask anything about your data and get streaming real-time AI responses." },
+        { icon: "⚡", color: "#FFB627", badge: "badge-gold", title: "Oracle AI", tag: "Groq-Powered", desc: "Ask questions about your data. Every number is calculated from all your rows, and every answer shows its working." },
         { icon: "🌐", color: "#7B4FE8", badge: "badge-violet", title: "Scenario Forge", tag: "What-If Engine", desc: "Simulate alternate scenarios by adjusting variables. Groq models probabilistic outcomes and visualizes the impact." },
-        { icon: "🗃️", color: "#00D4FF", badge: "badge-cyan", title: "Interactive Explorer", tag: "50K+ Rows", desc: "Searchable, sortable, paginated data grid built to handle massive datasets without breaking a sweat." },
+        { icon: "🗃️", color: "#00D4FF", badge: "badge-cyan", title: "Interactive Explorer", tag: "Data Grid", desc: "Searchable, sortable, paginated data grid for exploring every row of your dataset." },
         { icon: "📄", color: "#00E5A0", badge: "badge-green", title: "AI Narrative", tag: "Auto Reports", desc: "One-click AI-generated executive reports that summarize key metrics, trends, and anomalies from your dataset." },
       ].map((f) => (
         <div key={f.title} className="glass-card" style={{ padding: "28px" }}>
@@ -818,7 +818,7 @@ const ApiKeySetup = ({ setPage, apiKeyInput, setApiKeyInput, setApiKey }) => {
       <button className="btn-ghost" style={{ width: "100%", marginTop: "10px" }} onClick={() => { setApiKey("demo"); writeStoredApiKey("", false); setPage("app"); }}>Continue in Demo Mode</button>
     </div>
     <div style={{ marginTop: "20px", display: "flex", gap: "8px", flexWrap: "wrap", justifyContent: "center" }}>
-      {["Free tier", "Sub-100ms inference", "Llama 3 70B", "Privacy-first"].map((t) => (<div key={t} className="data-pill">{t}</div>))}
+      {["Free tier", "Llama 3 70B", "Privacy-first"].map((t) => (<div key={t} className="data-pill">{t}</div>))}
     </div>
     <div style={{ marginTop: "16px", textAlign: "center" }}>
       <button onClick={() => setPage("landing")} style={{ background: "none", border: "none", color: "#3d4f7c", cursor: "pointer", fontSize: "12px" }}>← Back to home</button>
@@ -1807,7 +1807,7 @@ Provide a short "Executive Summary" paragraph, then a "Key Findings" bulleted li
                   <span className="badge badge-violet">Groq · Llama 3.3 70B</span>
                   {(!apiKey || apiKey === "demo") && <span className="badge badge-gold">Demo Mode</span>}
                 </div>
-                <p style={{ color: "#8892b0", fontSize: "13px" }}>Ask anything about your data. Oracle streams answers via Groq in real-time.{!ds && <span style={{ color: "#FFB627" }}> Select a dataset first.</span>}</p>
+                <p style={{ color: "#8892b0", fontSize: "13px" }}>Ask questions about your data. Every number is calculated from all your rows.{!ds && <span style={{ color: "#FFB627" }}> Select a dataset first.</span>}</p>
               </div>
               <div style={{ background: "#050914", border: "1px solid #1e2d5c", borderRadius: "16px", height: "420px", overflow: "auto", padding: "20px", marginBottom: "16px", display: "flex", flexDirection: "column", gap: "16px" }}>
                 {oracleMessages.length === 0 ? (
