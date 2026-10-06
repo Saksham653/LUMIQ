@@ -1,5 +1,6 @@
 import KeyNudge from "../components/KeyNudge.jsx";
 import ShowTheWork from "../components/ShowTheWork.jsx";
+import RichText from "../components/RichText.jsx";
 import { exampleQuestions } from "../ai/oraclePlanner.js";
 
 export default function AskScreen({ ds, apiKey, setPage, oracleMessages, oracleInput, setOracleInput, oracleLoading, sendOracleMessage, oracleAbortRef, oracleLastFailed, chatEndRef }) {
@@ -29,15 +30,9 @@ export default function AskScreen({ ds, apiKey, setPage, oracleMessages, oracleI
           <div key={i} style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
             <div style={{ fontSize: "10px", fontFamily: "'DM Mono', monospace", color: "#3d4f7c", marginBottom: "4px", textAlign: msg.role === "user" ? "right" : "left" }}>{msg.role === "user" ? "YOU" : "ORACLE"}</div>
             <div className={msg.role === "user" ? "chat-bubble-user" : `chat-bubble-oracle ${msg.streaming ? "streaming-cursor" : ""}`}>
-              {msg.segments
-                ? msg.segments.map((s, j) =>
-                  s.number !== undefined && !s.verified ? (
-                    <span key={j} title="Not verified — this number does not match the calculation" style={{ color: "#FFB627", borderBottom: "1px dashed #FFB627" }}>{s.text}<sup style={{ fontSize: "9px" }}>?</sup></span>
-                  ) : (
-                    <span key={j}>{s.text}</span>
-                  )
-                )
-                : (msg.content || (msg.streaming ? "" : "..."))}
+              {msg.role === "assistant"
+                ? <RichText text={msg.content || (msg.streaming ? "" : "...")} candidates={msg.candidates} />
+                : msg.content}
             </div>
             {msg.unverified > 0 && !msg.streaming && (
               <div style={{ fontSize: "10px", color: "#FFB627" }}>⚠ {msg.unverified} number{msg.unverified === 1 ? "" : "s"} marked <sup>?</sup> could not be matched to the calculation</div>
