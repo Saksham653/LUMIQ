@@ -3,7 +3,7 @@ import { SAMPLE_DATASETS } from "../data/sampleDatasets.js";
 import { buildUploadPreview, datasetFromPreview } from "../data/uploadPreview.js";
 import UploadPreview from "../components/UploadPreview.jsx";
 
-export default function FilesScreen({ activeDataset, setActiveDataset, setActiveTab, uploadedData, setUploadedData, uploadError, setUploadError, fileInputRef }) {
+export default function FilesScreen({ activeDataset, setActiveDataset, setActiveTab, uploadedDatasets, addUploadedDataset, deleteEverything, uploadError, setUploadError, fileInputRef }) {
   const [preview, setPreview] = useState(null);
   const [previewTypes, setPreviewTypes] = useState(null);
 
@@ -36,17 +36,33 @@ export default function FilesScreen({ activeDataset, setActiveDataset, setActive
 
   const loadPreview = () => {
     const dataset = datasetFromPreview(preview, previewTypes);
-    setUploadedData(dataset);
+    addUploadedDataset(dataset);
     setActiveDataset(dataset);
     setActiveTab("canvas");
     cancelPreview();
   };
 
+  const confirmDeleteAll = () => {
+    if (window.confirm("Delete everything stored on this device? This removes saved datasets, Ask chats and the remembered key from this browser.")) {
+      deleteEverything();
+    }
+  };
+
+  const datasetCard = (d) => (
+    <div key={d.name} className={`glass-card`} style={{ padding: "20px", cursor: "pointer", transition: "all 0.2s", borderColor: activeDataset?.name === d.name ? "#00D4FF44" : "#1e2d5c" }} onClick={() => { setActiveDataset(d); setActiveTab("canvas"); }}>
+      <div style={{ fontSize: "28px", marginBottom: "10px" }}>{d.icon}</div>
+      <div style={{ fontFamily: "'Syne', sans-serif", fontWeight: 700, fontSize: "14px", marginBottom: "6px" }}>{d.name}</div>
+      <p style={{ color: "#8892b0", fontSize: "12px", marginBottom: "12px" }}>{d.description}</p>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: "4px" }}>{d.columns.slice(0, 3).map((c) => <span key={c} className="data-pill" style={{ fontSize: "10px" }}>{c}</span>)}</div>
+      {activeDataset?.name === d.name && <div style={{ marginTop: "10px" }}><span className="badge badge-cyan">Active</span></div>}
+    </div>
+  );
+
   return (
     <div style={{ maxWidth: "780px", margin: "0 auto", animation: "fadeSlide 0.3s ease" }}>
       <div style={{ marginBottom: "24px" }}>
         <h2 style={{ fontFamily: "'Syne', sans-serif", fontSize: "20px", fontWeight: 800, marginBottom: "8px" }}>Files</h2>
-        <p style={{ color: "#8892b0", fontSize: "13px" }}>Upload your own CSV or choose from sample datasets</p>
+        <p style={{ color: "#8892b0", fontSize: "13px" }}>Upload your own CSV or choose from sample datasets. Your files and chats stay on this device.</p>
       </div>
       {preview && (
         <UploadPreview preview={preview} types={previewTypes} setTypes={setPreviewTypes} onLoad={loadPreview} onCancel={cancelPreview} />
@@ -63,19 +79,24 @@ export default function FilesScreen({ activeDataset, setActiveDataset, setActive
         <div style={{ fontFamily: "'Syne', sans-serif", fontWeight: 700, fontSize: "16px", marginBottom: "8px" }}>Drop your CSV here</div>
         <p style={{ color: "#8892b0", fontSize: "13px" }}>or click to browse files</p>
         {uploadError && <p style={{ color: "#ff4444", fontSize: "12px", marginTop: "10px" }}>{uploadError}</p>}
-        {uploadedData && <p style={{ color: "#00E5A0", fontSize: "12px", marginTop: "10px" }}>✓ Loaded: {uploadedData.name} ({uploadedData.data.length} rows)</p>}
       </div>
+      {(uploadedDatasets || []).length > 0 && (
+        <>
+          <h3 style={{ fontFamily: "'Syne', sans-serif", fontSize: "14px", fontWeight: 700, marginBottom: "14px", color: "#8892b0", textTransform: "uppercase", letterSpacing: "0.5px" }}>Your Files</h3>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "14px", marginBottom: "24px" }}>
+            {uploadedDatasets.map(datasetCard)}
+          </div>
+        </>
+      )}
       <h3 style={{ fontFamily: "'Syne', sans-serif", fontSize: "14px", fontWeight: 700, marginBottom: "14px", color: "#8892b0", textTransform: "uppercase", letterSpacing: "0.5px" }}>Sample Datasets</h3>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "14px" }}>
-        {Object.values(SAMPLE_DATASETS).map((d) => (
-          <div key={d.name} className={`glass-card`} style={{ padding: "20px", cursor: "pointer", transition: "all 0.2s", borderColor: activeDataset?.name === d.name ? "#00D4FF44" : "#1e2d5c" }} onClick={() => { setActiveDataset(d); setActiveTab("canvas"); }}>
-            <div style={{ fontSize: "28px", marginBottom: "10px" }}>{d.icon}</div>
-            <div style={{ fontFamily: "'Syne', sans-serif", fontWeight: 700, fontSize: "14px", marginBottom: "6px" }}>{d.name}</div>
-            <p style={{ color: "#8892b0", fontSize: "12px", marginBottom: "12px" }}>{d.description}</p>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: "4px" }}>{d.columns.slice(0, 3).map((c) => <span key={c} className="data-pill" style={{ fontSize: "10px" }}>{c}</span>)}</div>
-            {activeDataset?.name === d.name && <div style={{ marginTop: "10px" }}><span className="badge badge-cyan">Active</span></div>}
-          </div>
-        ))}
+        {Object.values(SAMPLE_DATASETS).map(datasetCard)}
+      </div>
+      <div style={{ marginTop: "32px", paddingTop: "16px", borderTop: "1px solid #1e2d5c" }}>
+        <button className="btn-ghost" style={{ borderColor: "#FF3C3C44", color: "#FF8888" }} onClick={confirmDeleteAll}>
+          Delete everything stored on this device
+        </button>
+        <p style={{ fontSize: "11px", color: "#3d4f7c", marginTop: "8px" }}>Removes saved datasets, Ask chats and the remembered API key from this browser.</p>
       </div>
     </div>
   );
