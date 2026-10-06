@@ -1,9 +1,15 @@
+import { useState } from "react";
 import { SAMPLE_DATASETS } from "../data/sampleDatasets.js";
-import { datasetFromCsv } from "../data/dataset.js";
+import { buildUploadPreview, datasetFromPreview } from "../data/uploadPreview.js";
+import UploadPreview from "../components/UploadPreview.jsx";
 
 export default function FilesScreen({ activeDataset, setActiveDataset, setActiveTab, uploadedData, setUploadedData, uploadError, setUploadError, fileInputRef }) {
-  const handleFileUpload = (e) => {
-    const file = e.target.files[0];
+  const [preview, setPreview] = useState(null);
+  const [previewTypes, setPreviewTypes] = useState(null);
+
+  // Reads a chosen or dropped file into the preview — nothing is
+  // loaded until the user confirms.
+  const handleFile = (file) => {
     if (!file) return;
     setUploadError("");
     if (!file.name.endsWith(".csv")) { setUploadError("Please upload a CSV file."); return; }
@@ -12,15 +18,28 @@ export default function FilesScreen({ activeDataset, setActiveDataset, setActive
       try {
         // papaparse-backed: quoted commas, CRLF and a BOM are fine,
         // and column types are decided from all rows (see src/data/)
-        const dataset = datasetFromCsv(ev.target.result, file.name.replace(/\.csv$/i, ""));
-        setUploadedData(dataset);
-        setActiveDataset(dataset);
-        setActiveTab("canvas");
+        const p = buildUploadPreview(ev.target.result, file.name.replace(/\.csv$/i, ""));
+        setPreview(p);
+        setPreviewTypes(p.types);
       } catch (err) {
         setUploadError(err?.message || "Could not parse CSV. Please check the format.");
       }
     };
     reader.readAsText(file);
+  };
+
+  const cancelPreview = () => {
+    setPreview(null);
+    setPreviewTypes(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const loadPreview = () => {
+    const dataset = datasetFromPreview(preview, previewTypes);
+    setUploadedData(dataset);
+    setActiveDataset(dataset);
+    setActiveTab("canvas");
+    cancelPreview();
   };
 
   return (
@@ -29,8 +48,17 @@ export default function FilesScreen({ activeDataset, setActiveDataset, setActive
         <h2 style={{ fontFamily: "'Syne', sans-serif", fontSize: "20px", fontWeight: 800, marginBottom: "8px" }}>Files</h2>
         <p style={{ color: "#8892b0", fontSize: "13px" }}>Upload your own CSV or choose from sample datasets</p>
       </div>
-      <div className="upload-zone" style={{ marginBottom: "24px" }} onClick={() => fileInputRef.current?.click()}>
-        <input type="file" ref={fileInputRef} accept=".csv" style={{ display: "none" }} onChange={handleFileUpload} />
+      {preview && (
+        <UploadPreview preview={preview} types={previewTypes} setTypes={setPreviewTypes} onLoad={loadPreview} onCancel={cancelPreview} />
+      )}
+      <div
+        className="upload-zone"
+        style={{ marginBottom: "24px" }}
+        onClick={() => fileInputRef.current?.click()}
+        onDragOver={(e) => e.preventDefault()}
+        onDrop={(e) => { e.preventDefault(); handleFile(e.dataTransfer?.files?.[0]); }}
+      >
+        <input type="file" ref={fileInputRef} accept=".csv" style={{ display: "none" }} onChange={(e) => handleFile(e.target.files[0])} />
         <div style={{ fontSize: "36px", marginBottom: "12px" }}>📂</div>
         <div style={{ fontFamily: "'Syne', sans-serif", fontWeight: 700, fontSize: "16px", marginBottom: "8px" }}>Drop your CSV here</div>
         <p style={{ color: "#8892b0", fontSize: "13px" }}>or click to browse files</p>
