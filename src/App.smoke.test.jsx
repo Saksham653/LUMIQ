@@ -83,20 +83,19 @@ describe("screen smoke tests (no key, Sales sample)", () => {
     expect(screen.getByText(`+${(467700).toLocaleString()}`)).toBeTruthy();
   });
 
-  it("Data health computes the matrix locally without a key", async () => {
+  it("Data health shows the score, column cards and local matrix without a key", async () => {
     enterDemo();
     goTab("Data health");
+    // the honest score: Sales loses 2 points to a real robust outlier
+    expect(screen.getByText("98")).toBeTruthy();
+    expect(screen.getByText(/1 unusual value in avg_order_value/)).toBeTruthy();
+    expect(screen.getAllByText("Completeness")).toHaveLength(8); // merged column cards
     fireEvent.click(screen.getByText("Run Deep Dive"));
     expect(await screen.findByText("Correlation Matrix")).toBeTruthy();
     expect(screen.getByText("Anomaly Detection")).toBeTruthy();
     expect(screen.getAllByText(/Add a free Groq key/).length).toBeGreaterThan(0);
-  });
-
-  it("Column details profiles all 8 Sales columns", () => {
-    enterDemo();
-    goTab("Column details");
-    expect(screen.getByText("Column Profiler")).toBeTruthy();
-    expect(screen.getAllByText("Completeness")).toHaveLength(8);
+    // Column details is gone as a separate screen
+    expect(screen.queryByText("Column details")).toBeNull();
   });
 
   it("Files shows the upload zone and samples", () => {

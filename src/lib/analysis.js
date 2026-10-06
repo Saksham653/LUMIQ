@@ -2,7 +2,7 @@
 // downsampling, Pearson correlation, z-score anomalies, the linear
 // regression behind Forecast, and the Column details profiler.
 
-import { numericValues } from "./stats.js";
+import { numericValues, median } from "./stats.js";
 import { NUMERIC_TYPES } from "../data/columnTypes.js";
 
 // Smart downsampling: bucket N data points into maxBuckets averaged bins
@@ -117,7 +117,7 @@ export function profileColumn(data, colName, typeInfo) {
     profile.min = sorted[0] ?? null;
     profile.max = sorted[sorted.length - 1] ?? null;
     profile.mean = nums.length > 0 ? sum / nums.length : null;
-    profile.median = nums.length > 0 ? sorted[Math.floor(sorted.length / 2)] : null;
+    profile.median = median(nums);
     profile.stdDev = nums.length > 1 ? Math.sqrt(nums.reduce((a, v) => a + Math.pow(v - profile.mean, 2), 0) / (nums.length - 1)) : null;
 
     // Histogram (10 bins)
@@ -143,12 +143,6 @@ export function profileColumn(data, colName, typeInfo) {
     profile.histogram = profile.topValues.map(t => t.count);
   }
 
-  // Data Quality Score (0-100)
-  let quality = 0;
-  quality += completeness * 0.4; // 40% weight on completeness
-  quality += Math.min(uniqueCount / total, 1) * 30; // 30% weight on variety (capped)
-  quality += (nonNull > 0 ? 30 : 0); // 30% for having data at all
-  profile.qualityScore = Math.min(100, Math.round(quality));
 
   return profile;
 }
