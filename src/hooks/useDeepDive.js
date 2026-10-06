@@ -21,7 +21,7 @@ export function useDeepDive({ apiKey, ds, setLabAnalysis, setLabLoading }) {
       const matrix = [];
       for (let i = 0; i < numericCols.length; i++) {
         const row = [];
-        for (let j = 0; i < numericCols.length && j < numericCols.length; j++) {
+        for (let j = 0; j < numericCols.length; j++) {
           if (i === j) row.push(1);
           else {
             // Only rows where BOTH columns have real numbers count;

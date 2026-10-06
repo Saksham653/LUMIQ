@@ -8,8 +8,7 @@
 
 <br />
 
-[![Live App](https://img.shields.io/badge/🚀%20Live%20App-lumiq.vercel.app-00D4FF?style=for-the-badge&labelColor=050914)](https://lumiq-saksham-srivastavas-projects-a00eb29a.vercel.app/)
-[![Landing Page](https://img.shields.io/badge/🌐%20Landing%20Page-saksham653.github.io-7B4FE8?style=for-the-badge&labelColor=050914)](https://saksham653.github.io/LUMIQ/)
+[![Live App](https://img.shields.io/badge/🚀%20Live%20App-lumiq--silk.vercel.app-00D4FF?style=for-the-badge&labelColor=050914)](https://lumiq-silk.vercel.app/)
 
 <br />
 
@@ -43,8 +42,7 @@ Built on **Groq's fast inference engine** running **Llama 3.3 70B**, LUMIQ strea
 
 | | |
 |---|---|
-| 🌐 **Landing Page** | [https://saksham653.github.io/LUMIQ/](https://saksham653.github.io/LUMIQ/) |
-| 🚀 **Live Application** | [https://lumiq-saksham-srivastavas-projects-a00eb29a.vercel.app/](https://lumiq-saksham-srivastavas-projects-a00eb29a.vercel.app/) |
+| 🚀 **Live Application** | [https://lumiq-silk.vercel.app/](https://lumiq-silk.vercel.app/) |
 
 <br />
 
@@ -95,6 +93,8 @@ Ask questions in plain English. The AI never sees your rows and never does the m
 - The AI returns a **calculation plan**; LUMIQ validates it against your real columns and runs it on every row **in your browser**
 - The AI words the result, streamed in real time — and every number it states is **checked against the result table**; anything unmatched is marked *not verified*
 - **Show the work** under each answer lists the plain-English steps, the result table and "Based on N of M rows"; **What was sent** shows the exact text that left the browser
+- **Follow-up questions** work: "and by category?" or "only for North" modifies your previous question''s plan (the context carries the question, plan and steps — never rows); **New topic** starts fresh
+- Answers render with **clean formatting** — bold, lists and tables instead of raw `**` marks — and verified-number markers survive the formatting
 
 ---
 
@@ -153,9 +153,11 @@ A deep X-ray of every column in your dataset:
 
 Drop any CSV file and LUMIQ handles the rest:
 
-- Proper CSV parsing (papaparse): quoted commas, CRLF line endings, a UTF-8 BOM, quoted newlines
+- **Upload preview before loading**: row and column counts, the first 10 rows, each column''s detected type with a dropdown to change it, and plain warnings ("2 empty cells in revenue")
+- Proper CSV parsing (papaparse): quoted commas, CRLF line endings, a UTF-8 BOM, quoted newlines; drag and drop works
 - Column types (number, percent, money, date, text) decided from **all rows**, never the first row; `1,20,000`, `₹1,200` and `12.5%` parse as numbers and blanks stay blank
 - Immediately activates it as a live dataset across all 7 features
+- **Your work stays on this device between visits**: datasets, per-dataset Ask history and your selected screen are saved in the browser (IndexedDB); keep several files and switch between them; "Delete everything stored on this device" wipes it all, including the remembered key
 - Three curated sample datasets included: **E-Commerce Sales**, **Marketing Campaign**, **Customer Churn**
 
 <br />
@@ -302,7 +304,7 @@ Pull requests are welcome. For significant changes, open an issue first to discu
 **Saksham Srivastava**
 
 ✉️ [sakshamsrivastava7000@gmail.com](mailto:sakshamsrivastava7000@gmail.com)
-🌐 [saksham653.github.io/LUMIQ](https://saksham653.github.io/LUMIQ/)
+🌐 [lumiq-silk.vercel.app](https://lumiq-silk.vercel.app/)
 
 <br />
 
