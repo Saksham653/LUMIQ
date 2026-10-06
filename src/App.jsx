@@ -53,6 +53,8 @@ import WhatIfScreen from "./screens/WhatIfScreen.jsx";
 import { useScenario } from "./hooks/useScenario.js";
 import ReportScreen from "./screens/ReportScreen.jsx";
 import { useNarrative } from "./hooks/useNarrative.js";
+import AskScreen from "./screens/AskScreen.jsx";
+import { useOracleChat } from "./hooks/useOracleChat.js";
 
 // ============================================================
 // LUMIQ — Luminous Intelligence Queries (Groq Edition)
@@ -298,9 +300,7 @@ const AppShell = ({
 
   // In-flight AI requests (F5): the Stop buttons abort these, and a
   // failed Oracle question can be retried.
-  const oracleAbortRef = useRef(null);
   const forecastAbortRef = useRef(null);
-  const [oracleLastFailed, setOracleLastFailed] = useState(null);
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -476,135 +476,7 @@ Rules:
   const medianVal = medianValue(primaryVals);
   const headlineVal = metricRule === "avg" ? avgVal : totalVal;
 
-  // Merges fields into the last (streaming) Oracle message.
-  const updateLastOracle = (patch) => {
-    setOracleMessages((prev) => {
-      const u = [...prev];
-      u[u.length - 1] = { ...u[u.length - 1], ...patch };
-      return u;
-    });
-  };
-
-  // The proof flow (F8). 1) The question plus a schema summary — no
-  // raw rows — goes to the AI, which returns a JSON calculation plan.
-  // 2) The plan is validated (one corrected retry) and the browser
-  // runs it on every row. 3) The AI words the result table, streamed.
-  // 4) Every number in the wording is checked against that table and
-  // unmatched ones are marked. The proof (steps, table, N of M rows,
-  // exact prompts sent) is attached to the message.
-  const runOracleFlow = async (question, controller) => {
-    const summary = buildSchemaSummary(ds);
-    const schemaText = renderSchemaSummary(summary);
-    const sent = [];
-
-    updateLastOracle({ content: "Planning the calculation…" });
-    const planPrompt = buildPlanPrompt(question, schemaText);
-    sent.push({ label: "Plan request (schema summary only — no rows)", text: planPrompt });
-    const planReply = await callGroq(apiKey, [{ role: "user", content: planPrompt }], null, { signal: controller.signal, temperature: 0 });
-    let parsed = parsePlannerReply(planReply);
-
-    // Questions that need no calculation are answered from the
-    // summary alone and checked against the summary's own figures.
-    if (parsed.kind === "describe") {
-      const describePrompt = buildDescribePrompt(question, schemaText);
-      sent.push({ label: "Answer request (schema summary only)", text: describePrompt });
-      updateLastOracle({ content: "" });
-      const answer = await callGroq(apiKey, [{ role: "user", content: describePrompt }], (text) => updateLastOracle({ content: text }), { signal: controller.signal });
-      const check = verifyNumbers(answer, schemaNumberCandidates(summary));
-      updateLastOracle({
-        content: answer,
-        segments: check.segments,
-        unverified: check.unverified,
-        proof: {
-          steps: ["No calculation was needed — answered from the dataset summary (column names, types and per-column statistics; no rows were sent)."],
-          table: [],
-          rowsUsed: ds.data.length,
-          totalRows: ds.data.length,
-          sent,
-        },
-      });
-      return;
-    }
-
-    let checked = parsed.kind === "plan"
-      ? validatePlan(parsed.raw, ds.columns, ds.columnTypes)
-      : { ok: false, error: parsed.error };
-    if (!checked.ok) {
-      // One corrected attempt, then decline honestly.
-      updateLastOracle({ content: "Correcting the calculation plan…" });
-      const retryPrompt = `${planPrompt}\n\nYour previous reply was rejected: ${checked.error}\nReply again with ONLY a corrected JSON object.`;
-      sent.push({ label: "Corrected plan request", text: retryPrompt });
-      const retryReply = await callGroq(apiKey, [{ role: "user", content: retryPrompt }], null, { signal: controller.signal, temperature: 0 });
-      parsed = parsePlannerReply(retryReply);
-      checked = parsed.kind === "plan"
-        ? validatePlan(parsed.raw, ds.columns, ds.columnTypes)
-        : { ok: false, error: parsed.kind === "error" ? parsed.error : "The reply was not a plan." };
-      if (!checked.ok) {
-        const examples = exampleQuestions(ds);
-        updateLastOracle({
-          content: `I couldn't work that out from this data.\n\nQuestions I can answer here:\n• ${examples.join("\n• ")}`,
-          proof: {
-            steps: [`The calculation plan was rejected twice. Last reason: ${checked.error}`],
-            table: [],
-            rowsUsed: 0,
-            totalRows: ds.data.length,
-            sent,
-          },
-        });
-        return;
-      }
-    }
-
-    const result = runPlan(ds.data, ds.columns, checked.plan);
-    const explainPrompt = buildExplainPrompt(question, result.steps, result.table, result.rowsUsed, result.totalRows);
-    sent.push({ label: "Answer request (steps + result table — no rows)", text: explainPrompt });
-    updateLastOracle({ content: "" });
-    const answer = await callGroq(apiKey, [{ role: "user", content: explainPrompt }], (text) => updateLastOracle({ content: text }), { signal: controller.signal });
-    const candidates = collectCandidates(result.table, [result.rowsUsed, result.totalRows, result.table.length]);
-    const check = verifyNumbers(answer, candidates);
-    updateLastOracle({
-      content: answer,
-      segments: check.segments,
-      unverified: check.unverified,
-      proof: { steps: result.steps, table: result.table, rowsUsed: result.rowsUsed, totalRows: result.totalRows, sent },
-    });
-  };
-
-  // Pass retryText to re-send a failed question (the Retry button);
-  // otherwise the textarea content is sent.
-  const sendOracleMessage = async (retryText) => {
-    const userMsg = (typeof retryText === "string" ? retryText : oracleInput).trim();
-    if (!userMsg || oracleLoading) return;
-    if (typeof retryText !== "string") setOracleInput("");
-    setOracleLastFailed(null);
-    setOracleMessages((prev) => [...prev, { role: "user", content: userMsg }]);
-    setOracleLoading(true);
-    const controller = new AbortController();
-    oracleAbortRef.current = controller;
-    try {
-      setOracleMessages((prev) => [...prev, { role: "assistant", content: "", streaming: true }]);
-      if (apiKey && apiKey !== "demo") {
-        if (!ds) {
-          updateLastOracle({ content: "Select a dataset from the sidebar first — I calculate every answer from its rows." });
-        } else {
-          await runOracleFlow(userMsg, controller);
-        }
-      } else {
-        updateLastOracle({ content: "Add a free Groq key to ask questions in your own words — then I plan the calculation, run it on all your rows in your browser, and show the work under every answer." });
-      }
-      setOracleMessages((prev) => { const u = [...prev]; u[u.length - 1] = { ...u[u.length - 1], streaming: false }; return u; });
-    } catch (err) {
-      if (err.aborted) {
-        // Stopped by the user — keep whatever already streamed in
-        setOracleMessages((prev) => { const u = [...prev]; const last = u[u.length - 1]; u[u.length - 1] = { role: "assistant", content: last.content ? `${last.content} ⏹` : "⏹ Stopped.", streaming: false }; return u; });
-      } else {
-        setOracleLastFailed(userMsg);
-        setOracleMessages((prev) => { const u = [...prev]; u[u.length - 1] = { role: "assistant", content: `⚠ ${err.message}`, streaming: false }; return u; });
-      }
-    }
-    oracleAbortRef.current = null;
-    setOracleLoading(false);
-  };
+  const { sendOracleMessage, oracleAbortRef, oracleLastFailed } = useOracleChat({ apiKey, ds, oracleInput, setOracleInput, oracleLoading, setOracleLoading, setOracleMessages });
 
   const { generateNarrative, narrativeAbortRef } = useNarrative({ apiKey, ds, setNarrativeText, setNarrativeLoading });
 
@@ -1078,109 +950,7 @@ Rules:
             </div>
           )}
 
-          {activeTab === "oracle" && (
-            <div style={{ maxWidth: "800px", margin: "0 auto", animation: "fadeSlide 0.3s ease" }}>
-              <div style={{ marginBottom: "24px" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "8px" }}>
-                  <div style={{ width: "36px", height: "36px", borderRadius: "10px", background: "linear-gradient(135deg, #00D4FF1a, #7B4FE81a)", border: "1px solid #00D4FF33", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "18px" }}>🔮</div>
-                  <h2 style={{ fontFamily: "'Syne', sans-serif", fontSize: "20px", fontWeight: 800 }}>Ask</h2>
-                  <span className="badge badge-violet">Groq · Llama 3.3 70B</span>
-                  {(!apiKey || apiKey === "demo") && <span className="badge badge-gold">Demo Mode</span>}
-                </div>
-                <p style={{ color: "#8892b0", fontSize: "13px" }}>Ask questions about your data. Every number is calculated from all your rows.{!ds && <span style={{ color: "#FFB627" }}> Select a dataset first.</span>}</p>
-              </div>
-              <div style={{ background: "#050914", border: "1px solid #1e2d5c", borderRadius: "16px", height: "420px", overflow: "auto", padding: "20px", marginBottom: "16px", display: "flex", flexDirection: "column", gap: "16px" }}>
-                {oracleMessages.length === 0 ? (
-                  <div style={{ margin: "auto", textAlign: "center", color: "#3d4f7c" }}>
-                    <div style={{ fontSize: "36px", marginBottom: "12px" }}>🔮</div>
-                    <p style={{ fontSize: "14px" }}>Oracle is ready. Ask your first question.</p>
-                    <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", justifyContent: "center", marginTop: "16px" }}>
-                      {(ds ? exampleQuestions(ds) : []).map((q) => (
-                        <button key={q} className="btn-ghost" style={{ fontSize: "11px", padding: "6px 12px" }} onClick={() => setOracleInput(q)}>{q}</button>
-                      ))}
-                    </div>
-                  </div>
-                ) : oracleMessages.map((msg, i) => (
-                  <div key={i} style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-                    <div style={{ fontSize: "10px", fontFamily: "'DM Mono', monospace", color: "#3d4f7c", marginBottom: "4px", textAlign: msg.role === "user" ? "right" : "left" }}>{msg.role === "user" ? "YOU" : "ORACLE"}</div>
-                    <div className={msg.role === "user" ? "chat-bubble-user" : `chat-bubble-oracle ${msg.streaming ? "streaming-cursor" : ""}`}>
-                      {msg.segments
-                        ? msg.segments.map((s, j) =>
-                          s.number !== undefined && !s.verified ? (
-                            <span key={j} title="Not verified — this number does not match the calculation" style={{ color: "#FFB627", borderBottom: "1px dashed #FFB627" }}>{s.text}<sup style={{ fontSize: "9px" }}>?</sup></span>
-                          ) : (
-                            <span key={j}>{s.text}</span>
-                          )
-                        )
-                        : (msg.content || (msg.streaming ? "" : "..."))}
-                    </div>
-                    {msg.unverified > 0 && !msg.streaming && (
-                      <div style={{ fontSize: "10px", color: "#FFB627" }}>⚠ {msg.unverified} number{msg.unverified === 1 ? "" : "s"} marked <sup>?</sup> could not be matched to the calculation</div>
-                    )}
-                    {msg.proof && !msg.streaming && (
-                      <div style={{ maxWidth: "85%", display: "flex", flexDirection: "column", gap: "4px" }}>
-                        <details style={{ background: "#0a1128", border: "1px solid #1e2d5c", borderRadius: "8px", padding: "8px 12px", fontSize: "12px" }}>
-                          <summary style={{ cursor: "pointer", color: "#8892b0", fontSize: "11px" }}>Show the work</summary>
-                          <ol style={{ margin: "8px 0 0 18px", color: "#ccd6f6", lineHeight: 1.7, fontSize: "12px" }}>
-                            {msg.proof.steps.map((s, j) => <li key={j}>{s}</li>)}
-                          </ol>
-                          {msg.proof.table.length > 0 && (
-                            <div style={{ overflowX: "auto", maxHeight: "220px", overflowY: "auto", marginTop: "8px", border: "1px solid #1e2d5c", borderRadius: "6px" }}>
-                              <table style={{ borderCollapse: "collapse", fontSize: "11px", width: "100%" }}>
-                                <thead>
-                                  <tr>{Object.keys(msg.proof.table[0]).map((c) => (
-                                    <th key={c} style={{ textAlign: "left", padding: "4px 10px", color: "#8892b0", fontFamily: "'DM Mono', monospace", fontSize: "10px", borderBottom: "1px solid #1e2d5c", textTransform: "uppercase", whiteSpace: "nowrap" }}>{c}</th>
-                                  ))}</tr>
-                                </thead>
-                                <tbody>
-                                  {msg.proof.table.map((row, r) => (
-                                    <tr key={r}>{Object.keys(msg.proof.table[0]).map((c) => (
-                                      <td key={c} style={{ padding: "4px 10px", color: typeof row[c] === "number" ? "#00D4FF" : "#ccd6f6", fontFamily: typeof row[c] === "number" ? "'DM Mono', monospace" : "inherit", borderBottom: "1px solid #1e2d5c33", whiteSpace: "nowrap" }}>
-                                        {row[c] == null ? "—" : typeof row[c] === "number" ? row[c].toLocaleString() : String(row[c])}
-                                      </td>
-                                    ))}</tr>
-                                  ))}
-                                </tbody>
-                              </table>
-                            </div>
-                          )}
-                          <div style={{ marginTop: "8px", fontSize: "10px", color: "#3d4f7c", fontFamily: "'DM Mono', monospace" }}>Based on {msg.proof.rowsUsed} of {msg.proof.totalRows} rows</div>
-                        </details>
-                        <details style={{ background: "#0a1128", border: "1px solid #1e2d5c", borderRadius: "8px", padding: "8px 12px", fontSize: "12px" }}>
-                          <summary style={{ cursor: "pointer", color: "#8892b0", fontSize: "11px" }}>What was sent</summary>
-                          {msg.proof.sent.map((s, j) => (
-                            <div key={j} style={{ marginTop: "8px" }}>
-                              <div style={{ fontSize: "10px", color: "#7B4FE8", marginBottom: "4px", fontFamily: "'DM Mono', monospace", textTransform: "uppercase" }}>{s.label}</div>
-                              <pre style={{ whiteSpace: "pre-wrap", background: "#050914", border: "1px solid #1e2d5c", borderRadius: "6px", padding: "8px", fontSize: "10px", color: "#8892b0", fontFamily: "'DM Mono', monospace", maxHeight: "180px", overflow: "auto", margin: 0 }}>{s.text}</pre>
-                            </div>
-                          ))}
-                        </details>
-                      </div>
-                    )}
-                  </div>
-                ))}
-                <div ref={chatEndRef} />
-              </div>
-              <div style={{ display: "flex", gap: "10px" }}>
-                <textarea className="oracle-input" value={oracleInput} onChange={(e) => setOracleInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendOracleMessage(); } }} placeholder="Ask Oracle anything about your data..." rows={2} style={{ flex: 1 }} disabled={oracleLoading} />
-                {oracleLoading && apiKey && apiKey !== "demo" && (
-                  <button className="btn-ghost" onClick={() => oracleAbortRef.current?.abort()} style={{ alignSelf: "flex-end", padding: "14px 16px" }}>⏹ Stop</button>
-                )}
-                <button className="btn-primary" onClick={() => sendOracleMessage()} disabled={oracleLoading || !oracleInput.trim()} style={{ alignSelf: "flex-end", padding: "14px 20px" }}>{oracleLoading ? "..." : "→"}</button>
-              </div>
-              {oracleLastFailed && !oracleLoading && (
-                <div style={{ marginTop: "10px" }}>
-                  <button className="btn-ghost" style={{ fontSize: "12px" }} onClick={() => sendOracleMessage(oracleLastFailed)}>↻ Retry last question</button>
-                </div>
-              )}
-              <p style={{ fontSize: "11px", color: "#3d4f7c", marginTop: "8px" }}>Each question is answered on its own. Include the full detail, for example "revenue by region for 2026".</p>
-              {(!apiKey || apiKey === "demo") && (
-                <div style={{ marginTop: "12px" }}>
-                  <KeyNudge setPage={setPage} />
-                </div>
-              )}
-            </div>
-          )}
+          {activeTab === "oracle" && <AskScreen ds={ds} apiKey={apiKey} setPage={setPage} oracleMessages={oracleMessages} oracleInput={oracleInput} setOracleInput={setOracleInput} oracleLoading={oracleLoading} sendOracleMessage={sendOracleMessage} oracleAbortRef={oracleAbortRef} oracleLastFailed={oracleLastFailed} chatEndRef={chatEndRef} />}
 
           {activeTab === "narrative" && <ReportScreen ds={ds} apiKey={apiKey} setPage={setPage} narrativeText={narrativeText} narrativeLoading={narrativeLoading} generateNarrative={generateNarrative} narrativeAbortRef={narrativeAbortRef} />}
 
