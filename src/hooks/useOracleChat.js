@@ -6,7 +6,7 @@
 import { useRef, useState } from "react";
 import { callGroq } from "../ai/client.js";
 import { validatePlan } from "../engine/validatePlan.js";
-import { runPlan } from "../engine/runPlan.js";
+import { runPlanAsync } from "../worker/workerClient.js";
 import { buildSchemaSummary, renderSchemaSummary, schemaNumberCandidates } from "../ai/schemaSummary.js";
 import {
   buildPlanPrompt,
@@ -105,7 +105,9 @@ export function useOracleChat({ apiKey, ds, oracleInput, setOracleInput, oracleL
       }
     }
 
-    const result = runPlan(ds.data, ds.columns, checked.plan);
+    // The engine runs in the data worker (F13) — big files answer
+    // without freezing the page. Same runPlan either way.
+    const result = await runPlanAsync(ds, checked.plan);
     const explainPrompt = buildExplainPrompt(question, result.steps, result.table, result.rowsUsed, result.totalRows);
     sent.push({ label: "Answer request (steps + result table — no rows)", text: explainPrompt });
     updateLastOracle({ content: "" });

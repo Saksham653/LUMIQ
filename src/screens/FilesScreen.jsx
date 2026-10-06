@@ -1,42 +1,61 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { SAMPLE_DATASETS } from "../data/sampleDatasets.js";
-import { buildUploadPreview, datasetFromPreview } from "../data/uploadPreview.js";
 import { uniqueDatasetName } from "../data/dataset.js";
+import { buildPreviewAsync, datasetFromPreviewAsync, dropPreviewAsync, cancelAllWork } from "../worker/workerClient.js";
 import UploadPreview from "../components/UploadPreview.jsx";
 
 export default function FilesScreen({ activeDataset, setActiveDataset, setActiveTab, uploadedDatasets, addUploadedDataset, deleteEverything, uploadError, setUploadError, fileInputRef }) {
   const [preview, setPreview] = useState(null);
   const [previewTypes, setPreviewTypes] = useState(null);
+  const [parsing, setParsing] = useState(null); // { stage, rows, pct }
+  const parseToken = useRef(null);
 
   // Reads a chosen or dropped file into the preview — nothing is
-  // loaded until the user confirms.
+  // loaded until the user confirms. Parsing and type detection run
+  // in the data worker (F13), with live row-count progress.
   const handleFile = (file) => {
     if (!file) return;
     setUploadError("");
-    if (!file.name.endsWith(".csv")) { setUploadError("Please upload a CSV file."); return; }
+    if (!/\.csv$/i.test(file.name)) { setUploadError("Please upload a CSV file."); return; }
     const reader = new FileReader();
-    reader.onload = (ev) => {
+    reader.onload = async (ev) => {
+      const token = crypto.randomUUID();
+      parseToken.current = token;
+      setParsing({ stage: "Reading rows", rows: 0, pct: 0 });
       try {
-        // papaparse-backed: quoted commas, CRLF and a BOM are fine,
-        // and column types are decided from all rows (see src/data/)
-        const p = buildUploadPreview(ev.target.result, file.name.replace(/\.csv$/i, ""));
+        const p = await buildPreviewAsync(ev.target.result, file.name.replace(/\.csv$/i, ""), token, (m) => {
+          if (parseToken.current !== token) return;
+          setParsing({ stage: m.stage === "typing" ? "Detecting column types" : "Reading rows", rows: m.rows, pct: m.pct });
+        });
+        if (parseToken.current !== token) return; // cancelled meanwhile
+        setParsing(null);
         setPreview(p);
         setPreviewTypes(p.types);
       } catch (err) {
+        if (parseToken.current !== token || err?.cancelled) return;
+        setParsing(null);
         setUploadError(err?.message || "Could not parse CSV. Please check the format.");
       }
     };
     reader.readAsText(file);
   };
 
+  const cancelParsing = () => {
+    parseToken.current = null;
+    cancelAllWork();
+    setParsing(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
   const cancelPreview = () => {
+    dropPreviewAsync(preview?.token);
     setPreview(null);
     setPreviewTypes(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
-  const loadPreview = () => {
-    const dataset = datasetFromPreview(preview, previewTypes);
+  const loadPreview = async () => {
+    const dataset = await datasetFromPreviewAsync(preview, previewTypes);
     // Same display name twice? Show the newcomer as "name (2)" —
     // storage and history key on the id either way.
     const taken = [...(uploadedDatasets || []).map((d) => d.name), ...Object.values(SAMPLE_DATASETS).map((s) => s.name)];
@@ -44,7 +63,9 @@ export default function FilesScreen({ activeDataset, setActiveDataset, setActive
     addUploadedDataset(dataset);
     setActiveDataset(dataset);
     setActiveTab("canvas");
-    cancelPreview();
+    setPreview(null);
+    setPreviewTypes(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
   const confirmDeleteAll = () => {
@@ -69,6 +90,19 @@ export default function FilesScreen({ activeDataset, setActiveDataset, setActive
         <h2 style={{ fontFamily: "'Syne', sans-serif", fontSize: "20px", fontWeight: 800, marginBottom: "8px" }}>Files</h2>
         <p style={{ color: "#8892b0", fontSize: "13px" }}>Upload your own CSV or choose from sample datasets. Your files and chats stay on this device.</p>
       </div>
+      {parsing && (
+        <div className="glass-card" style={{ padding: "20px", marginBottom: "24px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px", gap: "10px" }}>
+            <span style={{ fontSize: "13px", color: "#ccd6f6" }}>
+              {parsing.stage}… <span style={{ fontFamily: "'DM Mono', monospace", color: "#00D4FF" }}>{parsing.rows.toLocaleString()}</span> rows
+            </span>
+            <button className="btn-ghost" style={{ fontSize: "12px", padding: "5px 12px" }} onClick={cancelParsing}>Cancel</button>
+          </div>
+          <div role="progressbar" aria-label="File loading progress" aria-valuenow={parsing.pct} aria-valuemin={0} aria-valuemax={100} style={{ height: "8px", background: "#1e2d5c", borderRadius: "4px", overflow: "hidden" }}>
+            <div style={{ width: `${parsing.pct}%`, height: "100%", background: "#00D4FF", borderRadius: "4px", transition: "width 0.15s ease" }} />
+          </div>
+        </div>
+      )}
       {preview && (
         <UploadPreview preview={preview} types={previewTypes} setTypes={setPreviewTypes} onLoad={loadPreview} onCancel={cancelPreview} />
       )}
