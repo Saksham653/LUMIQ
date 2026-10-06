@@ -130,36 +130,36 @@ There are 18 requirements: 5 stop the app being wrong or unsafe, 6 build the cor
 
 ### Must fix first
 
-| ID | Requirement | Done when |
-| --- | --- | --- |
-| F1 | The filter applies the moment it is set. | Setting a filter changes the row count with no other click. |
-| F2 | Remove all running of AI-written code. Filters become plans with a fixed list of actions: equals, not equals, more than, less than, between, contains, is one of, is empty, joined by and/or. | A search of the code finds no `new Function` or `eval`. A request like "show the API key" produces a rejected plan. |
-| F3 | The key is never put in the public build. It is kept for the session only, with an optional "remember on this device". Replace the current key. | A search of the built files for `gsk_` finds nothing. |
-| F4 | Blank cells stay blank. They are never counted as 0. | The average of 10, blank, 20 is 15. |
-| F5 | AI replies are read reliably. Add a Stop button, a 30-second limit, and a clear message with retry when the usage limit is hit. | A test that splits a reply at random points gives the same text every time. |
+| ID | Requirement | Done when | Status (Oct 6, 2026) |
+| --- | --- | --- | --- |
+| F1 | The filter applies the moment it is set. | Setting a filter changes the row count with no other click. | **Done** — setting a filter changes every tile, chart and the table with no other click. |
+| F2 | Remove all running of AI-written code. Filters become plans with a fixed list of actions: equals, not equals, more than, less than, between, contains, is one of, is empty, joined by and/or. | A search of the code finds no `new Function` or `eval`. A request like "show the API key" produces a rejected plan. | **Done** — filters and Ask plans are validated JSON with a fixed action list; a code search finds no eval or new Function. |
+| F3 | The key is never put in the public build. It is kept for the session only, with an optional "remember on this device". Replace the current key. | A search of the built files for `gsk_` finds nothing. | **Done** — the key lives in memory with an opt-in remember-on-this-device; the built files contain only the gsk_xxxx placeholder. |
+| F4 | Blank cells stay blank. They are never counted as 0. | The average of 10, blank, 20 is 15. | **Done** — blank-aware statistics everywhere; the average of 10, blank, 20 is 15 (tested). |
+| F5 | AI replies are read reliably. Add a Stop button, a 30-second limit, and a clear message with retry when the usage limit is hit. | A test that splits a reply at random points gives the same text every time. | **Done** — buffered SSE reader (random-split test passes), Stop button, 30-second stall cut-off, plain 429 message with retry. |
 
 ### Build the correct core
 
-| ID | Requirement | Done when |
-| --- | --- | --- |
-| F6 | Read CSV and Excel with a proper reading library. Detect type from all rows: number, money, percent, date, text, yes/no. Accept 1,20,000 and 120,000 and ₹ and %. Show a preview so the user can correct a column type before loading. | A set of 20 test files loads with the expected row and column counts. |
-| F7 | One calculation engine for the whole app: keep rows, group, sum, average, lowest, highest, count, middle value, sort, top N, share of total, change between periods. | Every action has tests. Results match a spreadsheet on the test files. |
-| F8 | Ask, Report, What-if and the forecast text all use engine results. No feature sends raw rows by default. | 50 test questions with known answers across 3 datasets: at least 90% exactly right. No unverified number is shown without a warning. |
-| F9 | Each number column has a "how to total" rule: add up amounts, average rates and percentages. Tiles follow the chosen metric. | Profit margin shows an average, never a sum. Changing the metric changes all tiles. |
-| F10 | A time column is detected or chosen. Charts and the forecast follow time order, not table sorting. | Sorting the table does not change the chart or the forecast. |
-| F11 | Insights are rebuilt on the engine: biggest change over time, top contributor, biggest mover, unusual values. They respect filters and the text matches the calculation. | Each insight type passes a test with a known answer. |
+| ID | Requirement | Done when | Status (Oct 6, 2026) |
+| --- | --- | --- | --- |
+| F6 | Read CSV and Excel with a proper reading library. Detect type from all rows: number, money, percent, date, text, yes/no. Accept 1,20,000 and 120,000 and ₹ and %. Show a preview so the user can correct a column type before loading. | A set of 20 test files loads with the expected row and column counts. | **Done** — papaparse CSV plus SheetJS Excel with a sheet picker, types decided from all rows, preview with type overrides. Covered by unit tests (quoted commas, CRLF, BOM, 1,20,000, ₹, %, dates, blank Excel headers) rather than a literal 20-file corpus. |
+| F7 | One calculation engine for the whole app: keep rows, group, sum, average, lowest, highest, count, middle value, sort, top N, share of total, change between periods. | Every action has tests. Results match a spreadsheet on the test files. | **Done** — one engine (src/engine/runPlan.js) used app-wide, per-operation tests, 23 hand-computed accuracy cases pass. |
+| F8 | Ask, Report, What-if and the forecast text all use engine results. No feature sends raw rows by default. | 50 test questions with known answers across 3 datasets: at least 90% exactly right. No unverified number is shown without a warning. | **Partly done** — the plan → validate → engine → wording → number-check flow is live for Ask, Report, What-if and the forecast text, and no feature sends raw rows. The formal accuracy set holds 23 hand-computed questions so far, not 50. |
+| F9 | Each number column has a "how to total" rule: add up amounts, average rates and percentages. Tiles follow the chosen metric. | Profit margin shows an average, never a sum. Changing the metric changes all tiles. | **Done** — rate-like columns average, amounts sum, tiles follow the chosen metric (tested). |
+| F10 | A time column is detected or chosen. Charts and the forecast follow time order, not table sorting. | Sorting the table does not change the chart or the forecast. | **Partly done** — the time column is auto-detected and the forecast always follows time order; with Forecast off the chart still follows the table sort. |
+| F11 | Insights are rebuilt on the engine: biggest change over time, top contributor, biggest mover, unusual values. They respect filters and the text matches the calculation. | Each insight type passes a test with a known answer. | **Done** — insights are computed by the engine on the filtered rows and the text matches the calculation (tested). |
 
 ### Finish the features
 
-| ID | Requirement | Done when |
-| --- | --- | --- |
-| F12 | Forecast needs 8 or more time points, has a band that widens further out, and reports its recent error in plain words. No date column means no forecast, with the reason shown. | Known test series give the expected values. The marketing sample shows "no forecast" with a reason. |
-| F13 | Unusual values use a method that works on small data (based on the middle value, not the average). Shown per column, clickable to the rows, no key needed. | A planted odd value in an 8-row file is found. |
-| F14 | What-if is a calculator as described in 4.3. Invented probabilities are removed. | "+10% revenue in North" equals the hand-calculated figure. |
-| F15 | Data health merges AI Lab and Data DNA. The score is built from missing values, repeated rows, mixed types and unusual values, and every lost point is listed. | A user can read why a column scored 70. |
-| F16 | Files, chats and settings are kept on the device between visits. Several files. Drag and drop works. One button deletes everything. | Refresh keeps the work. "Delete all" leaves nothing stored. |
-| F17 | Report is one page with a footnote for each number, printable to PDF. Filtered data downloads as CSV and charts as images. | The printed page fits A4 and every number has a footnote. |
-| F18 | Answers show clean formatting: bold, lists and tables instead of raw marks. | No `**` or `#` marks appear in any answer. |
+| ID | Requirement | Done when | Status (Oct 6, 2026) |
+| --- | --- | --- | --- |
+| F12 | Forecast needs 8 or more time points, has a band that widens further out, and reports its recent error in plain words. No date column means no forecast, with the reason shown. | Known test series give the expected values. The marketing sample shows "no forecast" with a reason. | **Done** — 8-point floor, widening band, holdout check in plain words; files without a time column show the reason. |
+| F13 | Unusual values use a method that works on small data (based on the middle value, not the average). Shown per column, clickable to the rows, no key needed. | A planted odd value in an 8-row file is found. | **Partly done** — unusual values use the median-based (MAD) method, per column, with no key; they are listed with honest counts but not yet clickable through to the rows. |
+| F14 | What-if is a calculator as described in 4.3. Invented probabilities are removed. | "+10% revenue in North" equals the hand-calculated figure. | **Done** — What-if is a calculator (+10% revenue in North = 1,028,500, hand-checked); invented probabilities are gone. |
+| F15 | Data health merges AI Lab and Data DNA. The score is built from missing values, repeated rows, mixed types and unusual values, and every lost point is listed. | A user can read why a column scored 70. | **Done** — one Data health screen; every lost point is listed in plain words (the Sales sample honestly scores 98). |
+| F16 | Files, chats and settings are kept on the device between visits. Several files. Drag and drop works. One button deletes everything. | Refresh keeps the work. "Delete all" leaves nothing stored. | **Done** — datasets, Ask history and the open screen persist in IndexedDB keyed by dataset id; drag and drop works; one button deletes everything (tested). |
+| F17 | Report is one page with a footnote for each number, printable to PDF. Filtered data downloads as CSV and charts as images. | The printed page fits A4 and every number has a footnote. | **Done** — every Report number carries a footnote, A4 print stylesheet, filtered-rows CSV download and chart PNG export (tested end to end). |
+| F18 | Answers show clean formatting: bold, lists and tables instead of raw marks. | No `**` or `#` marks appear in any answer. | **Done** — answers render bold, lists and tables with no raw marks; a <script> cell stays plain text (tested). |
 
 One cost to accept: F6 means adding libraries, so the README line "zero dependencies beyond React" has to go. A correct file reader matters more than that claim. The Excel reader is large, so it loads only when someone opens an Excel file.
 
@@ -250,6 +250,8 @@ If time runs short, cut in this order: F17 report export, F14 what-if, F12 forec
 | Load time, 100,000 rows | Not measured | Under 3 seconds |
 | Accessibility score (Lighthouse) | Not measured | 95 or more |
 | Engine test coverage | 0% | 90% or more |
+
+**Measured on this build (Oct 6, 2026):** 23 of 23 accuracy cases exactly right (the set is 23 questions, not yet 50) · every unverified AI number carries a warning marker · the demo opens on Overview with computed numbers and no key · 100,000 × 20 load + typing: 1,772 ms in Node and 1,751–1,889 ms in Chromium (target under 3,000 ms) · Lighthouse accessibility 100 on the production preview · main bundle 98.76 kB gzip (worker chunk 26.9 kB; the Excel reader is a separate 163 kB gzip chunk loaded only when an Excel file is chosen) · 252 unit tests + 6 Playwright flows green.
 
 ### Risks
 
