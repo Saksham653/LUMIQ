@@ -5,10 +5,7 @@
 // status).
 
 import { createStreamReader } from "../lib/streamReader.js";
-
-const GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions";
-const MODEL = "llama-3.3-70b-versatile";
-const STREAM_TIMEOUT_MS = 30000;
+import { AI_CONFIG } from "./config.js";
 
 // Plain-words messages for the errors users actually hit.
 function groqErrorMessage(status, detail) {
@@ -27,7 +24,7 @@ function groqErrorMessage(status, detail) {
 // is cancelled instead of hanging forever.
 // Thrown errors carry flags: aborted (user pressed Stop), timedOut,
 // canRetry, status.
-export async function callGroq(apiKey, messages, onStream, { signal, temperature = 0.7 } = {}) {
+export async function callGroq(apiKey, messages, onStream, { signal, temperature = AI_CONFIG.temperature } = {}) {
   const controller = new AbortController();
   let timedOut = false;
   const abortFromCaller = () => controller.abort();
@@ -37,24 +34,24 @@ export async function callGroq(apiKey, messages, onStream, { signal, temperature
   }
   // The timer resets whenever data arrives, so it catches a stuck
   // connection or a stalled stream, not a healthy reply in progress.
-  let timer = setTimeout(() => { timedOut = true; controller.abort(); }, STREAM_TIMEOUT_MS);
+  let timer = setTimeout(() => { timedOut = true; controller.abort(); }, AI_CONFIG.streamTimeoutMs);
   const resetTimer = () => {
     clearTimeout(timer);
-    timer = setTimeout(() => { timedOut = true; controller.abort(); }, STREAM_TIMEOUT_MS);
+    timer = setTimeout(() => { timedOut = true; controller.abort(); }, AI_CONFIG.streamTimeoutMs);
   };
 
   try {
-    const res = await fetch(GROQ_API_URL, {
+    const res = await fetch(AI_CONFIG.apiUrl, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: MODEL,
+        model: AI_CONFIG.model,
         messages,
         stream: true,
-        max_tokens: 1024,
+        max_tokens: AI_CONFIG.maxTokens,
         temperature,
       }),
       signal: controller.signal,
