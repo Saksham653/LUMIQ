@@ -63,12 +63,18 @@ describe("screen smoke tests (no key, Sales sample)", () => {
     expect(await screen.findByText(/then I plan the calculation/)).toBeTruthy();
   });
 
-  it("Report is key-gated with the add-key line", () => {
+  it("Report shows engine numbers with footnotes and works without a key", () => {
     enterDemo();
     goTab("Report");
-    const btn = screen.getByText("Generate Decision Brief").closest("button");
-    expect(btn.disabled).toBe(true);
+    expect(screen.getByText(/Every number is calculated by the engine/)).toBeTruthy();
+    // the footnote documents the calculation, honestly
+    expect(screen.getByText("Sum of revenue across all 12 rows (blank cells skipped).")).toBeTruthy();
+    expect(screen.getByText(/No AI summary/)).toBeTruthy();
     expect(screen.getAllByText(/Add a free Groq key/).length).toBeGreaterThan(0);
+    const printBtn = screen.getByText("🖨 Print or save as PDF").closest("button");
+    expect(printBtn.disabled).toBe(false);
+    // the old key-gated brief is gone
+    expect(screen.queryByText("Generate Decision Brief")).toBeNull();
   });
 
   it("What-if is a working calculator with no key", () => {
