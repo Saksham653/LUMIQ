@@ -68,7 +68,11 @@ export function usePersistence({
     prevDsName.current = next;
     if (!ready) return;
     guard(async () => {
-      if (prev) await storageSet(`askHistory:${prev}`, messagesRef.current);
+      if (prev) {
+        // empty chats delete their key, so a wipe stays a wipe
+        if (messagesRef.current.length) await storageSet(`askHistory:${prev}`, messagesRef.current);
+        else await storageDelete(`askHistory:${prev}`);
+      }
       const history = next ? await storageGet(`askHistory:${next}`) : [];
       setOracleMessages(Array.isArray(history) ? history : []);
     });
