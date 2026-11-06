@@ -35,16 +35,15 @@ const LandingPage = ({ setPage, startDemo }) => (
       </div>
     </div>
     <div style={{ display: "flex", justifyContent: "center", gap: "12px", flexWrap: "wrap", padding: "0 40px 40px" }}>
-      {[{ icon: "⬡", label: "Overview" }, { icon: "🗣️", label: "Ask" }, { icon: "🔮", label: "Forecast" }, { icon: "💬", label: "AI Data Filter" }, { icon: "🧬", label: "Column details" }, { icon: "🔬", label: "Data health" }, { icon: "🌐", label: "What-if" }, { icon: "🗃️", label: "Files" }].map((f) => (
+      {[{ icon: "⬡", label: "Overview" }, { icon: "🗣️", label: "Ask" }, { icon: "🔮", label: "Forecast" }, { icon: "💬", label: "AI Data Filter" }, { icon: "🔬", label: "Data health" }, { icon: "🌐", label: "What-if" }, { icon: "🗃️", label: "Files" }].map((f) => (
         <div key={f.label} className="data-pill" style={{ padding: "8px 16px", fontSize: "13px" }}><span>{f.icon}</span><span style={{ color: "#ccd6f6" }}>{f.label}</span></div>
       ))}
     </div>
     <div style={{ maxWidth: "1100px", margin: "0 auto", padding: "40px", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: "20px" }}>
       {[
         { icon: "🔮", color: "#7B4FE8", badge: "badge-violet", title: "Forecast", tag: "Predictive AI", desc: "Linear regression trendlines project future values with confidence bands. Groq explains what the numbers predict in plain English." },
-        { icon: "🧬", color: "#00E5A0", badge: "badge-green", title: "Column details", tag: "Column X-Ray", desc: "Deep statistical profile of every column — type detection, completeness, min/max/mean/median, distribution histograms, and data quality scores." },
         { icon: "💬", color: "#00D4FF", badge: "badge-cyan", title: "AI Data Filter", tag: "Natural Language", desc: "Query your data in plain English. LUMIQ translates your questions into precise filters and updates the entire dashboard instantly." },
-        { icon: "🔬", color: "#FF6B6B", badge: "badge-cyan", title: "Data health", tag: "Deep Analysis", desc: "Correlation heatmaps, Z-score anomaly detection, and AI-powered executive summaries of your statistical findings." },
+        { icon: "🔬", color: "#FF6B6B", badge: "badge-cyan", title: "Data health", tag: "Deep Analysis", desc: "A health score that explains every lost point, a profile of each column, correlation heatmaps, Z-score anomaly detection and AI-powered summaries." },
         { icon: "⚡", color: "#FFB627", badge: "badge-gold", title: "Ask", tag: "Groq-Powered", desc: "Ask questions about your data. Every number is calculated from all your rows, and every answer shows its working." },
         { icon: "🌐", color: "#7B4FE8", badge: "badge-violet", title: "What-if", tag: "What-If Engine", desc: "Describe a what-if and get a structured take grounded in your dataset summary — no invented probabilities." },
         { icon: "🗃️", color: "#00D4FF", badge: "badge-cyan", title: "Interactive Explorer", tag: "Data Grid", desc: "Searchable, sortable, paginated data grid for exploring every row of your dataset." },
