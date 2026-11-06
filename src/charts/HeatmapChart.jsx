@@ -4,10 +4,13 @@ export default function HeatmapChart({ matrix, columns }) {
   const cellSize = Math.max(20, Math.min(40, 300 / n));
   const w = n * cellSize;
   const h = n * cellSize;
+  const svgW = w + 80;
+  const svgH = h + 80;
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-      <svg width={w + 80} height={h + 80}>
+    <div style={{ display: "flex", flexDirection: "column" }}>
+      {/* Natural size when the card has room. In a narrower card (a phone, or two columns on a small tablet) it scales down through the viewBox instead of having its last column cut off, but never below 60%: a very wide matrix scrolls in its wrapper instead of turning to dots. margin auto centers it, and start-aligns on overflow so the left-hand labels stay reachable. */}
+      <svg width={svgW} height={svgH} viewBox={`0 0 ${svgW} ${svgH}`} style={{ maxWidth: "100%", minWidth: `${Math.round(svgW * 0.6)}px`, height: "auto", margin: "0 auto" }}>
         <g transform={`translate(80, 20)`}>
           {matrix.map((row, i) =>
             row.map((val, j) => {

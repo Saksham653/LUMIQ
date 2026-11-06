@@ -57,7 +57,8 @@ export default function DataHealthScreen({ ds, setPage, labAnalysis, labLoading,
       )}
 
       {labAnalysis && !labAnalysis.error && (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "20px", marginBottom: "24px" }}>
+        // two roomy columns on desktop, one on a phone: min(340px, 100%) lets a column shrink to a narrow screen instead of overflowing it
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(340px, 100%), 1fr))", gap: "20px", marginBottom: "24px" }}>
           <div className="glass-card" style={{ padding: "24px" }}>
             <h3 style={{ fontFamily: "'Syne', sans-serif", fontSize: "15px", fontWeight: 700, marginBottom: "16px" }}>Correlation Matrix</h3>
             <p style={{ fontSize: "12px", color: "#8892b0", marginBottom: "20px" }}>Identifies how strongly numeric columns are related to each other. <span style={{ color: "rgba(0, 212, 255, 1)" }}>Blue = Positive</span>, <span style={{ color: "rgba(255, 60, 60, 1)" }}>Red = Negative</span></p>
