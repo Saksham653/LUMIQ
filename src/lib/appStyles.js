@@ -17,8 +17,9 @@ export const css = `
     @media (prefers-reduced-motion: reduce) {
       *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
     }
-    .overview-grid { display: grid; grid-template-columns: 1fr 280px; gap: 20px; margin-bottom: 24px; }
-    @media (max-width: 900px) { .overview-grid { grid-template-columns: 1fr; } }
+    /* minmax(0, 1fr): a bare 1fr cannot shrink below its content's minimum width, which pushed Auto Insights off the right edge */
+    .overview-grid { display: grid; grid-template-columns: minmax(0, 1fr) 280px; gap: 20px; margin-bottom: 24px; }
+    @media (max-width: 900px) { .overview-grid { grid-template-columns: minmax(0, 1fr); } }
     .btn-primary { background: linear-gradient(135deg, #00D4FF, #0099bb); color: #050914; border: none; padding: 12px 28px; border-radius: 8px; font-family: 'Syne', sans-serif; font-weight: 700; font-size: 14px; cursor: pointer; transition: all 0.2s; letter-spacing: 0.5px; }
     .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 8px 24px #00D4FF44; }
     .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
