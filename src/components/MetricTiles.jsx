@@ -42,9 +42,12 @@ export default function MetricTiles({ ds, processedData, metric, metricRule, hea
           rows={donutData.map((d) => [d.column, Math.round(d.avg * 100) / 100, d.max])}
           maxHeight={150}
         >
+          {/* Three 72px donuts need 232px, but a tile is only 200-240px wide at common desktop widths (overflow: hidden cut the third one off). Each donut shrinks to share the row instead, so all four tiles keep the same height. */}
           <div style={{ display: "flex", gap: "8px", marginTop: "10px" }}>
             {donutData.map((d, i) => (
-              <DonutChart key={d.column} value={d.avg} max={d.max} color={["#7B4FE8", "#00D4FF", "#00E5A0"][i]} label={d.column.length > 10 ? d.column.slice(0, 8) + "…" : d.column} />
+              <div key={d.column} style={{ flex: "1 1 0", maxWidth: "72px", minWidth: 0 }}>
+                <DonutChart value={d.avg} max={d.max} color={["#7B4FE8", "#00D4FF", "#00E5A0"][i]} label={d.column.length > 10 ? d.column.slice(0, 8) + "…" : d.column} />
+              </div>
             ))}
           </div>
         </ChartWithTable>

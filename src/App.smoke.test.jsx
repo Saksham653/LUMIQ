@@ -36,6 +36,17 @@ describe("screen smoke tests (no key, Sales sample)", () => {
     expect(screen.getByText(/talks back/)).toBeTruthy();
   });
 
+  it("landing page no longer advertises the merged Column details screen", () => {
+    render(<App />);
+    // Column details became part of Data health (B6-3): no chip, no card,
+    // no "Column X-Ray" tag, no per-column quality score
+    expect(screen.queryAllByText(/Column details/)).toHaveLength(0);
+    expect(screen.queryAllByText(/Column X-Ray/)).toHaveLength(0);
+    expect(screen.queryAllByText(/data quality score/i)).toHaveLength(0);
+    // the screen it was merged into is still on offer: one chip, one card
+    expect(screen.getAllByText("Data health")).toHaveLength(2);
+  });
+
   it("key setup screen renders with the remember checkbox", () => {
     render(<App />);
     fireEvent.click(screen.getByText("Launch LUMIQ"));

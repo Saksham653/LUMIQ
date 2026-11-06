@@ -1,6 +1,7 @@
 // Chart and profile maths moved verbatim out of App.jsx: bucket
 // downsampling, Pearson correlation, z-score anomalies, the linear
-// regression behind Forecast, and the Column details profiler.
+// regression behind Forecast, and the per-column profiler (the
+// Data health column cards).
 
 import { numericValues, median } from "./stats.js";
 import { NUMERIC_TYPES } from "../data/columnTypes.js";
@@ -84,7 +85,7 @@ export function calcLinearRegression(vals) {
   return { slope, intercept, r2, forecast, confidence, residualStd };
 }
 
-// Column profiler for Column details
+// Column profiler for the Data health column cards
 export function profileColumn(data, colName, typeInfo) {
   const values = data.map(r => r[colName]);
   const total = values.length;

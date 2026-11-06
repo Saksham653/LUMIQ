@@ -38,16 +38,16 @@ There is no backend. Your rows never leave your device (see [Privacy](#-privacy)
 
 ## 📏 Measured, not promised
 
-Every performance or quality claim in this README was measured on this build (Oct 6, 2026 — dev machine, Node 24 / Chromium 153; CI re-runs the same suites on every push):
+Every performance or quality claim in this README was measured on this build (Oct 6, 2026 — dev machine, Node 24 / Chromium 153; CI re-runs the same suites on every push). The main-bundle size and the test counts were re-measured on Nov 6, 2026:
 
 | Claim | Measured |
 |---|---|
 | Answer accuracy | **23 of 23** hand-computed accuracy cases exactly right (totals, averages, groupings, shares, medians, filters across the 3 samples) |
 | Unverified AI numbers | Always marked — a number the checker cannot match to the calculation gets a visible "not verified" warning |
 | 100,000 × 20 file (12.9 MB) | Load + type detection **1,772 ms** in Node, **1,751–1,889 ms** in Chromium (parsed in a Web Worker — the page never freezes; target was 3,000 ms) |
-| Main bundle | **98.76 kB gzip** (plus a 26.9 kB worker chunk; the Excel reader is its own 163 kB gzip chunk fetched only when you open an Excel file) |
+| Main bundle | **98.85 kB gzip** (plus a 26.9 kB worker chunk; the Excel reader is its own 163 kB gzip chunk fetched only when you open an Excel file) |
 | Accessibility | Lighthouse accessibility **100** on the production preview; axe reports **0 serious/critical** violations on all 8 screens; AA contrast measured in-browser on every screen |
-| Tests | **252 unit tests + 6 Playwright end-to-end flows**, run in CI on every push |
+| Tests | **253 unit tests + 26 Playwright end-to-end tests** (5 user flows, the 100k-row speed budget, 20 layout checks), run in CI on every push |
 
 Reproduce them yourself: `npm test`, `npm run build && node scripts/perf.mjs`, `npm run test:e2e`.
 
@@ -106,7 +106,7 @@ Runtime deps→  react, react-dom, papaparse, xlsx (SheetJS 0.20.3, pinned
 AI          →  Groq API (Llama 3.3 70B, streaming), your own key, browser → Groq directly
 Charts      →  Hand-written SVG (no chart library)
 Workers     →  Parsing, type detection and plan running run off the main thread
-Tests       →  Vitest (252) + Playwright (6 flows, Chromium, Groq mocked)
+Tests       →  Vitest (253) + Playwright (26 tests, Chromium, Groq mocked)
 Deployment  →  Vercel only (production from main, previews from branches), CSP in vercel.json
 ```
 
@@ -135,11 +135,11 @@ Open `http://localhost:3000` (the dev server port set in `vite.config.js`). Try 
 ### Checks
 
 ```bash
-npm test               # 252 unit tests
+npm test               # 253 unit tests
 npm run build          # production build
 npm run preview        # serves the build with the real CSP headers
 node scripts/perf.mjs  # 100k×20 speed + bundle-size measurements
-npm run test:e2e       # 6 Playwright flows against the production build
+npm run test:e2e       # 26 Playwright tests against the production build
 ```
 
 ### Deploy

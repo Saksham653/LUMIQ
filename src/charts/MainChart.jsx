@@ -29,9 +29,10 @@ export default function MainChart({ ds, processedData, numericCols, metric, setS
   const chartLabel = `${chartType === "bar" ? "Bar" : chartType === "line" ? "Line" : "Area"} chart of ${metric} across ${tableSeries.values.length} rows${forecastEnabled && check?.ok && !check.tooIrregular ? ", plus a 5-point forecast" : ""}`;
   return (
     <div className="glass-card" style={{ padding: "24px" }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "20px" }}>
+      {/* Both rows wrap: the title, two selects and two buttons need ~460px in one line, more than a tablet-width card or a phone has */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "12px", marginBottom: "20px" }}>
         <h3 style={{ fontFamily: "'Syne', sans-serif", fontSize: "15px", fontWeight: 700 }}>Visualization</h3>
-        <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+        <div style={{ display: "flex", gap: "8px", alignItems: "center", flexWrap: "wrap" }}>
           <select aria-label="Metric to chart" value={metric} onChange={(e) => setSelectedMetric(e.target.value)}>{numericCols.map((c) => <option key={c} value={c}>{c}</option>)}</select>
           <select aria-label="Chart type" value={chartType} onChange={(e) => setChartType(e.target.value)}><option value="bar">Bar</option><option value="line">Line</option><option value="area">Area</option></select>
           <button className="btn-ghost" style={{ fontSize: "12px", padding: "5px 12px" }} onClick={downloadPng} aria-label="Download chart as PNG">⬇ PNG</button>
