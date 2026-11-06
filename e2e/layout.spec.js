@@ -7,6 +7,7 @@
 //     grid past the right edge of <main>.
 //  2. Data health -> Run Deep Dive: the results grid made the two
 //     cards a third wide each, and the correlation heatmap was clipped.
+//  3. The Peak Value tile's third donut was clipped at the tile edge.
 
 import { test, expect } from "@playwright/test";
 import { enterDemo } from "./helpers.js";
@@ -61,6 +62,31 @@ test.describe("Overview", () => {
     const card = await page.locator(".overview-grid > .glass-card").boundingBox();
     expect(card.width).toBeGreaterThan(300);
   });
+
+  // Tiles are only 200-240px wide at these widths: 900 is the narrowest
+  // 3-column case, 1180 the narrowest 4-column one, 1280 the common one.
+  for (const width of [900, 1000, 1180, 1280]) {
+    test(`Peak Value tile shows all three donuts inside its card at ${width}px`, async ({ page }) => {
+      await resize(page, width);
+      await enterDemo(page);
+      await expect(page.getByText("Peak Value")).toBeVisible();
+      const tile = page.locator(".metric-card.violet");
+      const tileBox = await tile.boundingBox();
+      const svgs = await tile.locator("svg").all();
+      expect(svgs).toHaveLength(3);
+      for (const svg of svgs) {
+        const b = await svg.boundingBox();
+        // every donut sits inside the tile's padding box, none is cut off
+        expect(b.x).toBeGreaterThanOrEqual(tileBox.x);
+        expect(b.x + b.width).toBeLessThanOrEqual(tileBox.x + tileBox.width);
+      }
+      // nothing in any tile is hidden by its own overflow: hidden
+      const clipped = await page.evaluate(() =>
+        [...document.querySelectorAll(".metric-card")].filter((c) => c.scrollWidth > c.clientWidth).length
+      );
+      expect(clipped).toBe(0);
+    });
+  }
 });
 
 test.describe("Data health -> Run Deep Dive", () => {
