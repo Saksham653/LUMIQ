@@ -1,0 +1,123 @@
+// Every user-visible string in the app, in English and Hindi.
+// Keep sentences short and plain: LUMIQ is meant for everyone.
+// {name}-style placeholders are filled in by translate().
+
+export const en = {
+  'welcome.title': 'Ask your data anything',
+  'welcome.subtitle': 'Open your Excel or CSV file and get answers in plain words.',
+  'welcome.step1.title': 'Open a file',
+  'welcome.step1.desc': 'Excel or CSV from WhatsApp, Drive or your phone',
+  'welcome.step2.title': 'See the summary',
+  'welcome.step2.desc': 'Totals, highs and lows, and simple charts',
+  'welcome.step3.title': 'Ask in your own words',
+  'welcome.step3.desc': 'Type a question, like in a chat',
+  'welcome.trySample': 'Try with sample data',
+  'welcome.openFile': 'Open my file (Excel or CSV)',
+  'welcome.languageLabel': 'App language',
+
+  'privacy.welcome': 'Your file stays on your phone. No sign-up needed.',
+  'privacy.short': 'Your file stays on your phone.',
+
+  'tabs.home': 'Home',
+  'tabs.insights': 'Insights',
+  'tabs.ask': 'Ask',
+  'tabs.more': 'More',
+
+  'home.title': 'Your files',
+  'home.myFiles': 'My files',
+  'home.noFiles': 'No files yet. Add one below. It stays on your phone.',
+  'home.samples': 'Sample files to try',
+  'home.rowsCols': '{rows} rows · {cols} columns',
+  'home.selected': 'Selected',
+  'home.addFile': 'Add a file (Excel or CSV)',
+  'home.importSoonTitle': 'Coming in the next update',
+  'home.importSoonBody': 'Opening your own Excel and CSV files is being built now. Try a sample file meanwhile.',
+
+  'sample.sales.name': 'E-Commerce Sales',
+  'sample.sales.desc': '12 months of online sales',
+  'sample.marketing.name': 'Marketing Campaign',
+  'sample.marketing.desc': 'How each ad channel performed',
+  'sample.churn.name': 'Customer Churn',
+  'sample.churn.desc': 'How many customers stayed or left',
+
+  'soon.title': 'Coming next',
+  'soon.insights': 'Totals, a chart and plain-language findings for {name} will appear here.',
+  'soon.ask': 'You will be able to ask questions about {name} here, in English or Hindi.',
+  'soon.noFile': 'Pick a file on Home first.',
+  'soon.goHome': 'Go to Home',
+
+  'more.title': 'More',
+  'more.language': 'Language',
+  'more.tools': 'Tools',
+  'more.whatIf': 'What if...?',
+  'more.whatIfDesc': 'Try a change and see the result',
+  'more.fileCheck': 'File check',
+  'more.fileCheckDesc': 'Is your file clean and ready?',
+  'more.report': 'Report',
+  'more.reportDesc': 'A one-page summary you can share',
+  'more.soon': 'Soon',
+  'more.privacy': 'Privacy',
+  'more.privacyText': 'Your rows never leave your phone. LUMIQ has no account and no sign-up.',
+  'more.version': 'Version {version}',
+} as const;
+
+export type StringKey = keyof typeof en;
+
+export const hi: Record<StringKey, string> = {
+  'welcome.title': 'अपने डेटा से कुछ भी पूछें',
+  'welcome.subtitle': 'अपनी Excel या CSV फ़ाइल खोलें और आसान शब्दों में जवाब पाएं।',
+  'welcome.step1.title': 'फ़ाइल खोलें',
+  'welcome.step1.desc': 'WhatsApp, Drive या फ़ोन से Excel या CSV',
+  'welcome.step2.title': 'सारांश देखें',
+  'welcome.step2.desc': 'कुल, सबसे ज़्यादा और सबसे कम, और आसान चार्ट',
+  'welcome.step3.title': 'अपनी भाषा में पूछें',
+  'welcome.step3.desc': 'चैट की तरह सवाल लिखें',
+  'welcome.trySample': 'सैंपल डेटा से आज़माएं',
+  'welcome.openFile': 'मेरी फ़ाइल खोलें (Excel या CSV)',
+  'welcome.languageLabel': 'ऐप की भाषा',
+
+  'privacy.welcome': 'आपकी फ़ाइल आपके फ़ोन में ही रहती है। साइन-अप की ज़रूरत नहीं।',
+  'privacy.short': 'आपकी फ़ाइल आपके फ़ोन में ही रहती है।',
+
+  'tabs.home': 'होम',
+  'tabs.insights': 'सारांश',
+  'tabs.ask': 'पूछें',
+  'tabs.more': 'और',
+
+  'home.title': 'आपकी फ़ाइलें',
+  'home.myFiles': 'मेरी फ़ाइलें',
+  'home.noFiles': 'अभी कोई फ़ाइल नहीं है। नीचे से जोड़ें। फ़ाइल आपके फ़ोन में ही रहेगी।',
+  'home.samples': 'आज़माने के लिए सैंपल फ़ाइलें',
+  'home.rowsCols': '{rows} पंक्तियाँ · {cols} कॉलम',
+  'home.selected': 'चुनी गई',
+  'home.addFile': 'फ़ाइल जोड़ें (Excel या CSV)',
+  'home.importSoonTitle': 'अगले अपडेट में आ रहा है',
+  'home.importSoonBody': 'अपनी Excel और CSV फ़ाइलें खोलने की सुविधा अभी बन रही है। तब तक कोई सैंपल फ़ाइल आज़माएं।',
+
+  'sample.sales.name': 'ई-कॉमर्स बिक्री',
+  'sample.sales.desc': '12 महीने की ऑनलाइन बिक्री',
+  'sample.marketing.name': 'मार्केटिंग कैंपेन',
+  'sample.marketing.desc': 'हर विज्ञापन चैनल ने कैसा किया',
+  'sample.churn.name': 'ग्राहक जो छोड़ गए',
+  'sample.churn.desc': 'कितने ग्राहक रुके और कितने छोड़ गए',
+
+  'soon.title': 'जल्द आ रहा है',
+  'soon.insights': '{name} का कुल, चार्ट और आसान भाषा में ज़रूरी बातें यहाँ दिखेंगी।',
+  'soon.ask': 'यहाँ आप {name} के बारे में हिंदी या English में सवाल पूछ सकेंगे।',
+  'soon.noFile': 'पहले होम पर कोई फ़ाइल चुनें।',
+  'soon.goHome': 'होम पर जाएं',
+
+  'more.title': 'और',
+  'more.language': 'भाषा',
+  'more.tools': 'टूल',
+  'more.whatIf': 'अगर ऐसा हो तो...?',
+  'more.whatIfDesc': 'कोई बदलाव आज़माएं और नतीजा देखें',
+  'more.fileCheck': 'फ़ाइल जाँच',
+  'more.fileCheckDesc': 'क्या आपकी फ़ाइल साफ़ और तैयार है?',
+  'more.report': 'रिपोर्ट',
+  'more.reportDesc': 'एक पेज का सारांश जिसे आप शेयर कर सकें',
+  'more.soon': 'जल्द',
+  'more.privacy': 'निजता',
+  'more.privacyText': 'आपकी पंक्तियाँ कभी आपके फ़ोन से बाहर नहीं जातीं। LUMIQ में न कोई अकाउंट है, न साइन-अप।',
+  'more.version': 'संस्करण {version}',
+};
