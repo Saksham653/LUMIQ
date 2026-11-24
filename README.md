@@ -14,7 +14,7 @@
 
 [![React](https://img.shields.io/badge/React-18-61DAFB?style=flat-square&logo=react&logoColor=white)](https://react.dev/)
 [![Vite](https://img.shields.io/badge/Vite-5-646CFF?style=flat-square&logo=vite&logoColor=white)](https://vitejs.dev/)
-[![Groq](https://img.shields.io/badge/Groq-Llama%203.3%2070B-F55036?style=flat-square)](https://console.groq.com/)
+[![Groq](https://img.shields.io/badge/Groq-GPT--OSS%20120B-F55036?style=flat-square)](https://console.groq.com/)
 [![License](https://img.shields.io/badge/License-MIT-00E5A0?style=flat-square)](LICENSE)
 [![Stars](https://img.shields.io/github/stars/saksham653/LUMIQ?style=flat-square&color=FFB627)](https://github.com/saksham653/LUMIQ/stargazers)
 
@@ -103,7 +103,7 @@ Everything clickable is a real button, reachable by keyboard with a visible focu
 Frontend    →  React 18 + Vite 5
 Runtime deps→  react, react-dom, papaparse, xlsx (SheetJS 0.20.3, pinned
                from cdn.sheetjs.com, loaded only when an Excel file is opened)
-AI          →  Groq API (Llama 3.3 70B, streaming), your own key, browser → Groq directly
+AI          →  Groq API (GPT-OSS 120B, streaming), your own key, browser → Groq directly
 Charts      →  Hand-written SVG (no chart library)
 Workers     →  Parsing, type detection and plan running run off the main thread
 Tests       →  Vitest (252) + Playwright (6 flows, Chromium, Groq mocked)

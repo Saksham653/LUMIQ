@@ -2,6 +2,7 @@ import KeyNudge from "../components/KeyNudge.jsx";
 import ShowTheWork from "../components/ShowTheWork.jsx";
 import RichText from "../components/RichText.jsx";
 import { exampleQuestions } from "../ai/oraclePlanner.js";
+import { AI_CONFIG } from "../ai/config.js";
 
 export default function AskScreen({ ds, apiKey, setPage, oracleMessages, oracleInput, setOracleInput, oracleLoading, sendOracleMessage, oracleAbortRef, oracleLastFailed, chatEndRef, clearContext, contextActive }) {
   return (
@@ -10,7 +11,7 @@ export default function AskScreen({ ds, apiKey, setPage, oracleMessages, oracleI
         <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "8px" }}>
           <div style={{ width: "36px", height: "36px", borderRadius: "10px", background: "linear-gradient(135deg, #00D4FF1a, #7B4FE81a)", border: "1px solid #00D4FF33", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "18px" }}>🔮</div>
           <h2 style={{ fontFamily: "'Syne', sans-serif", fontSize: "20px", fontWeight: 800 }}>Ask</h2>
-          <span className="badge badge-violet">Groq · Llama 3.3 70B</span>
+          <span className="badge badge-violet">Groq · {AI_CONFIG.modelName}</span>
           {(!apiKey || apiKey === "demo") && <span className="badge badge-gold">Demo Mode</span>}
         </div>
         <p style={{ color: "#8892b0", fontSize: "13px" }}>Ask questions about your data. Every number is calculated from all your rows.{!ds && <span style={{ color: "#FFB627" }}> Select a dataset first.</span>}</p>

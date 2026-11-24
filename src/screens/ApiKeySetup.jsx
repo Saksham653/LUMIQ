@@ -1,6 +1,7 @@
 import { useState } from "react";
 import PrismLogo from "../components/PrismLogo.jsx";
 import { writeStoredApiKey } from "../lib/apiKeyStorage.js";
+import { AI_CONFIG } from "../ai/config.js";
 
 const ApiKeySetup = ({ setPage, apiKeyInput, setApiKeyInput, setApiKey, startDemo }) => {
   const [rememberKey, setRememberKey] = useState(false);
@@ -36,7 +37,7 @@ const ApiKeySetup = ({ setPage, apiKeyInput, setApiKeyInput, setApiKey, startDem
       <button className="btn-ghost" style={{ width: "100%", marginTop: "10px" }} onClick={() => { setApiKey("demo"); writeStoredApiKey("", false); startDemo(); }}>Continue in Demo Mode</button>
     </div>
     <div style={{ marginTop: "20px", display: "flex", gap: "8px", flexWrap: "wrap", justifyContent: "center" }}>
-      {["Free tier", "Llama 3 70B", "Privacy-first"].map((t) => (<div key={t} className="data-pill">{t}</div>))}
+      {["Free tier", AI_CONFIG.modelName, "Privacy-first"].map((t) => (<div key={t} className="data-pill">{t}</div>))}
     </div>
     <div style={{ marginTop: "16px", textAlign: "center" }}>
       <button onClick={() => setPage("landing")} style={{ background: "none", border: "none", color: "#8892b0", cursor: "pointer", fontSize: "12px" }}>← Back to home</button>
