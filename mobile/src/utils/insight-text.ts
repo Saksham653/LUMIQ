@@ -2,8 +2,8 @@ import { computeInsights } from '@core/engine/insights.js';
 
 import type { IconName } from '@/components/app-icon';
 import type { Dataset } from '@/data/types';
-import type { Language, StringKey } from '@/i18n';
-import { formatAmount, prettyColumn } from '@/utils/format';
+import type { StringKey } from '@/i18n';
+import { prettyColumn, type Numbers } from '@/utils/format';
 
 type Translate = (key: StringKey, params?: Record<string, string | number>) => string;
 
@@ -21,11 +21,11 @@ export type InsightView = {
 };
 
 // The shared engine's findings (same rules as the web app), worded in the
-// chosen language from their raw facts, with numbers in lakh / crore.
-export function describeInsights(dataset: Dataset, t: Translate, language: Language): InsightView[] {
+// chosen language from their raw facts, with numbers in that language's format.
+export function describeInsights(dataset: Dataset, t: Translate, numbers: Numbers): InsightView[] {
   const insights = computeInsights(dataset, dataset.data) as RawInsight[];
   const amount = (value: unknown, column: unknown) =>
-    formatAmount(typeof value === 'number' ? value : null, dataset.columnTypes?.[String(column)], language);
+    numbers.amount(typeof value === 'number' ? value : null, dataset.columnTypes?.[String(column)], String(column));
 
   const views: InsightView[] = [];
   insights.forEach((insight, index) => {
@@ -37,7 +37,7 @@ export function describeInsights(dataset: Dataset, t: Translate, language: Langu
       const params = {
         group: String(f.group),
         metric: prettyColumn(String(f.metric)),
-        share: Number(f.share),
+        share: numbers.number(Number(f.share), 1),
         total: amount(f.total, f.metric),
         groups: Number(f.groups),
         groupColumn: prettyColumn(String(f.groupColumn)).toLowerCase(),
@@ -53,7 +53,7 @@ export function describeInsights(dataset: Dataset, t: Translate, language: Langu
       const up = insight.type === 'trend_up';
       const params = {
         metric: prettyColumn(String(f.metric)),
-        change: Number(f.change),
+        change: numbers.number(Number(f.change), 1),
         from: amount(f.from, f.metric),
         fromLabel: String(f.fromLabel),
         to: amount(f.to, f.metric),

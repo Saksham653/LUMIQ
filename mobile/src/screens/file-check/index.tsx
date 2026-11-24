@@ -9,10 +9,9 @@ import { Radius, Spacing } from '@/constants/theme';
 import type { ColumnKind, Dataset } from '@/data/types';
 import { useTheme } from '@/hooks/use-theme';
 import type { StringKey } from '@/i18n';
-import { useAppState, useT } from '@/state/app-state';
+import { useNumbers, useT } from '@/state/app-state';
 import { useActiveDataset } from '@/state/datasets';
 import { CHECKS, checkFile, profileColumn, type CheckKind, type Deduction, type Grade } from '@/utils/file-check';
-import { formatAmount, formatCount, formatExact } from '@/utils/format';
 
 import { CheckRow } from './check-row';
 import { ColumnCard } from './column-card';
@@ -66,7 +65,7 @@ export function FileCheck() {
 function DatasetCheck({ dataset }: { dataset: Dataset }) {
   const colors = useTheme();
   const t = useT();
-  const { language } = useAppState();
+  const numbers = useNumbers();
   const [allColumns, setAllColumns] = useState(false);
 
   const result = useMemo(() => checkFile(dataset), [dataset]);
@@ -74,7 +73,9 @@ function DatasetCheck({ dataset }: { dataset: Dataset }) {
   const shown = allColumns ? profiles : profiles.slice(0, FIRST_COLUMNS);
   const clearCount = CHECKS.filter((kind) => result.checks[kind].length === 0).length;
 
-  const amountIn = (column: string, value: number) => formatAmount(value, dataset.columnTypes?.[column], language);
+  const amountIn = (column: string, value: number) => numbers.amount(value, dataset.columnTypes?.[column], column);
+  const formatCount = numbers.count;
+  const formatExact = numbers.exact;
   const points = (list: Deduction[]) => list.reduce((total, item) => total + item.points, 0);
 
   const summaryFor = (kind: CheckKind): string => {

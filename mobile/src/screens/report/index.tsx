@@ -9,7 +9,7 @@ import { Radius, Spacing } from '@/constants/theme';
 import type { Dataset } from '@/data/types';
 import { useTheme } from '@/hooks/use-theme';
 import type { StringKey } from '@/i18n';
-import { useAppState, useT } from '@/state/app-state';
+import { useNumbers, useT } from '@/state/app-state';
 import { useActiveDataset, useDatasets } from '@/state/datasets';
 import type { Grade } from '@/utils/file-check';
 import { buildReport, reportText } from '@/utils/report';
@@ -32,11 +32,11 @@ export function Report() {
 function DatasetReport({ dataset }: { dataset: Dataset }) {
   const colors = useTheme();
   const t = useT();
-  const { language } = useAppState();
+  const numbers = useNumbers();
   const { datasetName } = useDatasets();
   const name = datasetName(dataset.id) ?? dataset.name;
 
-  const report = useMemo(() => buildReport(dataset, name, t, language), [dataset, name, t, language]);
+  const report = useMemo(() => buildReport(dataset, name, t, numbers), [dataset, name, t, numbers]);
   const gradeLabel = t(GRADE_LABEL[report.check.grade]);
   const checkTone = report.check.grade === 'great' ? 'success' : report.check.grade === 'good' ? 'primary' : 'accent';
 

@@ -9,9 +9,8 @@ import { Section } from '@/components/section';
 import { Radius, Spacing } from '@/constants/theme';
 import { SAMPLES } from '@/data/samples';
 import { useTheme } from '@/hooks/use-theme';
-import { useAppState, useT } from '@/state/app-state';
+import { useAppState, useNumbers, useT } from '@/state/app-state';
 import { useDatasets } from '@/state/datasets';
-import { formatCount, formatDate } from '@/utils/format';
 
 import { MyFileCard } from './my-file-card';
 import { SampleCard } from './sample-card';
@@ -21,7 +20,8 @@ import { SampleCard } from './sample-card';
 export function Home() {
   const colors = useTheme();
   const t = useT();
-  const { activeDatasetId, setActiveDatasetId, language } = useAppState();
+  const { activeDatasetId, setActiveDatasetId } = useAppState();
+  const numbers = useNumbers();
   const { myFiles, importFile, removeFile } = useDatasets();
 
   const open = (id: string) => {
@@ -47,9 +47,9 @@ export function Home() {
               key={file.id}
               name={file.name}
               meta={t('home.fileMeta', {
-                rows: formatCount(file.rows),
+                rows: numbers.count(file.rows),
                 cols: file.columns,
-                date: formatDate(file.addedAt, language),
+                date: numbers.date(file.addedAt),
               })}
               selected={file.id === activeDatasetId}
               selectedLabel={t('home.selected')}

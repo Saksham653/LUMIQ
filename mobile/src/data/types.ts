@@ -2,7 +2,8 @@
 // datasetFromPreview): columns, typed rows and a type per column.
 export type ColumnKind = 'number' | 'percent' | 'money' | 'date' | 'text';
 
-export type ColumnType = { type: ColumnKind; symbol?: string };
+// `currency` says which currency a ¥ means (JPY or CNY) when the file gave a clue.
+export type ColumnType = { type: ColumnKind; symbol?: string; currency?: string };
 
 export type Cell = string | number | null;
 export type Row = Record<string, Cell>;

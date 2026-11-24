@@ -7,8 +7,8 @@ import { Radius, Spacing } from '@/constants/theme';
 import type { AskProof, AskResult, SentPrompt } from '@/ai/ask-flow';
 import { useTheme } from '@/hooks/use-theme';
 import type { StringKey } from '@/i18n';
-import { useT } from '@/state/app-state';
-import { formatCount, formatExact, prettyColumn } from '@/utils/format';
+import { useNumbers, useT } from '@/state/app-state';
+import { prettyColumn, type Numbers } from '@/utils/format';
 
 import { SuggestionButton } from './suggestion-button';
 
@@ -107,6 +107,7 @@ export function AnswerCard({
 function ProofDetails({ proof }: { proof: AskProof }) {
   const colors = useTheme();
   const t = useT();
+  const numbers = useNumbers();
   const [open, setOpen] = useState(false);
   const [showSent, setShowSent] = useState(false);
 
@@ -142,7 +143,7 @@ function ProofDetails({ proof }: { proof: AskProof }) {
               {proof.table.length > 0 && <ResultTable rows={proof.table} />}
               {proof.rowsUsed > 0 && (
                 <AppText variant="small" tone="secondary">
-                  {t('ask.rowsUsed', { used: formatCount(proof.rowsUsed), total: formatCount(proof.totalRows) })}
+                  {t('ask.rowsUsed', { used: numbers.count(proof.rowsUsed), total: numbers.count(proof.totalRows) })}
                 </AppText>
               )}
             </>
@@ -172,8 +173,8 @@ function ProofDetails({ proof }: { proof: AskProof }) {
   );
 }
 
-function cellText(value: unknown): string {
-  if (typeof value === 'number') return formatExact(value);
+function cellText(value: unknown, numbers: Numbers): string {
+  if (typeof value === 'number') return numbers.exact(value);
   if (value === null || value === undefined || value === '') return '—';
   return String(value);
 }
@@ -182,6 +183,7 @@ function cellText(value: unknown): string {
 function ResultTable({ rows }: { rows: Record<string, unknown>[] }) {
   const colors = useTheme();
   const t = useT();
+  const numbers = useNumbers();
   const columns = Object.keys(rows[0] ?? {});
   return (
     <View style={styles.tableWrap}>
@@ -198,7 +200,7 @@ function ResultTable({ rows }: { rows: Record<string, unknown>[] }) {
             <View key={index} style={[styles.tableRow, { borderTopColor: colors.border }, styles.bodyRow]}>
               {columns.map((column) => (
                 <AppText key={column} variant="small" style={styles.cell}>
-                  {cellText(row[column])}
+                  {cellText(row[column], numbers)}
                 </AppText>
               ))}
             </View>

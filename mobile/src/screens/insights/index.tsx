@@ -11,10 +11,10 @@ import { Section } from '@/components/section';
 import { Radius, Spacing } from '@/constants/theme';
 import type { Dataset } from '@/data/types';
 import { useTheme } from '@/hooks/use-theme';
-import { useAppState, useT } from '@/state/app-state';
+import { useNumbers, useT } from '@/state/app-state';
 import { useActiveDataset } from '@/state/datasets';
 import { buildChart } from '@/utils/chart';
-import { formatAmount, formatCount, prettyColumn } from '@/utils/format';
+import { prettyColumn } from '@/utils/format';
 import { describeInsights } from '@/utils/insight-text';
 import { computeKpis } from '@/utils/kpis';
 
@@ -34,7 +34,8 @@ export function Insights() {
 function DatasetInsights({ dataset }: { dataset: Dataset }) {
   const colors = useTheme();
   const t = useT();
-  const { language } = useAppState();
+  const numbers = useNumbers();
+  const formatCount = numbers.count;
 
   const numeric = useMemo(() => numericColumns(dataset) as string[], [dataset]);
   const [picked, setPicked] = useState<string | null>(null);
@@ -42,9 +43,9 @@ function DatasetInsights({ dataset }: { dataset: Dataset }) {
 
   const kpis = useMemo(() => (metric ? computeKpis(dataset, metric) : null), [dataset, metric]);
   const chart = useMemo(() => (metric ? buildChart(dataset, metric) : null), [dataset, metric]);
-  const insights = useMemo(() => describeInsights(dataset, t, language), [dataset, t, language]);
+  const insights = useMemo(() => describeInsights(dataset, t, numbers), [dataset, t, numbers]);
 
-  const amount = (value: number | null) => formatAmount(value, kpis?.typeInfo, language);
+  const amount = (value: number | null) => numbers.amount(value, kpis?.typeInfo, metric ?? undefined);
   const peak = chart ? chart.bars.reduce((best, bar) => (bar.value > best.value ? bar : best), chart.bars[0]) : null;
 
   return (
