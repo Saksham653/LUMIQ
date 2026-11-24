@@ -287,4 +287,9 @@ export const de: Record<StringKey, string> = {
   'currency.CNY': 'Chinesischer Yuan (¥)',
   'currency.INR': 'Indische Rupie (₹)',
   'currency.ILS': 'Israelischer Schekel (₪)',
+
+  'suggest.totalBy': 'Wie hoch ist {metric} insgesamt pro {group}?',
+  'suggest.average': 'Wie hoch ist {metric} im Durchschnitt?',
+  'suggest.highestIn': 'Bei welchem Wert von {group} ist {metric} am höchsten?',
+  'suggest.highest': 'Was ist der höchste Wert von {metric}?',
 };
