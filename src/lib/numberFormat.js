@@ -260,19 +260,10 @@ export function formatAmount(value, typeInfo, format) {
   if (value === null || value === undefined || !Number.isFinite(value)) return "—";
   if (typeInfo?.type === "percent") return formatPercent(value, format, 1);
   const { prefix, number, suffix } = formatAmountParts(value, typeInfo, format);
-  if (format.currencyAfter && typeInfo?.type === "money") {
-    // The currency sits outside the left-to-right isolate, after the number.
-    const [compact, label] = splitCurrency(suffix);
-    return `${isolate(`${number}${compact}`, format)}${label ? `${NBSP}${label}` : ""}`;
-  }
+  // A minus sign stays in front of the whole amount ("-$1,234"). In Hebrew
+  // the amount, currency included, stays left-to-right ("1,234.5 ₪").
   if (number.startsWith("-") && prefix) return isolate(`-${prefix}${number.slice(1)}${suffix}`, format);
   return isolate(`${prefix}${number}${suffix}`, format);
-}
-
-// " Mio. €" → [" Mio.", "€"]: the shortened unit, then the currency.
-function splitCurrency(suffix) {
-  const at = suffix.lastIndexOf(NBSP);
-  return at === -1 ? [suffix, ""] : [suffix.slice(0, at), suffix.slice(at + 1)];
 }
 
 // The format in words, for the AI: how to write the numbers in its answer
