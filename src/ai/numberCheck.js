@@ -1,15 +1,34 @@
 // Checks every number an AI answer states against the result table
 // it was given. Handles Western and Indian comma grouping, %, K and M
-// suffixes, lakh and crore. A number counts as verified when some
-// table value matches it at the precision the answer used (so 4.68M
-// matches 4,677,000, and 20% matches 19.99).
+// suffixes, lakh and crore (also written लाख and करोड़, for answers
+// in Hindi). A number counts as verified when some table value
+// matches it at the precision the answer used (so 4.68M matches
+// 4,677,000, and 20% matches 19.99).
 
 // The trailing guard rejects a following word character or a further
 // decimal part ("1.2.3"), but allows an ordinary sentence period
-// right after a number or unit ("…was 4.68M.").
-const NUMBER_RE = /(?<![\w.])[-+]?\d[\d,]*(?:\.\d+)?(?:\s*(lakhs?|crores?)|(k|m|%))?(?!\w|\.\d)/gi;
+// right after a number or unit ("…was 4.68M."). करोड़ may be typed
+// with the single letter ड़ or as ड plus the nukta sign.
+// Thousands may also be grouped with a thin or no-break space before
+// exactly three digits ("780 000", as some models write them); an
+// ordinary space still separates two numbers.
+const HINDI_UNITS = "लाख|करो(?:ड़|ड़)";
+const GROUP_SPACES = "    ";
+const NUMBER_RE = new RegExp(
+  `(?<![\\w.])[-+]?\\d(?:[\\d,]|[${GROUP_SPACES}](?=\\d{3}(?!\\d)))*(?:\\.\\d+)?(?:\\s*(lakhs?|crores?|${HINDI_UNITS})|(k|m|%))?(?!\\w|\\.\\d)`,
+  "gi"
+);
+const GROUPING_RE = new RegExp(`[,${GROUP_SPACES}]`, "g");
+const UNIT_SUFFIX_RE = new RegExp(`\\s*(lakhs?|crores?|${HINDI_UNITS}|k|m|%)$`, "i");
 
 const UNIT_SCALE = { k: 1e3, m: 1e6, lakh: 1e5, lakhs: 1e5, crore: 1e7, crores: 1e7 };
+
+// लाख → lakh, करोड़ → crore; English units are already lowercase.
+function unitName(word) {
+  if (word === "लाख") return "lakh";
+  if (word.startsWith("करो")) return "crore";
+  return word;
+}
 
 // Every extracted number carries a tolerance of half a step of its
 // last shown digit: "3.4K" → ±50, "45%" → ±0.5, "4,677,000" → ±0.5.
@@ -18,10 +37,10 @@ export function extractNumbers(text) {
   if (typeof text !== "string" || !text) return out;
   for (const m of text.matchAll(NUMBER_RE)) {
     const raw = m[0];
-    const unitWord = (m[1] || m[2] || "").toLowerCase();
+    const unitWord = unitName((m[1] || m[2] || "").toLowerCase());
     const core = raw
-      .replace(/\s*(lakhs?|crores?|k|m|%)$/i, "")
-      .replace(/,/g, "")
+      .replace(UNIT_SUFFIX_RE, "")
+      .replace(GROUPING_RE, "")
       .trim();
     const base = Number(core);
     if (!Number.isFinite(base)) continue;
