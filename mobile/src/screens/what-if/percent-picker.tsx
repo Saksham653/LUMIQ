@@ -54,7 +54,8 @@ export function PercentPicker({
         <Host matchContents={{ vertical: true }} seedColor={colors.primary} style={styles.slider}>
           <Slider value={value} min={MIN} max={MAX} step={5} onValueChange={step} />
         </Host>
-        {/* The scale reads left to right in every language. */}
+        {/* The phone's slider mirrors in Hebrew (lowest at the right), so its
+            scale mirrors with it; each label itself still reads left to right. */}
         <View style={styles.ends}>
           <AppText variant="small" tone="secondary">
             {numbers.signedPercent(MIN)}
@@ -92,5 +93,5 @@ const styles = StyleSheet.create({
   },
   center: { textAlign: 'center', alignSelf: 'stretch' },
   slider: { alignSelf: 'stretch' },
-  ends: { flexDirection: 'row', justifyContent: 'space-between', direction: 'ltr' },
+  ends: { flexDirection: 'row', justifyContent: 'space-between' },
 });
