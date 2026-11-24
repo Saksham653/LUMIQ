@@ -11,6 +11,13 @@ export default function MoreStack() {
       <Stack.Screen name="what-if" options={{ title: t('whatIf.title'), headerLargeTitleEnabled: false }} />
       <Stack.Screen name="file-check" options={{ title: t('check.title'), headerLargeTitleEnabled: false }} />
       <Stack.Screen name="report" options={{ title: t('report.title'), headerLargeTitleEnabled: false }} />
+      <Stack.Screen name="language" options={{ title: t('language.title'), headerLargeTitleEnabled: false }} />
+      <Stack.Screen name="numbers" options={{ title: t('numbers.title'), headerLargeTitleEnabled: false }} />
+      {/* A native sheet rather than a dropdown. */}
+      <Stack.Screen
+        name="currency"
+        options={{ presentation: 'formSheet', headerShown: false, sheetAllowedDetents: [0.75, 1], sheetGrabberVisible: true }}
+      />
     </Stack>
   );
 }
