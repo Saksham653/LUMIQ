@@ -37,7 +37,7 @@ export function describeInsights(dataset: Dataset, t: Translate, numbers: Number
       const params = {
         group: String(f.group),
         metric: prettyColumn(String(f.metric)),
-        share: numbers.number(Number(f.share), 1),
+        share: numbers.percent(Number(f.share), 1),
         total: amount(f.total, f.metric),
         groups: Number(f.groups),
         groupColumn: inSentence(prettyColumn(String(f.groupColumn)), language),
@@ -53,7 +53,7 @@ export function describeInsights(dataset: Dataset, t: Translate, numbers: Number
       const up = insight.type === 'trend_up';
       const params = {
         metric: prettyColumn(String(f.metric)),
-        change: numbers.number(Number(f.change), 1),
+        change: numbers.percent(Number(f.change), 1),
         from: amount(f.from, f.metric),
         fromLabel: String(f.fromLabel),
         to: amount(f.to, f.metric),
