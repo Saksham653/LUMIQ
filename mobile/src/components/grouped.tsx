@@ -149,4 +149,29 @@ const styles = StyleSheet.create({
   text: { flex: 1, gap: 2 },
   iconCircle: { alignItems: 'center', justifyContent: 'center' },
   flip: { transform: [{ scaleX: -1 }] },
+  radio: { width: 24, height: 24, borderRadius: 12, borderWidth: 2, alignItems: 'center', justifyContent: 'center' },
+  radioDot: { width: 12, height: 12, borderRadius: 6 },
+  tag: { paddingHorizontal: Spacing.sm, borderRadius: Radius.pill },
 });
+
+// A radio button: a cyan ring with a filled centre when chosen.
+export function Radio({ selected }: { selected: boolean }) {
+  const colors = useTheme();
+  return (
+    <View style={[styles.radio, { borderColor: selected ? colors.primary : colors.textTertiary }]}>
+      {selected ? <View style={[styles.radioDot, { backgroundColor: colors.primary }]} /> : null}
+    </View>
+  );
+}
+
+// A small quiet tag, e.g. "Beta".
+export function Tag({ label }: { label: string }) {
+  const colors = useTheme();
+  return (
+    <View style={[styles.tag, { backgroundColor: colors.surfaceVariant }]}>
+      <AppText variant="small" tone="secondary" snug>
+        {label}
+      </AppText>
+    </View>
+  );
+}
