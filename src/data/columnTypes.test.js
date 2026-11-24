@@ -37,6 +37,25 @@ describe("detectColumnTypes", () => {
     expect(detectColumnTypes(rows, ["v"]).v.type).toBe("number");
   });
 
+  it("reads yen, yuan, shekel and other currency symbols, before or after the number", () => {
+    expect(parseNumericString("¥1,200")).toEqual({ value: 1200, kind: "money", symbol: "¥" });
+    expect(parseNumericString("￥980")).toEqual({ value: 980, kind: "money", symbol: "¥" });
+    expect(parseNumericString("1,234.5 ₪")).toEqual({ value: 1234.5, kind: "money", symbol: "₪" });
+    expect(parseNumericString("₩15,000").symbol).toBe("₩");
+  });
+
+  it("keeps the clue that says whether ¥ means yen or yuan", () => {
+    expect(parseNumericString("1,200円")).toEqual({ value: 1200, kind: "money", symbol: "¥", currency: "JPY" });
+    expect(parseNumericString("JPY 1200")).toEqual({ value: 1200, kind: "money", symbol: "¥", currency: "JPY" });
+    expect(parseNumericString("1,200元")).toEqual({ value: 1200, kind: "money", symbol: "¥", currency: "CNY" });
+    expect(parseNumericString("RMB 88.5")).toEqual({ value: 88.5, kind: "money", symbol: "¥", currency: "CNY" });
+    expect(parseNumericString("¥300 CNY")).toEqual({ value: 300, kind: "money", symbol: "¥", currency: "CNY" });
+    // Text that merely contains the character is not a number.
+    expect(parseNumericString("元宵节")).toBeNull();
+    const rows = [{ p: "1,200円" }, { p: "980円" }, { p: "" }];
+    expect(detectColumnTypes(rows, ["p"]).p).toEqual({ type: "money", symbol: "¥", currency: "JPY" });
+  });
+
   it("detects percent, money (with symbol) and date columns", () => {
     const rows = [
       { p: "12.5%", m: "₹1,200", d: "2024-01-01", t: "North" },

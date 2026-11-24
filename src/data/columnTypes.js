@@ -12,10 +12,16 @@ export const NUMERIC_TYPES = Object.freeze(["number", "percent", "money"]);
 const NUMERIC_SHARE = 0.8;
 const DATE_SHARE = 0.9;
 
-const CURRENCY_RE = /[₹$€£]/;
+const CURRENCY_RE = /[₹$€£¥￥₪₩₽₺₫฿₱]/;
+// The yen sign is shared by Japan and China; these say which one a file
+// means: "1,200円" and "JPY 1,200" are yen, "1,200元", "RMB 1,200" and
+// "CNY 1,200" are yuan. They are kept so the app can write JP¥ or CN¥.
+const YEN_CLUE_RE = /\s*(円|元|JPY|CNY|RMB)\s*/i;
+const YEN_CLUES = { "円": "JPY", jpy: "JPY", "元": "CNY", cny: "CNY", rmb: "CNY" };
 
 // Parses one cell as a number if it looks like one:
 // "1,20,000" → 120000, "120,000" → 120000, "₹1,200" → 1200 (money),
+// "1,200円" → 1200 (money in yen),
 // "12.5%" → 12.5 (percent), "-3.4" → -3.4. Returns null otherwise.
 export function parseNumericString(raw) {
   if (typeof raw === "number") {
@@ -25,15 +31,20 @@ export function parseNumericString(raw) {
   const s = raw.trim();
   if (!s) return null;
   const hasPercent = /%$/.test(s);
-  const symbol = (s.match(CURRENCY_RE) || [null])[0];
-  let core = s.replace(/%$/, "").replace(CURRENCY_RE, "").trim();
+  const clue = (s.match(YEN_CLUE_RE) || [null, null])[1];
+  const currency = clue ? YEN_CLUES[clue.toLowerCase()] || YEN_CLUES[clue] : undefined;
+  let symbol = (s.match(CURRENCY_RE) || [null])[0];
+  if (symbol === "￥" || (currency && !symbol)) symbol = "¥";
+  let core = s.replace(/%$/, "").replace(YEN_CLUE_RE, "").replace(CURRENCY_RE, "").trim();
   // Digits with optional grouping commas and one decimal point. The
   // comma positions are not checked, so both 1,234,567 and 1,20,000
   // parse; anything with letters or other symbols does not.
   if (!/^[-+]?[\d,]*\.?\d+$/.test(core)) return null;
   const value = Number(core.replace(/,/g, ""));
   if (!Number.isFinite(value)) return null;
-  return { value, kind: hasPercent ? "percent" : symbol ? "money" : "number", symbol };
+  const parsed = { value, kind: hasPercent ? "percent" : symbol ? "money" : "number", symbol };
+  if (currency) parsed.currency = currency;
+  return parsed;
 }
 
 const DATE_PATTERNS = [
@@ -54,6 +65,7 @@ export function detectColumnTypes(rows, columns) {
     let dates = 0;
     const kinds = { number: 0, percent: 0, money: 0 };
     let symbol = null;
+    let currency = null;
     for (const row of rows) {
       const v = row?.[col];
       if (isBlank(v)) continue;
@@ -62,6 +74,7 @@ export function detectColumnTypes(rows, columns) {
       if (parsed) {
         kinds[parsed.kind]++;
         if (!symbol && parsed.symbol) symbol = parsed.symbol;
+        if (!currency && parsed.currency) currency = parsed.currency;
       } else if (looksLikeDate(v)) {
         dates++;
       }
@@ -77,7 +90,7 @@ export function detectColumnTypes(rows, columns) {
           : kinds.money >= kinds.number
             ? "money"
             : "number";
-      result[col] = symbol ? { type, symbol } : { type };
+      result[col] = symbol ? { type, symbol, ...(currency ? { currency } : {}) } : { type };
     } else if (dates / total >= DATE_SHARE) {
       result[col] = { type: "date" };
     } else {
