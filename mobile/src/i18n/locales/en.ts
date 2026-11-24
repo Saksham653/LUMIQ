@@ -145,6 +145,8 @@ export const en = {
   'whatIf.result': 'Result',
   'whatIf.totalWouldBe': 'Total {metric} would be {value}',
   'whatIf.averageWouldBe': 'Average {metric} would be {value}',
+  'whatIf.totalAfter': 'Total {metric} after the change',
+  'whatIf.averageAfter': 'Average {metric} after the change',
   'whatIf.more': 'That is {diff} more than now ({now}).',
   'whatIf.less': 'That is {diff} less than now ({now}).',
   'whatIf.same': 'The same as now ({now}).',

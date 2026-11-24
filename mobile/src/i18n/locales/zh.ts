@@ -143,6 +143,8 @@ export const zh: Record<StringKey, string> = {
   'whatIf.result': '结果',
   'whatIf.totalWouldBe': '{metric} 总计会是 {value}',
   'whatIf.averageWouldBe': '{metric} 平均值会是 {value}',
+  'whatIf.totalAfter': '变化后的{metric}总计',
+  'whatIf.averageAfter': '变化后的{metric}平均值',
   'whatIf.more': '比现在（{now}）多 {diff}。',
   'whatIf.less': '比现在（{now}）少 {diff}。',
   'whatIf.same': '和现在（{now}）一样。',

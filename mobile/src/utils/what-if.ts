@@ -25,9 +25,3 @@ export function groupValues(dataset: Dataset, column: string): { value: string; 
   }
   return [...counts.entries()].map(([value, rows]) => ({ value, rows })).sort((a, b) => b.rows - a.rows);
 }
-
-// "+5.5%" / "-2%" / "0%": a change in percent, one decimal at most.
-export function signedPercent(value: number): string {
-  const rounded = Number(value.toFixed(1));
-  return `${rounded > 0 ? '+' : ''}${rounded}%`;
-}

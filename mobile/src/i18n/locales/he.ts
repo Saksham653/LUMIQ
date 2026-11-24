@@ -143,6 +143,8 @@ export const he: Record<StringKey, string> = {
   'whatIf.result': 'התוצאה',
   'whatIf.totalWouldBe': 'סך הכול של {metric} יהיה {value}',
   'whatIf.averageWouldBe': 'הממוצע של {metric} יהיה {value}',
+  'whatIf.totalAfter': 'סך {metric} אחרי השינוי',
+  'whatIf.averageAfter': 'ממוצע {metric} אחרי השינוי',
   'whatIf.more': 'זה {diff} יותר מעכשיו ({now}).',
   'whatIf.less': 'זה {diff} פחות מעכשיו ({now}).',
   'whatIf.same': 'אותו דבר כמו עכשיו ({now}).',

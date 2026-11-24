@@ -143,6 +143,8 @@ export const es: Record<StringKey, string> = {
   'whatIf.result': 'Resultado',
   'whatIf.totalWouldBe': 'El total de {metric} sería {value}',
   'whatIf.averageWouldBe': 'El promedio de {metric} sería {value}',
+  'whatIf.totalAfter': 'Total de {metric} tras el cambio',
+  'whatIf.averageAfter': 'Promedio de {metric} tras el cambio',
   'whatIf.more': 'Eso es {diff} más que ahora ({now}).',
   'whatIf.less': 'Eso es {diff} menos que ahora ({now}).',
   'whatIf.same': 'Igual que ahora ({now}).',
