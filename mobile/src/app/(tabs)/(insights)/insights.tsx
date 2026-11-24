@@ -1,5 +1,5 @@
-import { ComingSoon } from '@/screens/coming-soon';
+import { Insights } from '@/screens/insights';
 
 export default function InsightsRoute() {
-  return <ComingSoon messageKey="soon.insights" />;
+  return <Insights />;
 }
