@@ -8,6 +8,7 @@
     "scheme": "lumiq",
     "userInterfaceStyle": "automatic",
     "android": {
+      "package": "com.saksham653.lumiq",
       "adaptiveIcon": {
         "backgroundColor": "#050914",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -39,6 +40,17 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "router": {
+        "asyncRoutes": {
+          "web": true
+        }
+      },
+      "eas": {
+        "projectId": "cc3c0371-109e-40ac-8f1f-98d23f39bbab"
+      }
+    },
+    "owner": "sam_7001"
   }
 }
