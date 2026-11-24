@@ -96,7 +96,7 @@ describe.each([
     expect(formatAmount(4677000, money("€"), resolveNumberFormat("en"))).toBe("€4.68M");
     expect(formatAmount(4677000, money("€"), resolveNumberFormat("de"))).toBe(`4,68${NBSP}Mio.${NBSP}€`);
     expect(formatAmount(4677000, money("€"), resolveNumberFormat("fr"))).toBe(`4,68${NBSP}M${NBSP}€`);
-    expect(formatAmount(1234.5, money("₪"), resolveNumberFormat("he"))).toBe(`${ltr("1,234.5")}${NBSP}₪`);
+    expect(formatAmount(1234.5, money("₪"), resolveNumberFormat("he"))).toBe(ltr(`1,234.5${NBSP}₪`));
     expect(formatAmount(4677000, money("₹"), resolveNumberFormat("hi"))).toBe("₹46.8 लाख");
     expect(formatAmount(-1234, money("$"), resolveNumberFormat("en"))).toBe("-$1,234");
     expect(formatAmount(-1234, money("€"), resolveNumberFormat("de"))).toBe(`-1.234${NBSP}€`);
