@@ -1,7 +1,6 @@
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
 
 import { isLanguage, translate, type Language, type StringKey } from '@/i18n';
-import { matchLayoutDirection } from '@/state/layout-direction';
 import { makeNumbers, type Numbers } from '@/utils/format';
 import {
   loadSettings,
@@ -28,13 +27,11 @@ type AppState = {
 const AppStateContext = createContext<AppState | null>(null);
 
 // Everyone starts in English, whatever the phone's own language; the
-// language is chosen under More > Language and remembered.
+// language is chosen under More > Language and remembered. The layout
+// direction is checked at launch by the root layout (fixDirectionAtLaunch).
 function initialSettings(): StoredSettings {
   const settings = loadSettings();
   const language = isLanguage(settings.language) ? settings.language : 'en';
-  // The layout direction normally changes with a restart when Hebrew is
-  // picked; this keeps it right if that restart never happened.
-  matchLayoutDirection(language);
   return { ...settings, language };
 }
 

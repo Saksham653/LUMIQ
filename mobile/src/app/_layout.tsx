@@ -8,15 +8,20 @@ import { useColorScheme } from 'react-native';
 
 import { AppStateProvider, useAppState } from '@/state/app-state';
 import { DatasetsProvider } from '@/state/datasets';
+import { fixDirectionAtLaunch } from '@/state/layout-direction';
 
 SplashScreen.preventAutoHideAsync();
 
 // First launch shows Welcome; after that the app opens straight on the tabs.
+// The splash stays up if the layout direction needs a restart first.
 function RootStack() {
-  const { onboarded } = useAppState();
+  const { onboarded, language } = useAppState();
 
   useEffect(() => {
+    if (fixDirectionAtLaunch(language)) return;
     SplashScreen.hideAsync();
+    // Only at launch: a language picked later restarts from its own screen.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (

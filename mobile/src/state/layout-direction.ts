@@ -1,3 +1,5 @@
+import Constants, { ExecutionEnvironment } from 'expo-constants';
+import { File, Paths } from 'expo-file-system';
 import * as Updates from 'expo-updates';
 import { DevSettings, I18nManager, Platform } from 'react-native';
 
@@ -29,4 +31,37 @@ export async function restartForLanguage(language: Language): Promise<void> {
   } catch {
     DevSettings.reload();
   }
+}
+
+// A phone set to Arabic, Hebrew or another right-to-left language opens
+// LUMIQ right to left the very first time, even in English. Called once at
+// launch while the splash screen is still up: when the direction is wrong it
+// restarts once, behind the splash, and returns true. A note in the cache
+// stops a second try when a restart did not change the direction, so this
+// can never loop. Expo Go resets the direction itself, so it is left alone
+// there.
+export function fixDirectionAtLaunch(language: Language): boolean {
+  if (Platform.OS === 'web' || Constants.executionEnvironment === ExecutionEnvironment.StoreClient) return false;
+  const wanted = languageInfo(language).rtl ? 'rtl' : 'ltr';
+  try {
+    const note = new File(Paths.cache, 'lumiq-direction-restart.txt');
+    if (!needsRestart(language)) {
+      if (note.exists) note.delete();
+      return false;
+    }
+    if (note.exists && note.textSync() === wanted) {
+      // Already restarted once for this: carry on, set for the next start.
+      note.delete();
+      matchLayoutDirection(language);
+      return false;
+    }
+    if (!note.exists) note.create();
+    note.write(wanted);
+  } catch {
+    // Without the note there is no loop guard, so no restart either.
+    matchLayoutDirection(language);
+    return false;
+  }
+  void restartForLanguage(language);
+  return true;
 }
