@@ -88,7 +88,7 @@ function DatasetWhatIf({ dataset }: { dataset: Dataset }) {
   const typeInfo = dataset.columnTypes?.[measure];
   const amount = (value: number | null) => numbers.amount(value, typeInfo, measure);
   const metric = prettyColumn(measure);
-  const pct = numbers.number(Math.abs(change), 1);
+  const pct = numbers.percent(Math.abs(change), 1);
 
   const description =
     change === 0
