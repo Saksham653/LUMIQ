@@ -3,6 +3,7 @@ import '@/polyfills';
 import { DarkTheme, DefaultTheme, ThemeProvider } from 'expo-router';
 import { Stack } from 'expo-router/stack';
 import * as SplashScreen from 'expo-splash-screen';
+import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import { useColorScheme } from 'react-native';
 
@@ -45,6 +46,8 @@ export default function RootLayout() {
   const scheme = useColorScheme();
   return (
     <ThemeProvider value={scheme === 'dark' ? DarkTheme : DefaultTheme}>
+      {/* Status bar icons follow the theme: dark on light screens, light on dark. */}
+      <StatusBar style="auto" />
       <AppStateProvider>
         <DatasetsProvider>
           <RootStack />
