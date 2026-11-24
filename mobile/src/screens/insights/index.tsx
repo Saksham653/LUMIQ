@@ -11,7 +11,8 @@ import { Section } from '@/components/section';
 import { Radius, Spacing } from '@/constants/theme';
 import type { Dataset } from '@/data/types';
 import { useTheme } from '@/hooks/use-theme';
-import { useNumbers, useT } from '@/state/app-state';
+import { inSentence } from '@/i18n';
+import { useAppState, useNumbers, useT } from '@/state/app-state';
 import { useActiveDataset } from '@/state/datasets';
 import { buildChart } from '@/utils/chart';
 import { prettyColumn } from '@/utils/format';
@@ -35,6 +36,7 @@ function DatasetInsights({ dataset }: { dataset: Dataset }) {
   const colors = useTheme();
   const t = useT();
   const numbers = useNumbers();
+  const { language } = useAppState();
   const formatCount = numbers.count;
 
   const numeric = useMemo(() => numericColumns(dataset) as string[], [dataset]);
@@ -43,7 +45,7 @@ function DatasetInsights({ dataset }: { dataset: Dataset }) {
 
   const kpis = useMemo(() => (metric ? computeKpis(dataset, metric) : null), [dataset, metric]);
   const chart = useMemo(() => (metric ? buildChart(dataset, metric) : null), [dataset, metric]);
-  const insights = useMemo(() => describeInsights(dataset, t, numbers), [dataset, t, numbers]);
+  const insights = useMemo(() => describeInsights(dataset, t, numbers, language), [dataset, t, numbers, language]);
 
   const amount = (value: number | null) => numbers.amount(value, kpis?.typeInfo, metric ?? undefined);
   const peak = chart ? chart.bars.reduce((best, bar) => (bar.value > best.value ? bar : best), chart.bars[0]) : null;
@@ -91,7 +93,7 @@ function DatasetInsights({ dataset }: { dataset: Dataset }) {
           <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <AppText variant="heading">
               {chart?.groupColumn
-                ? t('insights.chartBy', { metric: prettyColumn(metric), group: prettyColumn(chart.groupColumn).toLowerCase() })
+                ? t('insights.chartBy', { metric: prettyColumn(metric), group: inSentence(prettyColumn(chart.groupColumn), language) })
                 : t('insights.chartRows', { metric: prettyColumn(metric) })}
             </AppText>
             {chart && peak ? (
