@@ -3,11 +3,12 @@ import { Pressable, StyleSheet, View } from 'react-native';
 
 import { AppIcon } from '@/components/app-icon';
 import { AppText } from '@/components/app-text';
-import { Radius, Spacing, TouchTarget } from '@/constants/theme';
+import { Spacing, TouchTarget } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
-// One of the four checks: a green tick and "OK" when clear; otherwise an amber
-// warning, what was found, and "See it" to show where and how to fix it.
+// One of the four checks, as a row of the "What we checked" group: a green
+// tick and "OK" when clear; otherwise what was found in amber, and "See it"
+// (an action, so cyan) to show where and how to fix it.
 export function CheckRow({
   title,
   summary,
@@ -27,18 +28,10 @@ export function CheckRow({
 }) {
   const colors = useTheme();
   const [open, setOpen] = useState(false);
-  const tone = clear ? colors.success : colors.accent;
 
   return (
-    <View style={[styles.row, { backgroundColor: clear ? colors.background : colors.accentContainer }]}>
+    <View style={styles.row}>
       <View style={styles.top}>
-        <View style={[styles.icon, { backgroundColor: clear ? colors.successContainer : colors.card }]}>
-          <AppIcon
-            name={clear ? { ios: 'checkmark', android: 'check' } : { ios: 'exclamationmark.triangle.fill', android: 'warning' }}
-            size={20}
-            color={tone}
-          />
-        </View>
         <View style={styles.text}>
           <AppText variant="label">{title}</AppText>
           <AppText variant="small" tone={clear ? 'secondary' : 'accent'}>
@@ -46,36 +39,40 @@ export function CheckRow({
           </AppText>
         </View>
         {clear ? (
-          <AppText variant="small" tone="success" style={styles.ok}>
-            {okLabel}
-          </AppText>
+          <View style={styles.ok} accessible accessibilityLabel={okLabel}>
+            <AppIcon name={{ ios: 'checkmark.circle.fill', android: 'check_circle' }} size={20} color={colors.success} />
+            <AppText variant="small" tone="success" snug style={styles.okText}>
+              {okLabel}
+            </AppText>
+          </View>
         ) : (
           <Pressable
             onPress={() => setOpen((value) => !value)}
             accessibilityRole="button"
             accessibilityState={{ expanded: open }}
             accessibilityLabel={`${open ? hideLabel : seeLabel}: ${title}`}
-            style={[styles.see, { backgroundColor: colors.card, borderColor: tone }]}>
-            <AppText variant="small" style={[styles.seeText, { color: tone }]}>
+            hitSlop={8}
+            style={styles.see}>
+            {/* Fixed width, full-width centred text: shrink-wrapped bold Hindi
+                is measured too narrow on Android and loses letters. */}
+            <AppText variant="label" tone="primary" style={styles.seeText}>
               {open ? hideLabel : seeLabel}
             </AppText>
           </Pressable>
         )}
       </View>
-      {!clear && open && <View style={[styles.details, { borderTopColor: colors.border }]}>{children}</View>}
+      {!clear && open && <View style={[styles.details, { backgroundColor: colors.background }]}>{children}</View>}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  row: { borderRadius: Radius.md, padding: Spacing.md, gap: Spacing.sm },
+  row: { paddingHorizontal: Spacing.lg, paddingVertical: Spacing.md, gap: Spacing.sm },
   top: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, minHeight: TouchTarget - 8 },
-  icon: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
   text: { flex: 1, gap: 2 },
-  ok: { fontWeight: '700' },
-  // A fixed width with full-width, centred text: shrink-wrapped bold Hindi is
-  // measured too narrow on Android and loses letters.
-  see: { minHeight: 40, width: 92, paddingHorizontal: Spacing.sm, borderRadius: Radius.pill, borderWidth: 1, justifyContent: 'center' },
-  seeText: { fontWeight: '700', textAlign: 'center', alignSelf: 'stretch' },
-  details: { borderTopWidth: StyleSheet.hairlineWidth, paddingTop: Spacing.sm, gap: Spacing.xs },
+  ok: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs },
+  okText: { fontWeight: '700' },
+  see: { minHeight: 44, width: 96, justifyContent: 'center' },
+  seeText: { textAlign: 'center', alignSelf: 'stretch' },
+  details: { borderRadius: 12, padding: Spacing.md, gap: Spacing.xs },
 });
