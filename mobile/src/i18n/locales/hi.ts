@@ -287,4 +287,9 @@ export const hi: Record<StringKey, string> = {
   'currency.CNY': 'चीनी युआन (¥)',
   'currency.INR': 'भारतीय रुपया (₹)',
   'currency.ILS': 'इज़राइली शेकेल (₪)',
+
+  'suggest.totalBy': '{group} के हिसाब से कुल {metric} कितना है?',
+  'suggest.average': 'औसत {metric} कितना है?',
+  'suggest.highestIn': 'किस {group} में {metric} सबसे ज़्यादा है?',
+  'suggest.highest': 'सबसे ज़्यादा {metric} कितना है?',
 };

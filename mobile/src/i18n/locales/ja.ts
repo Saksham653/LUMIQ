@@ -287,4 +287,9 @@ export const ja: Record<StringKey, string> = {
   'currency.CNY': '人民元（¥）',
   'currency.INR': 'インドルピー（₹）',
   'currency.ILS': 'イスラエル・シェケル（₪）',
+
+  'suggest.totalBy': '{group}ごとの{metric}の合計は？',
+  'suggest.average': '{metric}の平均は？',
+  'suggest.highestIn': '{metric}が最も高い{group}は？',
+  'suggest.highest': '{metric}の最高値は？',
 };

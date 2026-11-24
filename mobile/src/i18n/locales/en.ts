@@ -289,6 +289,11 @@ export const en = {
   'currency.CNY': 'Chinese yuan (¥)',
   'currency.INR': 'Indian rupee (₹)',
   'currency.ILS': 'Israeli shekel (₪)',
+
+  'suggest.totalBy': 'What is the total {metric} by {group}?',
+  'suggest.average': 'What is the average {metric}?',
+  'suggest.highestIn': 'Which {group} has the highest {metric}?',
+  'suggest.highest': 'What is the highest {metric}?',
 } as const;
 
 export type StringKey = keyof typeof en;

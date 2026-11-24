@@ -287,4 +287,9 @@ export const zh: Record<StringKey, string> = {
   'currency.CNY': '人民币（¥）',
   'currency.INR': '印度卢比（₹）',
   'currency.ILS': '以色列谢克尔（₪）',
+
+  'suggest.totalBy': '按{group}统计的{metric}总计是多少？',
+  'suggest.average': '{metric}的平均值是多少？',
+  'suggest.highestIn': '哪个{group}的{metric}最高？',
+  'suggest.highest': '{metric}的最高值是多少？',
 };
