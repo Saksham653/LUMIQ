@@ -193,7 +193,7 @@ function DatasetWhatIf({ dataset }: { dataset: Dataset }) {
         afterText={amount(after)}
       />
 
-      <BigButton variant="outlined" label={t('whatIf.reset')} onPress={reset} />
+      <BigButton variant="tonal" label={t('whatIf.reset')} onPress={reset} />
     </ScrollView>
   );
 }
