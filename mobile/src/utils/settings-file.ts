@@ -2,12 +2,22 @@ import { File, Paths } from 'expo-file-system';
 
 import type { Language } from '@/i18n';
 
+// A number style picked by hand on the Numbers & currency screen, or "auto"
+// to follow the language (see @core/lib/numberFormat.js).
+export type NumberStyleChoice = 'auto' | 'comma-dot' | 'dot-comma' | 'space-comma' | 'indian' | 'cjk';
+
+// The currency for amount columns when a file shows none, or null for plain
+// numbers. Never used to convert anything.
+export type DefaultCurrency = 'USD' | 'EUR' | 'GBP' | 'JPY' | 'CNY' | 'INR' | 'ILS';
+
 // Small app settings, kept in one JSON file in the app's private storage on the
 // phone. Nothing here ever leaves the device.
 export type StoredSettings = {
   language?: Language;
   onboarded?: boolean;
   activeDatasetId?: string;
+  numberStyle?: NumberStyleChoice;
+  defaultCurrency?: DefaultCurrency | null;
 };
 
 const settingsFile = () => new File(Paths.document, 'lumiq-settings.json');

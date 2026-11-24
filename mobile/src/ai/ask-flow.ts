@@ -3,9 +3,11 @@ import { buildDescribePrompt, buildExplainPrompt, buildPlanPrompt, parsePlannerR
 import { buildSchemaSummary, renderSchemaSummary, schemaNumberCandidates } from '@core/ai/schemaSummary.js';
 import { runPlan } from '@core/engine/runPlan.js';
 import { validatePlan } from '@core/engine/validatePlan.js';
+import { describeNumberFormat } from '@core/lib/numberFormat.js';
 
 import type { Dataset } from '@/data/types';
 import type { Language } from '@/i18n';
+import type { NumberFormat } from '@/utils/format';
 
 import { askAi } from './ask-client';
 
@@ -43,22 +45,33 @@ export type AskResult =
 type PlanCheck = { ok: true; plan: unknown } | { ok: false; error: string };
 type PlanResult = { table: Record<string, unknown>[]; rowsUsed: number; totalRows: number; steps: string[] };
 
-// Questions often come in Hindi or Hinglish; the plan must still name the
-// columns exactly as the file does.
+// Questions come in any language (and Hinglish); the plan must still name
+// the columns exactly as the file does.
 const PLAN_NOTE =
-  '\n\nThe question may be written in English, Hindi or Hinglish. The JSON must still use the exact column names from the summary.';
+  '\n\nThe question may be written in any language, for example English, Hindi, Hinglish, Spanish, French, German, Japanese, Chinese or Hebrew. The JSON must still use the exact column names from the summary.';
 
-// How answers write numbers, so every figure can be checked against the
-// calculation: plain digits grouped with commas (some models group with
-// thin spaces), and no totals the phone did not calculate.
-const NUMBER_STYLE =
-  'Write numbers with the digits 0-9 and group thousands with commas (for example 780,000 or 7,80,000), never with spaces. Only repeat numbers given above; do not add them up or combine them yourself.';
+// Answers come back in the app's language.
+const ANSWER_LANGUAGE: Record<Language, string> = {
+  en: '',
+  hi: 'Write the answer in simple, everyday Hindi (Devanagari script).',
+  es: 'Write the answer in simple, everyday Spanish.',
+  fr: 'Write the answer in simple, everyday French.',
+  de: 'Write the answer in simple, everyday German, addressing the reader as "du".',
+  ja: 'Write the answer in simple, everyday Japanese, in the polite です/ます style.',
+  zh: 'Write the answer in simple, everyday Simplified Chinese.',
+  he: 'Write the answer in simple, everyday Hebrew, in gender-neutral wording.',
+};
+const KEEP_NAMES = 'Keep column names, group names and dates exactly as they appear above.';
 
-const HINDI_ANSWER =
-  'Write the answer in simple, everyday Hindi (Devanagari script). Keep column names, group names and dates exactly as they appear above. You may write large amounts with लाख or करोड़.';
+// No totals the phone did not calculate, so every figure can be checked.
+const ONLY_GIVEN_NUMBERS = 'Only repeat numbers given above; do not add them up or combine them yourself.';
 
-const answerPrompt = (prompt: string, language: Language) =>
-  `${prompt}\n\n${language === 'hi' ? `${HINDI_ANSWER} ` : ''}${NUMBER_STYLE}`;
+// The answer's language, then the exact number format the check will read
+// back: the same format the app shows numbers in.
+const answerPrompt = (prompt: string, language: Language, format: NumberFormat) => {
+  const rules = [ANSWER_LANGUAGE[language], language === 'en' ? '' : KEEP_NAMES, describeNumberFormat(format), ONLY_GIVEN_NUMBERS];
+  return `${prompt}\n\n${rules.filter(Boolean).join(' ')}`;
+};
 
 // Lets the screen draw the next stage before the phone starts calculating.
 const nextFrame = () => new Promise((resolve) => setTimeout(resolve, 0));
@@ -78,6 +91,7 @@ export async function answerQuestion({
   question,
   context,
   language,
+  numberFormat,
   signal,
   onStage,
 }: {
@@ -85,6 +99,8 @@ export async function answerQuestion({
   question: string;
   context: AskContextItem[];
   language: Language;
+  // How the AI should write numbers, and how the check reads them back.
+  numberFormat: NumberFormat;
   signal: AbortSignal;
   onStage: (stage: AskStage) => void;
 }): Promise<AskResult> {
@@ -104,10 +120,10 @@ export async function answerQuestion({
   // and checked against the summary's own figures.
   if (parsed.kind === 'describe') {
     onStage('writing');
-    const prompt = answerPrompt(buildDescribePrompt(question, schemaText), language);
+    const prompt = answerPrompt(buildDescribePrompt(question, schemaText), language, numberFormat);
     sent.push({ label: 'answer', text: prompt });
     const answer = await askAi(prompt, 'describe', { signal });
-    const check = verifyNumbers(answer.text, schemaNumberCandidates(summary));
+    const check = verifyNumbers(answer.text, schemaNumberCandidates(summary), numberFormat);
     return {
       kind: 'answer',
       text: answer.text,
@@ -150,11 +166,12 @@ export async function answerQuestion({
   const explainPrompt = answerPrompt(
     buildExplainPrompt(question, result.steps, result.table, result.rowsUsed, result.totalRows),
     language,
+    numberFormat,
   );
   sent.push({ label: 'answer', text: explainPrompt });
   const answer = await askAi(explainPrompt, 'explain', { signal });
   const candidates = collectCandidates(result.table, [result.rowsUsed, result.totalRows, result.table.length]);
-  const check = verifyNumbers(answer.text, candidates);
+  const check = verifyNumbers(answer.text, candidates, numberFormat);
   return {
     kind: 'answer',
     text: answer.text,

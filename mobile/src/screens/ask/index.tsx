@@ -20,7 +20,7 @@ import { Radius, Spacing } from '@/constants/theme';
 import type { Dataset } from '@/data/types';
 import { useTheme } from '@/hooks/use-theme';
 import type { StringKey } from '@/i18n';
-import { useAppState, useT } from '@/state/app-state';
+import { useAppState, useNumbers, useT } from '@/state/app-state';
 import { useActiveDataset } from '@/state/datasets';
 import { suggestedQuestions } from '@/utils/suggested-questions';
 
@@ -66,6 +66,7 @@ function AskChat({ dataset }: { dataset: Dataset }) {
   const colors = useTheme();
   const t = useT();
   const { language } = useAppState();
+  const numbers = useNumbers();
   const headerHeight = useHeaderHeight();
   const configured = isAskConfigured();
 
@@ -98,6 +99,7 @@ function AskChat({ dataset }: { dataset: Dataset }) {
         question,
         context: contextRef.current,
         language,
+        numberFormat: numbers.format,
         signal: controller.signal,
         onStage: (stage) => replace({ id: answerId, role: 'assistant', state: 'working', stage }),
       });

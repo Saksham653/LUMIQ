@@ -12,9 +12,9 @@ import { NoFileChosen } from '@/components/no-file-chosen';
 import { Radius, Spacing } from '@/constants/theme';
 import type { Dataset } from '@/data/types';
 import { useTheme } from '@/hooks/use-theme';
-import { useAppState, useT } from '@/state/app-state';
+import { useNumbers, useT } from '@/state/app-state';
 import { useActiveDataset } from '@/state/datasets';
-import { formatAmount, formatCount, prettyColumn } from '@/utils/format';
+import { prettyColumn } from '@/utils/format';
 import { groupColumns, groupValues, signedPercent } from '@/utils/what-if';
 
 import { PercentPicker } from './percent-picker';
@@ -36,7 +36,8 @@ export function WhatIf() {
 function DatasetWhatIf({ dataset }: { dataset: Dataset }) {
   const colors = useTheme();
   const t = useT();
-  const { language } = useAppState();
+  const numbers = useNumbers();
+  const formatCount = numbers.count;
 
   const numeric = useMemo(() => numericColumns(dataset) as string[], [dataset]);
   const columns = useMemo(() => groupColumns(dataset), [dataset]);
@@ -83,7 +84,7 @@ function DatasetWhatIf({ dataset }: { dataset: Dataset }) {
   }
 
   const typeInfo = dataset.columnTypes?.[measure];
-  const amount = (value: number | null) => formatAmount(value, typeInfo, language);
+  const amount = (value: number | null) => numbers.amount(value, typeInfo, measure);
   const metric = prettyColumn(measure);
   const pct = Math.abs(change);
 
