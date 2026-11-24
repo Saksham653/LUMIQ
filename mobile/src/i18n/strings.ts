@@ -37,6 +37,11 @@ export const en = {
 
   'common.cancel': 'Cancel',
   'common.delete': 'Delete',
+  'common.changeFile': 'Change',
+
+  'noFile.title': 'No file chosen',
+  'noFile.body': 'Pick a file on Home first.',
+  'noFile.goHome': 'Go to Home',
 
   'unit.lakh': 'lakh',
   'unit.crore': 'crore',
@@ -48,8 +53,6 @@ export const en = {
   'import.failed': 'Something went wrong while reading it. Try saving it again as Excel or CSV.',
   'import.chooseSheet': 'This file has {count} sheets. Which one should we open?',
 
-  'insights.noFileTitle': 'No file chosen',
-  'insights.changeFile': 'Change',
   'insights.showing': 'Choose a column',
   'insights.total': 'Total',
   'insights.totalHow': 'All {rows} values added up',
@@ -79,17 +82,47 @@ export const en = {
   'insight.unusualAbove.body': '{value} is unusually high. Most values are around {typical}. Check that it is correct.',
   'insight.unusualBelow.body': '{value} is unusually low. Most values are around {typical}. Check that it is correct.',
 
+  'ask.intro': 'Ask anything about this file, in your own words.',
+  'ask.tryThese': 'Or tap one of these:',
+  'ask.privacy':
+    'To answer, LUMIQ sends your question, the column names with a short summary, and the calculated result to an AI service (Groq). Your rows stay on your phone.',
+  'ask.placeholder': 'Type your question…',
+  'ask.send': 'Send question',
+  'ask.stop': 'Stop',
+  'ask.you': 'You',
+  'ask.stage.planning': 'Planning the calculation…',
+  'ask.stage.calculating': 'Calculating on your phone…',
+  'ask.stage.writing': 'Writing the answer…',
+  'ask.checked': 'Every number above matches the calculation.',
+  'ask.unchecked': '{count} of the numbers above could not be matched with the calculation. Check them before using them.',
+  'ask.howTitle': 'How LUMIQ worked this out',
+  'ask.fromSummary': 'No calculation was needed: this was answered from the column summary.',
+  'ask.rowsUsed': 'Calculated on your phone from {used} of {total} rows.',
+  'ask.moreRows': '…and {count} more rows',
+  'ask.sentSummary': 'Sent to the AI: your question, the column summary and, after the calculation, its result. Never your rows.',
+  'ask.showSent': 'Show exactly what was sent',
+  'ask.hideSent': 'Hide what was sent',
+  'ask.sent.plan': 'Plan request (column summary, no rows)',
+  'ask.sent.retry': 'Corrected plan request',
+  'ask.sent.answer': 'Answer request (steps and result, no rows)',
+  'ask.cannot': "I couldn't work that out from this file. Try asking another way, or tap one of these:",
+  'ask.left': '{count} free questions left today',
+  'ask.retry': 'Try again',
+  'ask.newChat': 'New chat',
+  'ask.stopped': 'Stopped.',
+  'ask.error.notConfigured':
+    'The built-in AI is not switched on yet, so questions cannot be answered. Insights work without it.',
+  'ask.error.deviceLimit': "You've used today's {limit} free questions. You can ask again tomorrow.",
+  'ask.error.busy': 'The AI is busy right now. Please try again in a little while.',
+  'ask.error.offline': 'No internet connection. Connect and try again.',
+  'ask.error.failed': 'Something went wrong while getting the answer. Please try again.',
+
   'sample.sales.name': 'E-Commerce Sales',
   'sample.sales.desc': '12 months of online sales',
   'sample.marketing.name': 'Marketing Campaign',
   'sample.marketing.desc': 'How each ad channel performed',
   'sample.churn.name': 'Customer Churn',
   'sample.churn.desc': 'How many customers stayed or left',
-
-  'soon.title': 'Coming next',
-  'soon.ask': 'You will be able to ask questions about {name} here, in English or Hindi.',
-  'soon.noFile': 'Pick a file on Home first.',
-  'soon.goHome': 'Go to Home',
 
   'more.title': 'More',
   'more.language': 'Language',
@@ -102,7 +135,8 @@ export const en = {
   'more.reportDesc': 'A one-page summary you can share',
   'more.soon': 'Soon',
   'more.privacy': 'Privacy',
-  'more.privacyText': 'Your rows never leave your phone. LUMIQ has no account and no sign-up.',
+  'more.privacyText':
+    'Your rows never leave your phone. When you ask a question, only the question, a column summary and the calculated result go to the AI. LUMIQ has no account and no sign-up.',
   'more.version': 'Version {version}',
 } as const;
 
@@ -143,6 +177,11 @@ export const hi: Record<StringKey, string> = {
 
   'common.cancel': 'रद्द करें',
   'common.delete': 'हटाएं',
+  'common.changeFile': 'बदलें',
+
+  'noFile.title': 'कोई फ़ाइल नहीं चुनी गई',
+  'noFile.body': 'पहले होम पर कोई फ़ाइल चुनें।',
+  'noFile.goHome': 'होम पर जाएं',
 
   'unit.lakh': 'लाख',
   'unit.crore': 'करोड़',
@@ -154,8 +193,6 @@ export const hi: Record<StringKey, string> = {
   'import.failed': 'फ़ाइल पढ़ते समय कुछ गड़बड़ हो गई। इसे Excel या CSV में दोबारा सेव करके आज़माएं।',
   'import.chooseSheet': 'इस फ़ाइल में {count} शीट हैं। कौन-सी खोलें?',
 
-  'insights.noFileTitle': 'कोई फ़ाइल नहीं चुनी गई',
-  'insights.changeFile': 'बदलें',
   'insights.showing': 'कॉलम चुनें',
   'insights.total': 'कुल',
   'insights.totalHow': 'सभी {rows} संख्याओं का जोड़',
@@ -185,17 +222,47 @@ export const hi: Record<StringKey, string> = {
   'insight.unusualAbove.body': '{value} आम से काफ़ी ज़्यादा है। ज़्यादातर संख्याएँ {typical} के आसपास हैं। एक बार जाँच लें कि यह सही है।',
   'insight.unusualBelow.body': '{value} आम से काफ़ी कम है। ज़्यादातर संख्याएँ {typical} के आसपास हैं। एक बार जाँच लें कि यह सही है।',
 
+  'ask.intro': 'इस फ़ाइल के बारे में अपनी भाषा में कुछ भी पूछें।',
+  'ask.tryThese': 'या इनमें से किसी पर टैप करें:',
+  'ask.privacy':
+    'जवाब देने के लिए LUMIQ आपका सवाल, कॉलम के नाम और उनका छोटा सारांश, और हिसाब का नतीजा एक AI सेवा (Groq) को भेजता है। आपकी पंक्तियाँ आपके फ़ोन में ही रहती हैं।',
+  'ask.placeholder': 'अपना सवाल लिखें…',
+  'ask.send': 'सवाल भेजें',
+  'ask.stop': 'रोकें',
+  'ask.you': 'आप',
+  'ask.stage.planning': 'हिसाब की योजना बन रही है…',
+  'ask.stage.calculating': 'आपके फ़ोन पर हिसाब हो रहा है…',
+  'ask.stage.writing': 'जवाब लिखा जा रहा है…',
+  'ask.checked': 'ऊपर की हर संख्या हिसाब से मेल खाती है।',
+  'ask.unchecked': 'ऊपर की {count} संख्याएँ हिसाब से मेल नहीं खा सकीं। इस्तेमाल से पहले इन्हें जाँच लें।',
+  'ask.howTitle': 'LUMIQ ने यह कैसे निकाला',
+  'ask.fromSummary': 'हिसाब की ज़रूरत नहीं पड़ी: यह जवाब कॉलम के सारांश से दिया गया।',
+  'ask.rowsUsed': 'आपके फ़ोन पर {total} में से {used} पंक्तियों से हिसाब किया गया।',
+  'ask.moreRows': '…और {count} पंक्तियाँ',
+  'ask.sentSummary': 'AI को भेजा गया: आपका सवाल, कॉलम का सारांश और हिसाब के बाद उसका नतीजा। आपकी पंक्तियाँ कभी नहीं।',
+  'ask.showSent': 'ठीक-ठीक क्या भेजा गया, दिखाएं',
+  'ask.hideSent': 'भेजा गया हिस्सा छिपाएं',
+  'ask.sent.plan': 'योजना का अनुरोध (कॉलम सारांश, कोई पंक्ति नहीं)',
+  'ask.sent.retry': 'सुधरी हुई योजना का अनुरोध',
+  'ask.sent.answer': 'जवाब का अनुरोध (कदम और नतीजा, कोई पंक्ति नहीं)',
+  'ask.cannot': 'इस फ़ाइल से यह नहीं निकल पाया। सवाल दूसरे तरीके से पूछें, या इनमें से किसी पर टैप करें:',
+  'ask.left': 'आज {count} मुफ़्त सवाल बाकी हैं',
+  'ask.retry': 'फिर कोशिश करें',
+  'ask.newChat': 'नई बातचीत',
+  'ask.stopped': 'रोक दिया गया।',
+  'ask.error.notConfigured':
+    'बिल्ट-इन AI अभी चालू नहीं है, इसलिए सवालों के जवाब नहीं मिल सकते। सारांश इसके बिना भी काम करता है।',
+  'ask.error.deviceLimit': 'आज के {limit} मुफ़्त सवाल पूरे हो गए। कल फिर से पूछ सकते हैं।',
+  'ask.error.busy': 'AI अभी व्यस्त है। थोड़ी देर बाद फिर कोशिश करें।',
+  'ask.error.offline': 'इंटरनेट कनेक्शन नहीं है। कनेक्ट करके फिर कोशिश करें।',
+  'ask.error.failed': 'जवाब लाते समय कुछ गड़बड़ हो गई। फिर से कोशिश करें।',
+
   'sample.sales.name': 'ई-कॉमर्स बिक्री',
   'sample.sales.desc': '12 महीने की ऑनलाइन बिक्री',
   'sample.marketing.name': 'मार्केटिंग कैंपेन',
   'sample.marketing.desc': 'हर विज्ञापन चैनल ने कैसा किया',
   'sample.churn.name': 'ग्राहक जो छोड़ गए',
   'sample.churn.desc': 'कितने ग्राहक रुके और कितने छोड़ गए',
-
-  'soon.title': 'जल्द आ रहा है',
-  'soon.ask': 'यहाँ आप {name} के बारे में हिंदी या English में सवाल पूछ सकेंगे।',
-  'soon.noFile': 'पहले होम पर कोई फ़ाइल चुनें।',
-  'soon.goHome': 'होम पर जाएं',
 
   'more.title': 'और',
   'more.language': 'भाषा',
@@ -208,6 +275,7 @@ export const hi: Record<StringKey, string> = {
   'more.reportDesc': 'एक पेज का सारांश जिसे आप शेयर कर सकें',
   'more.soon': 'जल्द',
   'more.privacy': 'निजता',
-  'more.privacyText': 'आपकी पंक्तियाँ कभी आपके फ़ोन से बाहर नहीं जातीं। LUMIQ में न कोई अकाउंट है, न साइन-अप।',
+  'more.privacyText':
+    'आपकी पंक्तियाँ कभी आपके फ़ोन से बाहर नहीं जातीं। सवाल पूछने पर सिर्फ़ सवाल, कॉलम का सारांश और हिसाब का नतीजा AI को जाता है। LUMIQ में न कोई अकाउंट है, न साइन-अप।',
   'more.version': 'संस्करण {version}',
 };

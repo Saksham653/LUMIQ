@@ -1,5 +1,5 @@
-import { ComingSoon } from '@/screens/coming-soon';
+import { Ask } from '@/screens/ask';
 
 export default function AskRoute() {
-  return <ComingSoon messageKey="soon.ask" />;
+  return <Ask />;
 }

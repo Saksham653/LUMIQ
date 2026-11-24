@@ -58,6 +58,14 @@ export function formatCount(value: number): string {
   return groupIndian(Math.round(value), 0);
 }
 
+// Exact figures for a result table, so they can be matched with the words of
+// an answer: digit grouping and at most two decimals, never lakh or K.
+export function formatExact(value: number): string {
+  if (!Number.isFinite(value)) return '—';
+  const abs = Math.abs(value);
+  return `${value < 0 ? '-' : ''}${groupIndian(abs, Number.isInteger(abs) ? 0 : 2)}`;
+}
+
 // Column names as people would say them: "avg_order_value" → "Avg order value".
 export function prettyColumn(column: string): string {
   const spaced = column.replace(/[_]+/g, ' ').replace(/\s+/g, ' ').trim();
