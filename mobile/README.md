@@ -38,6 +38,16 @@ Then open it on one of these:
 
 `npm run typecheck` checks the TypeScript.
 
+## Test builds (Android)
+
+The app is the EAS project **@sam_7001/lumiq** (app ID `com.saksham653.lumiq`). To make a new installable APK, signed in to that Expo account:
+
+```bash
+eas build --platform android --profile preview
+```
+
+It builds in Expo's cloud (free plan; about 20 minutes plus any queue) and prints a link and QR code; open it on an Android phone and tap Install. Expo keeps the app's signing key. The APK holds code for every processor type (about 100 MB); store builds (`--profile production`, an app bundle) are split per phone by the Play Store.
+
 ## Built-in AI (Ask)
 
 Users need no key: the app calls LUMIQ's own server, which adds the owner's Groq key.
