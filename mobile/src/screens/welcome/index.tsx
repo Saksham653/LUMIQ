@@ -11,6 +11,7 @@ import { Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import type { Language } from '@/i18n';
 import { useAppState, useT } from '@/state/app-state';
+import { useDatasets } from '@/state/datasets';
 
 const LANGUAGES: Language[] = ['en', 'hi'];
 const LANGUAGE_LABELS = ['English', 'हिंदी'];
@@ -21,6 +22,7 @@ export function Welcome() {
   const colors = useTheme();
   const t = useT();
   const { language, setLanguage, completeOnboarding, setActiveDatasetId } = useAppState();
+  const { importFile } = useDatasets();
 
   const steps: { icon: IconName; title: string; desc: string; background: string; color: string }[] = [
     {
@@ -49,6 +51,12 @@ export function Welcome() {
   const startWithSample = () => {
     setActiveDatasetId('sample:sales');
     completeOnboarding();
+  };
+
+  // Straight to the phone's file picker; Home appears behind it.
+  const openOwnFile = () => {
+    completeOnboarding();
+    void importFile();
   };
 
   return (
@@ -103,7 +111,7 @@ export function Welcome() {
 
         <View style={styles.actions}>
           <BigButton label={t('welcome.trySample')} onPress={startWithSample} />
-          <BigButton variant="outlined" label={t('welcome.openFile')} onPress={completeOnboarding} />
+          <BigButton variant="outlined" label={t('welcome.openFile')} onPress={openOwnFile} />
           <PrivacyNote text={t('privacy.welcome')} />
         </View>
       </ScrollView>

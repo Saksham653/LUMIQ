@@ -1,3 +1,5 @@
+import '@/polyfills';
+
 import { DarkTheme, DefaultTheme, ThemeProvider } from 'expo-router';
 import { Stack } from 'expo-router/stack';
 import * as SplashScreen from 'expo-splash-screen';
@@ -5,6 +7,7 @@ import { useEffect } from 'react';
 import { useColorScheme } from 'react-native';
 
 import { AppStateProvider, useAppState } from '@/state/app-state';
+import { DatasetsProvider } from '@/state/datasets';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -33,7 +36,9 @@ export default function RootLayout() {
   return (
     <ThemeProvider value={scheme === 'dark' ? DarkTheme : DefaultTheme}>
       <AppStateProvider>
-        <RootStack />
+        <DatasetsProvider>
+          <RootStack />
+        </DatasetsProvider>
       </AppStateProvider>
     </ThemeProvider>
   );

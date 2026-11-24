@@ -1,0 +1,85 @@
+import { computeInsights } from '@core/engine/insights.js';
+
+import type { IconName } from '@/components/app-icon';
+import type { Dataset } from '@/data/types';
+import type { Language, StringKey } from '@/i18n';
+import { formatAmount, prettyColumn } from '@/utils/format';
+
+type Translate = (key: StringKey, params?: Record<string, string | number>) => string;
+
+type RawInsight = {
+  type: 'top' | 'trend_up' | 'trend_down' | 'unusual';
+  facts?: Record<string, unknown>;
+};
+
+export type InsightView = {
+  id: string;
+  icon: IconName;
+  tone: 'primary' | 'accent' | 'secondary';
+  title: string;
+  body: string;
+};
+
+// The shared engine's findings (same rules as the web app), worded in the
+// chosen language from their raw facts, with numbers in lakh / crore.
+export function describeInsights(dataset: Dataset, t: Translate, language: Language): InsightView[] {
+  const insights = computeInsights(dataset, dataset.data) as RawInsight[];
+  const amount = (value: unknown, column: unknown) =>
+    formatAmount(typeof value === 'number' ? value : null, dataset.columnTypes?.[String(column)], language);
+
+  const views: InsightView[] = [];
+  insights.forEach((insight, index) => {
+    const f = insight.facts;
+    if (!f) return;
+    const id = `${insight.type}-${index}`;
+
+    if (insight.type === 'top') {
+      const params = {
+        group: String(f.group),
+        metric: prettyColumn(String(f.metric)),
+        share: Number(f.share),
+        total: amount(f.total, f.metric),
+        groups: Number(f.groups),
+        groupColumn: prettyColumn(String(f.groupColumn)).toLowerCase(),
+      };
+      views.push({
+        id,
+        icon: { ios: 'chart.pie.fill', android: 'pie_chart' },
+        tone: 'primary',
+        title: t('insight.top.title', params),
+        body: t('insight.top.body', params),
+      });
+    } else if (insight.type === 'trend_up' || insight.type === 'trend_down') {
+      const up = insight.type === 'trend_up';
+      const params = {
+        metric: prettyColumn(String(f.metric)),
+        change: Number(f.change),
+        from: amount(f.from, f.metric),
+        fromLabel: String(f.fromLabel),
+        to: amount(f.to, f.metric),
+        toLabel: String(f.toLabel),
+      };
+      views.push({
+        id,
+        icon: up ? { ios: 'chart.line.uptrend.xyaxis', android: 'trending_up' } : { ios: 'chart.line.downtrend.xyaxis', android: 'trending_down' },
+        tone: 'accent',
+        title: t(up ? 'insight.trendUp.title' : 'insight.trendDown.title', params),
+        body: t('insight.trend.body', params),
+      });
+    } else if (insight.type === 'unusual') {
+      const params = {
+        column: prettyColumn(String(f.column)),
+        value: amount(f.value, f.column),
+        typical: amount(f.typical, f.column),
+      };
+      views.push({
+        id,
+        icon: { ios: 'exclamationmark.triangle.fill', android: 'warning' },
+        tone: 'secondary',
+        title: t('insight.unusual.title', params),
+        body: t(f.direction === 'above' ? 'insight.unusualAbove.body' : 'insight.unusualBelow.body', params),
+      });
+    }
+  });
+  return views;
+}
