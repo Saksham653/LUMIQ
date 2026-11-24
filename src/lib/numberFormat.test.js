@@ -4,6 +4,7 @@ import {
   currencyLabel,
   describeNumberFormat,
   formatAmount,
+  formatAmountParts,
   formatCount,
   formatExact,
   formatNumber,
@@ -99,6 +100,22 @@ describe.each([
     expect(formatAmount(4677000, money("₹"), resolveNumberFormat("hi"))).toBe("₹46.8 लाख");
     expect(formatAmount(-1234, money("$"), resolveNumberFormat("en"))).toBe("-$1,234");
     expect(formatAmount(-1234, money("€"), resolveNumberFormat("de"))).toBe(`-1.234${NBSP}€`);
+  });
+
+  it("splits an amount into currency, digits and unit, so the unit can be drawn lighter", () => {
+    const parts = (lang, value, type) => {
+      const { prefix, number, suffix } = formatAmountParts(value, type, resolveNumberFormat(lang));
+      return [prefix, number, suffix];
+    };
+    expect(parts("en", 4677000, plain)).toEqual(["", "4.68", "M"]);
+    expect(parts("en", 4677000, money("$"))).toEqual(["$", "4.68", "M"]);
+    expect(parts("hi", 4677000, money("₹"))).toEqual(["₹", "46.8", " लाख"]);
+    expect(parts("de", 4677000, money("€"))).toEqual(["", "4,68", `${NBSP}Mio.${NBSP}€`]);
+    expect(parts("ja", 4677000, plain)).toEqual(["", "468", "万"]);
+    expect(parts("en", 1234, plain)).toEqual(["", "1,234", ""]);
+    expect(parts("fr", 45, { type: "percent" })).toEqual(["", "45", `${NNBSP}%`]);
+    expect(parts("en", null, plain)).toEqual(["", "—", ""]);
+    expect(formatAmountParts(1200000, plain, resolveNumberFormat("he")).rtl).toBe(true);
   });
 
   it("lets people pick a style by hand, whatever the language", () => {

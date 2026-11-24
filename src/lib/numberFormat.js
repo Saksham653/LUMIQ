@@ -193,9 +193,11 @@ export function formatExact(value, format) {
 // Three significant digits: 4.677 → 4.68, 46.77 → 46.8, 467.7 → 468.
 const compactDecimals = (n) => (n >= 100 ? 0 : n >= 10 ? 1 : 2);
 
-// The shortened form of a non-negative number, or null when it is too small
-// to shorten: 4677000 → "4.68M" / "4,68 Mio." / "46.8 लाख" / "468万".
-function compactCore(abs, format) {
+// The shortened form of a non-negative number, split into its digits and
+// its unit, or null when it is too small to shorten:
+// 4677000 → { number: "4.68", suffix: "M" } / { "4,68", " Mio." } /
+// { "46.8", " लाख" } / { "468", "万" }.
+function compactParts(abs, format) {
   const steps = COMPACT[format.compact] || COMPACT.latin;
   for (let i = 0; i < steps.length; i++) {
     const step = steps[i];
@@ -207,9 +209,9 @@ function compactCore(abs, format) {
     const bigger = steps[i - 1];
     if (bigger && rounded * step.scale >= bigger.from) {
       const up = abs / bigger.scale;
-      return `${formatDigits(Number(up.toFixed(compactDecimals(up))), format)}${bigger.suffix}`;
+      return { number: formatDigits(Number(up.toFixed(compactDecimals(up))), format), suffix: bigger.suffix };
     }
-    return `${formatDigits(rounded, format, decimals)}${step.suffix}`;
+    return { number: formatDigits(rounded, format, decimals), suffix: step.suffix };
   }
   return null;
 }
@@ -231,28 +233,46 @@ export function currencyLabel(symbol, currency, language) {
   return "¥";
 }
 
-// Puts a currency where the language writes it: "$4.68M", "4,68 Mio. €",
-// "1,234.5 ₪". A minus sign stays in front of the whole amount.
-export function withCurrency(numberText, label, format) {
-  if (!label) return numberText;
-  if (format.currencyAfter) return `${numberText}${NBSP}${label}`;
-  const negative = numberText.replace(LRI, "").startsWith("-");
-  return negative ? `-${label}${numberText.replace("-", "")}` : `${label}${numberText}`;
+// A number for people, not spreadsheets, in parts so a screen can draw the
+// unit lighter than the digits: big numbers shortened the way the language
+// writes them, money with its own currency, percentages with one decimal.
+// Blanks show as a dash, never as 0. `typeInfo` is a column type
+// ({ type: "money" | "percent" | "number", symbol?, currency? }). `rtl`
+// says the whole amount should stay left-to-right inside Hebrew text.
+export function formatAmountParts(value, typeInfo, format) {
+  const empty = { prefix: "", number: "—", suffix: "", rtl: false };
+  if (value === null || value === undefined || !Number.isFinite(value)) return empty;
+  if (typeInfo?.type === "percent") {
+    return { prefix: "", number: formatDigits(value, format, 1), suffix: format.percent, rtl: format.rtl };
+  }
+  const abs = Math.abs(value);
+  const decimals = Number.isInteger(abs) ? 0 : abs < 100 ? 2 : 1;
+  const parts = compactParts(abs, format) ?? { number: formatDigits(abs, format, decimals), suffix: "" };
+  const number = `${value < 0 ? "-" : ""}${parts.number}`;
+  const label = typeInfo?.type === "money" ? currencyLabel(typeInfo.symbol, typeInfo.currency, format.language) : "";
+  if (!label) return { prefix: "", number, suffix: parts.suffix, rtl: format.rtl };
+  if (format.currencyAfter) return { prefix: "", number, suffix: `${parts.suffix}${NBSP}${label}`, rtl: format.rtl };
+  return { prefix: label, number, suffix: parts.suffix, rtl: format.rtl };
 }
 
-// A number for people, not spreadsheets: big numbers shortened the way the
-// language writes them, money with its own currency, percentages with one
-// decimal. Blanks show as a dash, never as 0. `typeInfo` is a column type
-// ({ type: "money" | "percent" | "number", symbol?, currency? }).
+// The same amount as one string: "4.68M", "4,68 Mio. €", "₹46.8 लाख".
 export function formatAmount(value, typeInfo, format) {
   if (value === null || value === undefined || !Number.isFinite(value)) return "—";
   if (typeInfo?.type === "percent") return formatPercent(value, format, 1);
-  const abs = Math.abs(value);
-  const decimals = Number.isInteger(abs) ? 0 : abs < 100 ? 2 : 1;
-  const core = compactCore(abs, format) ?? formatDigits(abs, format, decimals);
-  const number = isolate(`${value < 0 ? "-" : ""}${core}`, format);
-  const label = typeInfo?.type === "money" ? currencyLabel(typeInfo.symbol, typeInfo.currency, format.language) : "";
-  return withCurrency(number, label, format);
+  const { prefix, number, suffix } = formatAmountParts(value, typeInfo, format);
+  if (format.currencyAfter && typeInfo?.type === "money") {
+    // The currency sits outside the left-to-right isolate, after the number.
+    const [compact, label] = splitCurrency(suffix);
+    return `${isolate(`${number}${compact}`, format)}${label ? `${NBSP}${label}` : ""}`;
+  }
+  if (number.startsWith("-") && prefix) return isolate(`-${prefix}${number.slice(1)}${suffix}`, format);
+  return isolate(`${prefix}${number}${suffix}`, format);
+}
+
+// " Mio. €" → [" Mio.", "€"]: the shortened unit, then the currency.
+function splitCurrency(suffix) {
+  const at = suffix.lastIndexOf(NBSP);
+  return at === -1 ? [suffix, ""] : [suffix.slice(0, at), suffix.slice(at + 1)];
 }
 
 // The format in words, for the AI: how to write the numbers in its answer
