@@ -8,8 +8,8 @@ import { Section } from '@/components/section';
 import { Radius, Spacing } from '@/constants/theme';
 import type { ColumnKind, Dataset } from '@/data/types';
 import { useTheme } from '@/hooks/use-theme';
-import type { StringKey } from '@/i18n';
-import { useNumbers, useT } from '@/state/app-state';
+import { listJoin, type Language, type StringKey } from '@/i18n';
+import { useAppState, useNumbers, useT } from '@/state/app-state';
 import { useActiveDataset } from '@/state/datasets';
 import { CHECKS, checkFile, profileColumn, type CheckKind, type Deduction, type Grade } from '@/utils/file-check';
 
@@ -52,7 +52,8 @@ const TYPE_LABEL: Record<ColumnKind, StringKey> = {
 };
 
 // "17, 18, 19, 20" — with "…" when there are more than the examples shown.
-const rowList = (rows: number[], total: number) => `${rows.join(', ')}${total > rows.length ? ', …' : ''}`;
+const rowList = (rows: string[], total: number, language: Language) =>
+  `${listJoin(rows, language)}${total > rows.length ? (language === 'ja' || language === 'zh' ? '、…' : ', …') : ''}`;
 
 // File check: is the file clean and ready? The shared health score (the same
 // four checks as the web app), every lost point explained, where it is and
@@ -66,6 +67,7 @@ function DatasetCheck({ dataset }: { dataset: Dataset }) {
   const colors = useTheme();
   const t = useT();
   const numbers = useNumbers();
+  const { language } = useAppState();
   const [allColumns, setAllColumns] = useState(false);
 
   const result = useMemo(() => checkFile(dataset), [dataset]);
@@ -93,9 +95,9 @@ function DatasetCheck({ dataset }: { dataset: Dataset }) {
     for (const item of result.checks[kind]) {
       if (item.kind === 'empty') {
         lines.push(t('check.emptyLine', { column: item.facts.column, empty: formatCount(item.facts.empty), rows: formatCount(item.facts.rows), points: item.points }));
-        lines.push(t('check.rows', { rows: rowList(item.facts.examples, item.facts.empty) }));
+        lines.push(t('check.rows', { rows: rowList(item.facts.examples.map(formatCount), item.facts.empty, language) }));
       } else if (item.kind === 'repeats') {
-        lines.push(t('check.rows', { rows: rowList(item.facts.examples, item.facts.repeats) }));
+        lines.push(t('check.rows', { rows: rowList(item.facts.examples.map(formatCount), item.facts.repeats, language) }));
       } else if (item.kind === 'mixed') {
         lines.push(t('check.mixedLine', { column: item.facts.column, numericish: item.facts.numericish, total: item.facts.total, points: item.points }));
       } else if (item.kind === 'unusual') {
@@ -125,7 +127,7 @@ function DatasetCheck({ dataset }: { dataset: Dataset }) {
       return t('check.range', { low: amountIn(profile.name, profile.range.low), high: amountIn(profile.name, profile.range.high) });
     }
     if (profile.dates) return t('check.dateRange', { first: profile.dates.first, last: profile.dates.last });
-    if (profile.values) return t('check.values', { unique: formatCount(profile.values.unique), common: profile.values.common.join(', ') });
+    if (profile.values) return t('check.values', { unique: formatCount(profile.values.unique), common: listJoin(profile.values.common, language) });
     return t('check.noneFound');
   };
 

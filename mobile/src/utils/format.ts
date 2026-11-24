@@ -4,6 +4,7 @@ import {
   formatExact,
   formatNumber,
   formatPercent,
+  formatSignedPercent,
   resolveNumberFormat,
 } from '@core/lib/numberFormat.js';
 
@@ -28,6 +29,8 @@ export type Numbers = {
   // A plain number with up to `decimals` decimals.
   number: (value: number, decimals?: number) => string;
   percent: (value: number, decimals?: number) => string;
+  // A change with its sign: "+5.5%", "-2 %".
+  signedPercent: (value: number) => string;
   date: (timestamp: number) => string;
 };
 
@@ -67,6 +70,7 @@ export function makeNumbers(
     exact: (value) => formatExact(value, format),
     number: (value, decimals = 2) => formatNumber(value, format, { maxDecimals: decimals }),
     percent: (value, decimals = 1) => formatPercent(value, format, decimals),
+    signedPercent: (value) => formatSignedPercent(value, format),
     date: (timestamp) => {
       try {
         return new Date(timestamp).toLocaleDateString(locale, { day: 'numeric', month: 'short', year: 'numeric' });

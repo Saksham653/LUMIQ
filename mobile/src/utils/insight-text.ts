@@ -2,7 +2,7 @@ import { computeInsights } from '@core/engine/insights.js';
 
 import type { IconName } from '@/components/app-icon';
 import type { Dataset } from '@/data/types';
-import type { StringKey } from '@/i18n';
+import { inSentence, type Language, type StringKey } from '@/i18n';
 import { prettyColumn, type Numbers } from '@/utils/format';
 
 type Translate = (key: StringKey, params?: Record<string, string | number>) => string;
@@ -22,7 +22,7 @@ export type InsightView = {
 
 // The shared engine's findings (same rules as the web app), worded in the
 // chosen language from their raw facts, with numbers in that language's format.
-export function describeInsights(dataset: Dataset, t: Translate, numbers: Numbers): InsightView[] {
+export function describeInsights(dataset: Dataset, t: Translate, numbers: Numbers, language: Language): InsightView[] {
   const insights = computeInsights(dataset, dataset.data) as RawInsight[];
   const amount = (value: unknown, column: unknown) =>
     numbers.amount(typeof value === 'number' ? value : null, dataset.columnTypes?.[String(column)], String(column));
@@ -40,7 +40,7 @@ export function describeInsights(dataset: Dataset, t: Translate, numbers: Number
         share: numbers.number(Number(f.share), 1),
         total: amount(f.total, f.metric),
         groups: Number(f.groups),
-        groupColumn: prettyColumn(String(f.groupColumn)).toLowerCase(),
+        groupColumn: inSentence(prettyColumn(String(f.groupColumn)), language),
       };
       views.push({
         id,

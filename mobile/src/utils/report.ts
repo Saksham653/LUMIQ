@@ -1,7 +1,7 @@
 import { buildReportData } from '@core/engine/reportData.js';
 
 import type { ColumnType, Dataset } from '@/data/types';
-import type { StringKey } from '@/i18n';
+import type { Language, StringKey } from '@/i18n';
 import { checkFile, type Grade } from '@/utils/file-check';
 import { prettyColumn, type Numbers } from '@/utils/format';
 import { describeInsights } from '@/utils/insight-text';
@@ -28,7 +28,7 @@ export type Report = {
 // The report's contents, worded in the app's language: the shared engine's
 // headline numbers with their footnotes, what LUMIQ noticed, and the File
 // check score. Everything is worked out on the phone.
-export function buildReport(dataset: Dataset, name: string, t: Translate, formatter: Numbers): Report {
+export function buildReport(dataset: Dataset, name: string, t: Translate, formatter: Numbers, language: Language): Report {
   const engine = buildReportData(dataset) as { items: EngineItem[] };
   const rows = formatter.count(dataset.data.length);
 
@@ -50,7 +50,7 @@ export function buildReport(dataset: Dataset, name: string, t: Translate, format
     name,
     meta: t('report.meta', { rows, cols: dataset.columns.length, date: formatter.date(Date.now()) }),
     numbers,
-    noticed: describeInsights(dataset, t, formatter).map(({ title, body }) => ({ title, body })),
+    noticed: describeInsights(dataset, t, formatter, language).map(({ title, body }) => ({ title, body })),
     check: { score: check.score, grade: check.grade },
   };
 }
