@@ -1,5 +1,6 @@
 import {
   formatAmount,
+  formatAmountParts,
   formatCount,
   formatExact,
   formatNumber,
@@ -22,6 +23,12 @@ export type Numbers = {
   // its currency; percent with one decimal. `column` lets an amount column
   // show the default currency when the file has none.
   amount: (value: number | null | undefined, typeInfo?: ColumnType, column?: string) => string;
+  // The same amount in parts, for big numerals with a lighter unit.
+  amountParts: (
+    value: number | null | undefined,
+    typeInfo?: ColumnType,
+    column?: string,
+  ) => { prefix: string; number: string; suffix: string; rtl: boolean };
   // Whole counts with grouping: 1,240 / 1.240 / 1 240.
   count: (value: number) => string;
   // Exact figures (at most two decimals), never shortened.
@@ -66,6 +73,8 @@ export function makeNumbers(
     format,
     amount: (value, typeInfo, column) =>
       formatAmount(value ?? null, withDefaultCurrency(typeInfo, column, defaultCurrency), format),
+    amountParts: (value, typeInfo, column) =>
+      formatAmountParts(value ?? null, withDefaultCurrency(typeInfo, column, defaultCurrency), format),
     count: (value) => formatCount(value, format),
     exact: (value) => formatExact(value, format),
     number: (value, decimals = 2) => formatNumber(value, format, { maxDecimals: decimals }),
