@@ -5,6 +5,7 @@ import { AppText } from '@/components/app-text';
 import { BigButton } from '@/components/big-button';
 import { FileHeader } from '@/components/file-header';
 import { NoFileChosen } from '@/components/no-file-chosen';
+import { Numeral } from '@/components/numeral';
 import { Radius, Spacing } from '@/constants/theme';
 import type { Dataset } from '@/data/types';
 import { useTheme } from '@/hooks/use-theme';
@@ -39,7 +40,7 @@ function DatasetReport({ dataset }: { dataset: Dataset }) {
 
   const report = useMemo(() => buildReport(dataset, name, t, numbers, language), [dataset, name, t, numbers, language]);
   const gradeLabel = t(GRADE_LABEL[report.check.grade]);
-  const checkTone = report.check.grade === 'great' ? 'success' : report.check.grade === 'good' ? 'primary' : 'accent';
+  const checkTone = report.check.grade === 'great' ? 'success' : report.check.grade === 'good' ? 'default' : 'accent';
 
   const share = async () => {
     try {
@@ -52,11 +53,13 @@ function DatasetReport({ dataset }: { dataset: Dataset }) {
   return (
     <ScrollView contentInsetAdjustmentBehavior="automatic" style={{ backgroundColor: colors.background }} contentContainerStyle={styles.content}>
       <FileHeader dataset={dataset} />
-      <AppText tone="secondary">{t('report.intro')}</AppText>
+      <AppText variant="small" tone="secondary">
+        {t('report.intro')}
+      </AppText>
 
-      <View style={[styles.page, { backgroundColor: colors.card, borderColor: colors.border }]}>
+      <View style={[styles.page, { backgroundColor: colors.card }]}>
         <View style={styles.block}>
-          <AppText variant="small" tone="primary" style={styles.kicker}>
+          <AppText variant="small" tone="secondary" style={styles.kicker}>
             {t('report.label')}
           </AppText>
           <AppText variant="title">{name}</AppText>
@@ -72,11 +75,16 @@ function DatasetReport({ dataset }: { dataset: Dataset }) {
           </AppText>
           <View style={styles.grid}>
             {report.numbers.map((item, index) => (
-              <View key={item.label} style={[styles.tile, { backgroundColor: colors.background }]} accessible>
+              <View
+                key={item.label}
+                style={[styles.tile, { backgroundColor: colors.background }]}
+                accessible
+                accessibilityLabel={`${item.label}: ${item.value}. ${item.footnote}`}>
                 <AppText variant="small" tone="secondary">
-                  {`${item.label} [${index + 1}]`}
+                  {item.label}
+                  <AppText variant="small" tone="tertiary">{` ${numbers.count(index + 1)}`}</AppText>
                 </AppText>
-                <AppText variant="heading">{item.value}</AppText>
+                <Numeral parts={item.parts} format={numbers.format} size="medium" />
               </View>
             ))}
           </View>
@@ -92,8 +100,8 @@ function DatasetReport({ dataset }: { dataset: Dataset }) {
           ) : (
             report.noticed.map((item, index) => (
               <View key={index} style={styles.noticed}>
-                <AppText variant="label">{`•  ${item.title}`}</AppText>
-                <AppText variant="small" tone="secondary" style={styles.indent}>
+                <AppText variant="label">{item.title}</AppText>
+                <AppText variant="small" tone="secondary">
                   {item.body}
                 </AppText>
               </View>
@@ -106,7 +114,7 @@ function DatasetReport({ dataset }: { dataset: Dataset }) {
           <AppText variant="label" accessibilityRole="header">
             {t('report.fileCheck')}
           </AppText>
-          <AppText tone={checkTone}>{t('report.checkLine', { score: report.check.score, grade: gradeLabel })}</AppText>
+          <AppText tone={checkTone}>{t('report.checkLine', { score: numbers.count(report.check.score), grade: gradeLabel })}</AppText>
         </View>
 
         <Divider />
@@ -115,9 +123,14 @@ function DatasetReport({ dataset }: { dataset: Dataset }) {
             {t('report.how')}
           </AppText>
           {report.numbers.map((item, index) => (
-            <AppText key={item.label} variant="small" tone="secondary">
-              {`[${index + 1}] ${item.footnote}`}
-            </AppText>
+            <View key={item.label} style={styles.footnote}>
+              <AppText variant="small" tone="tertiary" style={styles.footnoteMark}>
+                {numbers.count(index + 1)}
+              </AppText>
+              <AppText variant="small" tone="secondary" style={styles.flex}>
+                {item.footnote}
+              </AppText>
+            </View>
           ))}
         </View>
 
@@ -126,10 +139,12 @@ function DatasetReport({ dataset }: { dataset: Dataset }) {
         </AppText>
       </View>
 
-      <BigButton label={t('report.share')} onPress={() => void share()} />
-      <AppText variant="small" tone="secondary" style={styles.center}>
-        {t('report.shareNote')}
-      </AppText>
+      <View style={styles.actions}>
+        <BigButton label={t('report.share')} icon={{ ios: 'square.and.arrow.up', android: 'share' }} onPress={() => void share()} />
+        <AppText variant="small" tone="secondary" style={styles.center}>
+          {t('report.shareNote')}
+        </AppText>
+      </View>
     </ScrollView>
   );
 }
@@ -140,15 +155,18 @@ function Divider() {
 }
 
 const styles = StyleSheet.create({
-  content: { padding: Spacing.xl, gap: Spacing.lg, paddingBottom: Spacing.xxxl },
-  page: { padding: Spacing.lg, borderRadius: Radius.lg, borderWidth: 1, gap: Spacing.lg },
+  content: { padding: Spacing.xl, gap: Spacing.xxl, paddingBottom: Spacing.huge },
+  page: { padding: Spacing.xl, borderRadius: Radius.xxl, gap: Spacing.lg },
   block: { gap: Spacing.sm },
   kicker: { fontWeight: '700', letterSpacing: 1 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm },
-  tile: { flexGrow: 1, flexBasis: '45%', padding: Spacing.md, borderRadius: Radius.md, gap: 2 },
+  tile: { flexGrow: 1, flexBasis: '45%', padding: Spacing.md, borderRadius: Radius.lg, gap: 2 },
   noticed: { gap: 2 },
-  indent: { paddingLeft: Spacing.lg },
+  footnote: { flexDirection: 'row', gap: Spacing.sm },
+  footnoteMark: { minWidth: 14, fontVariant: ['tabular-nums'] },
+  flex: { flex: 1 },
   divider: { height: StyleSheet.hairlineWidth },
   footer: { fontStyle: 'italic' },
+  actions: { gap: Spacing.md },
   center: { textAlign: 'center', alignSelf: 'stretch' },
 });
