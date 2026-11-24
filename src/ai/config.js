@@ -1,6 +1,7 @@
-// Every AI setting in one place. Switching to another provider with
-// the same chat-completions format is a one-file change: edit the
-// URL and model here (the client reads nothing else).
+// Every AI setting in one place. Switching to another provider or
+// model with the same chat-completions format is a one-file change:
+// edit the URL, model and modelName here (the client reads nothing
+// else, and the screens show modelName).
 
 export const AI_CONFIG = Object.freeze({
   // OpenAI-compatible chat-completions endpoint
@@ -9,6 +10,8 @@ export const AI_CONFIG = Object.freeze({
   // model used before, Llama 3.3 70B, is now Enterprise-only on Groq
   // and answers ordinary keys with 404 (model not found).
   model: "openai/gpt-oss-120b",
+  // The model's name as the screens show it ("Groq · GPT-OSS 120B")
+  modelName: "GPT-OSS 120B",
   // A stream silent for this long is cancelled instead of hanging
   streamTimeoutMs: 30000,
   // Most tokens one reply may use. A reasoning model (GPT-OSS) spends
