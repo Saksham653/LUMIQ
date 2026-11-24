@@ -5,10 +5,9 @@ import { BottomSheet, Button, Column, Host, Text as UIText } from '@expo/ui';
 import { File, type PickSingleFileResult } from 'expo-file-system';
 import { router } from 'expo-router';
 import { createContext, useCallback, useContext, useMemo, useRef, useState, type ReactNode } from 'react';
-import { ActivityIndicator, Alert, Modal, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { Alert, useWindowDimensions } from 'react-native';
 
-import { AppText } from '@/components/app-text';
-import { Radius, Spacing } from '@/constants/theme';
+import { hapticSuccess } from '@/components/haptics';
 import { deleteDataset, listStoredFiles, readDataset, storeDataset, type StoredFile } from '@/data/dataset-store';
 import { ImportError, previewFromFile } from '@/data/import-file';
 import { findSample } from '@/data/samples';
@@ -18,6 +17,10 @@ import { useAppState, useT } from '@/state/app-state';
 
 type DatasetsState = {
   myFiles: StoredFile[];
+  // A file is being read: Home shows a skeleton row in its place.
+  importing: boolean;
+  // The file added last in this session, so only it fades in.
+  lastAddedId: string | null;
   importFile: () => Promise<void>;
   removeFile: (id: string) => void;
   getDataset: (id: string | null) => Dataset | null;
@@ -37,6 +40,7 @@ export function DatasetsProvider({ children }: { children: ReactNode }) {
   const { activeDatasetId, setActiveDatasetId } = useAppState();
   const [myFiles, setMyFiles] = useState<StoredFile[]>(listStoredFiles);
   const [busy, setBusy] = useState(false);
+  const [lastAddedId, setLastAddedId] = useState<string | null>(null);
   const [sheetChoice, setSheetChoice] = useState<SheetChoice | null>(null);
   const cache = useRef(new Map<string, Dataset>());
   // Percentage widths are not applied inside the bottom sheet, so the sheet
@@ -102,7 +106,7 @@ export function DatasetsProvider({ children }: { children: ReactNode }) {
 
     setBusy(true);
     try {
-      // Let the "Opening your file" overlay appear before the parsing work.
+      // Let the skeleton row appear before the parsing work.
       await new Promise((resolve) => setTimeout(resolve, 60));
       const preview = await previewFromFile(file, chooseSheet);
       if (!preview) return;
@@ -110,7 +114,10 @@ export function DatasetsProvider({ children }: { children: ReactNode }) {
       const dataset = datasetFromPreview(preview, preview.types) as Dataset;
       cache.current.set(dataset.id, dataset);
       setMyFiles(storeDataset(dataset, myFiles));
+      setLastAddedId(dataset.id);
       setActiveDatasetId(dataset.id);
+      // One success haptic, as the new file appears.
+      hapticSuccess();
       router.navigate('/insights');
     } catch (error) {
       Alert.alert(t('import.errorTitle'), t(error instanceof ImportError ? error.messageKey : 'import.failed'));
@@ -129,22 +136,13 @@ export function DatasetsProvider({ children }: { children: ReactNode }) {
   );
 
   const value = useMemo<DatasetsState>(
-    () => ({ myFiles, importFile, removeFile, getDataset, datasetName }),
-    [myFiles, importFile, removeFile, getDataset, datasetName],
+    () => ({ myFiles, importing: busy, lastAddedId, importFile, removeFile, getDataset, datasetName }),
+    [myFiles, busy, lastAddedId, importFile, removeFile, getDataset, datasetName],
   );
 
   return (
     <DatasetsContext.Provider value={value}>
       {children}
-
-      <Modal transparent visible={busy} animationType="fade" statusBarTranslucent>
-        <View style={styles.overlay}>
-          <View style={[styles.busyCard, { backgroundColor: colors.card }]} accessible accessibilityLiveRegion="polite">
-            <ActivityIndicator size="large" color={colors.primary} />
-            <AppText variant="label">{t('import.opening')}</AppText>
-          </View>
-        </View>
-      </Modal>
 
       {sheetChoice && (
         <Host matchContents seedColor={colors.primary}>
@@ -178,8 +176,3 @@ export function useActiveDataset(): Dataset | null {
   const { getDataset } = useDatasets();
   return useMemo(() => getDataset(activeDatasetId), [getDataset, activeDatasetId]);
 }
-
-const styles = StyleSheet.create({
-  overlay: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(5, 9, 20, 0.45)' },
-  busyCard: { alignItems: 'center', gap: Spacing.lg, paddingVertical: Spacing.xxl, paddingHorizontal: Spacing.xxxl, borderRadius: Radius.lg },
-});
