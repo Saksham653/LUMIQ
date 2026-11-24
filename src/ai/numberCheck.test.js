@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { extractNumbers, collectCandidates, verifyNumbers } from "./numberCheck.js";
+import { resolveNumberFormat } from "../lib/numberFormat.js";
 
 describe("extractNumbers", () => {
   it("reads plain, comma-grouped and Indian-grouped numbers", () => {
@@ -104,5 +105,100 @@ describe("verifyNumbers (F8 checker)", () => {
       const { segments } = verifyNumbers(text, candidates);
       expect(segments.map((s) => s.text).join("")).toBe(text);
     }
+  });
+});
+
+describe("answers in every LUMIQ language", () => {
+  // The sales sample: 12 months, total 4,677,000, December 712,000,
+  // February 198,000, Electronics 51.1% of revenue.
+  const candidates = collectCandidates(
+    [
+      { month: "Dec", revenue: 712000 },
+      { month: "Feb", revenue: 198000 },
+      { total: 4677000, share: 51.1 },
+    ],
+    [12, 12, 3]
+  );
+  const values = (text, options) => extractNumbers(text, options).map((n) => n.value);
+  const check = (text, options) => verifyNumbers(text, candidates, options);
+
+  it("English: 4.68M, 712,000, 51.1%", () => {
+    const text = "Revenue adds up to 4.68M across the 12 months; December was highest at 712,000 and Electronics took 51.1%.";
+    expect(values(text, { language: "en" })).toEqual([4680000, 12, 712000, 51.1]);
+    expect(check(text, { language: "en" }).unverified).toBe(0);
+  });
+
+  it("German: decimal comma, dot grouping, Mio. and 51,1 %", () => {
+    const text =
+      "Dein Umsatz beträgt in den 12 Monaten insgesamt 4,68 Mio. Am höchsten war der Dezember mit 712.000, am niedrigsten der Februar mit 198.000. Elektronik: 51,1 %.";
+    expect(values(text, { language: "de" })).toEqual([12, 4680000, 712000, 198000, 51.1]);
+    expect(check(text, { language: "de" })).toMatchObject({ checked: 5, unverified: 0 });
+    // The same digits read the English way would be wrong, so the language decides.
+    expect(values("712.000", { language: "en" })).toEqual([712]);
+  });
+
+  it("German: a decimal dot written by habit still reads as decimals", () => {
+    expect(values("insgesamt 4.68 Mio. und 1.234,5", { language: "de" })).toEqual([4680000, 1234.5]);
+  });
+
+  it("Spanish: 4,68 M, 712 mil, millones", () => {
+    const text = "Los ingresos suman 4,68 M en 12 meses; diciembre llegó a 712 mil y febrero a 198.000. En total 4,68 millones.";
+    expect(values(text, { language: "es" })).toEqual([4680000, 12, 712000, 198000, 4680000]);
+    expect(check(text, { language: "es" }).unverified).toBe(0);
+  });
+
+  it("French: narrow no-break or ordinary spaces between thousands, 51,1 %", () => {
+    const text = "Total 4,68 M sur 12 mois. Décembre : 712 000 ; février : 198 000. Électronique 51,1 %.";
+    expect(values(text, { language: "fr" })).toEqual([4680000, 12, 712000, 198000, 51.1]);
+    expect(check(text, { language: "fr" }).unverified).toBe(0);
+  });
+
+  it("Japanese: 万 and 億; dates like 12月 and 2月 are not checked", () => {
+    const text = "12か月の売上合計は468万です。最も多かったのは12月の71.2万、最も少なかったのは2月の19.8万でした。";
+    expect(values(text, { language: "ja" })).toEqual([12, 4680000, 712000, 198000]);
+    expect(check(text, { language: "ja" })).toMatchObject({ checked: 4, unverified: 0 });
+    expect(values("2024年の売上は1.2億円", { language: "ja" })).toEqual([120000000]);
+  });
+
+  it("Chinese: 万 and 亿", () => {
+    const text = "总收入为468万元，最高的是12月的71.2万。";
+    expect(values(text, { language: "zh" })).toEqual([4680000, 712000]);
+    expect(check(text, { language: "zh" }).unverified).toBe(0);
+    expect(values("约1.2亿", { language: "zh" })).toEqual([120000000]);
+  });
+
+  it("Hebrew: numbers stay left to right, and a prefix like ב- is not a minus", () => {
+    const text = "סך ההכנסות ב-12 החודשים הוא 4.68M. החודש הגבוה ביותר היה דצמבר עם 712,000, והנמוך ביותר פברואר עם 198,000.";
+    expect(values(text, { language: "he" })).toEqual([12, 4680000, 712000, 198000]);
+    expect(check(text, { language: "he" })).toMatchObject({ checked: 4, unverified: 0 });
+  });
+
+  it("Hindi: लाख with the Hindi format", () => {
+    const text = "कुल revenue 46.8 लाख है; दिसंबर में 7.12 लाख।";
+    expect(values(text, { language: "hi" })).toEqual([4680000, 712000]);
+    expect(check(text, { language: "hi" }).unverified).toBe(0);
+  });
+
+  it("a currency sign before or after the number is not part of it", () => {
+    expect(values("€4.68M or ₪1,234.5 or ¥468万 or 1,234.5 ₪", { language: "en" })).toEqual([
+      4680000, 1234.5, 4680000, 1234.5,
+    ]);
+    expect(values("4,68 Mio. € und 712.000 €", { language: "de" })).toEqual([4680000, 712000]);
+  });
+
+  it("a range is two positive numbers, a spaced minus is still negative", () => {
+    expect(values("10-20 rows", { language: "en" })).toEqual([10, 20]);
+    expect(values("change of -3.5% and (−2)", { language: "en" })).toEqual([-3.5, -2]);
+  });
+
+  it("a style picked by hand decides, and a full format works the same", () => {
+    expect(values("1.234,5", { language: "en", style: "dot-comma" })).toEqual([1234.5]);
+    expect(values("1.234,5", resolveNumberFormat("de"))).toEqual([1234.5]);
+    expect(values("12,34,567.8", resolveNumberFormat("hi"))).toEqual([1234567.8]);
+  });
+
+  it("a wrong number in any language is still caught", () => {
+    expect(check("Der Dezember lag bei 713.000.", { language: "de" }).unverified).toBe(1);
+    expect(check("12月は75万でした。", { language: "ja" }).unverified).toBe(1);
   });
 });
