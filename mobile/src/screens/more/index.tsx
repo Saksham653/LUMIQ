@@ -1,6 +1,7 @@
 import SegmentedControl from '@expo/ui/community/segmented-control';
 import Constants from 'expo-constants';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { router, type Href } from 'expo-router';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { AppIcon, type IconName } from '@/components/app-icon';
 import { AppText } from '@/components/app-text';
@@ -13,14 +14,14 @@ import { useAppState, useT } from '@/state/app-state';
 const LANGUAGES: Language[] = ['en', 'hi'];
 const LANGUAGE_LABELS = ['English', 'हिंदी'];
 
-const TOOLS: { icon: IconName; titleKey: StringKey; descKey: StringKey }[] = [
-  { icon: { ios: 'slider.horizontal.3', android: 'tune' }, titleKey: 'more.whatIf', descKey: 'more.whatIfDesc' },
+// The tools: a tool with an href opens; the others are still on the way.
+const TOOLS: { icon: IconName; titleKey: StringKey; descKey: StringKey; href?: Href }[] = [
+  { icon: { ios: 'slider.horizontal.3', android: 'tune' }, titleKey: 'more.whatIf', descKey: 'more.whatIfDesc', href: '/what-if' },
   { icon: { ios: 'checkmark.shield', android: 'verified' }, titleKey: 'more.fileCheck', descKey: 'more.fileCheckDesc' },
   { icon: { ios: 'doc.richtext', android: 'description' }, titleKey: 'more.report', descKey: 'more.reportDesc' },
 ];
 
-// More: the app language, the tools that are on the way, and the privacy
-// promise in plain words.
+// More: the app language, the tools, and the privacy promise in plain words.
 export function More() {
   const colors = useTheme();
   const t = useT();
@@ -43,27 +44,46 @@ export function More() {
 
       <Section title={t('more.tools')}>
         <View style={[styles.group, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          {TOOLS.map((tool, index) => (
-            <View
-              key={tool.titleKey}
-              style={[styles.row, index > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderColor: colors.border }]}
-              accessible
-              accessibilityState={{ disabled: true }}
-              accessibilityLabel={`${t(tool.titleKey)}. ${t(tool.descKey)}. ${t('more.soon')}`}>
-              <AppIcon name={tool.icon} size={24} color={colors.textSecondary} />
+          {TOOLS.map((tool, index) => {
+            const href = tool.href;
+            const divider = index > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderColor: colors.border };
+            const text = (
               <View style={styles.rowText}>
                 <AppText variant="label">{t(tool.titleKey)}</AppText>
                 <AppText variant="small" tone="secondary">
                   {t(tool.descKey)}
                 </AppText>
               </View>
-              <View style={[styles.badge, { backgroundColor: colors.accentContainer }]}>
-                <AppText variant="small" tone="accent">
-                  {t('more.soon')}
-                </AppText>
+            );
+            return href ? (
+              <Pressable
+                key={tool.titleKey}
+                onPress={() => router.push(href)}
+                accessibilityRole="button"
+                accessibilityLabel={`${t(tool.titleKey)}. ${t(tool.descKey)}`}
+                android_ripple={{ color: colors.primaryContainer }}
+                style={[styles.row, divider]}>
+                <AppIcon name={tool.icon} size={24} color={colors.primary} />
+                {text}
+                <AppIcon name={{ ios: 'chevron.right', android: 'chevron_right' }} size={22} color={colors.textSecondary} />
+              </Pressable>
+            ) : (
+              <View
+                key={tool.titleKey}
+                style={[styles.row, divider]}
+                accessible
+                accessibilityState={{ disabled: true }}
+                accessibilityLabel={`${t(tool.titleKey)}. ${t(tool.descKey)}. ${t('more.soon')}`}>
+                <AppIcon name={tool.icon} size={24} color={colors.textSecondary} />
+                {text}
+                <View style={[styles.badge, { backgroundColor: colors.accentContainer }]}>
+                  <AppText variant="small" tone="accent">
+                    {t('more.soon')}
+                  </AppText>
+                </View>
               </View>
-            </View>
-          ))}
+            );
+          })}
         </View>
       </Section>
 
