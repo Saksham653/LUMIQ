@@ -1,85 +1,97 @@
+import {
+  formatAmount,
+  formatAmountParts,
+  formatCount,
+  formatExact,
+  formatNumber,
+  formatPercent,
+  formatSignedPercent,
+  resolveNumberFormat,
+} from '@core/lib/numberFormat.js';
+
 import type { ColumnType } from '@/data/types';
-import { translate, type Language } from '@/i18n';
+import { languageInfo, type Language } from '@/i18n';
+import type { DefaultCurrency, NumberStyleChoice } from '@/utils/settings-file';
 
-const INDIAN_SYMBOLS = new Set(['', '₹', 'Rs', 'Rs.', 'INR']);
+export type NumberFormat = ReturnType<typeof resolveNumberFormat>;
 
-// 46.77 → "46.77", 3.90 → "3.9", 7.0 → "7"
-function trimNumber(value: number, decimals: number) {
-  return String(Number(value.toFixed(decimals)));
+// Every number on screen goes through one of these, so it follows the chosen
+// language, the number style picked by hand and the file's own currency.
+export type Numbers = {
+  format: NumberFormat;
+  // Big numbers shortened (4.68M, 46.8 लाख, 4,68 Mio., 468万); money with
+  // its currency; percent with one decimal. `column` lets an amount column
+  // show the default currency when the file has none.
+  amount: (value: number | null | undefined, typeInfo?: ColumnType, column?: string) => string;
+  // The same amount in parts, for big numerals with a lighter unit.
+  amountParts: (
+    value: number | null | undefined,
+    typeInfo?: ColumnType,
+    column?: string,
+  ) => { prefix: string; number: string; suffix: string; rtl: boolean };
+  // Whole counts with grouping: 1,240 / 1.240 / 1 240.
+  count: (value: number) => string;
+  // Exact figures (at most two decimals), never shortened.
+  exact: (value: number) => string;
+  // A plain number with up to `decimals` decimals.
+  number: (value: number, decimals?: number) => string;
+  percent: (value: number, decimals?: number) => string;
+  // A change with its sign: "+5.5%", "-2 %".
+  signedPercent: (value: number) => string;
+  date: (timestamp: number) => string;
+};
+
+const CURRENCY_SYMBOL: Record<DefaultCurrency, { symbol: string; currency?: string }> = {
+  USD: { symbol: '$' },
+  EUR: { symbol: '€' },
+  GBP: { symbol: '£' },
+  JPY: { symbol: '¥', currency: 'JPY' },
+  CNY: { symbol: '¥', currency: 'CNY' },
+  INR: { symbol: '₹' },
+  ILS: { symbol: '₪' },
+};
+
+// Columns that hold amounts of money, by name. Rates, counts and scores are
+// never given a currency.
+const MONEY_NAME = /revenue|sales|amount|price|cost|spend|profit|income|budget|salary|fee|paid|turnover|gmv|earning|expense|value|total/i;
+const NOT_MONEY_NAME = /rate|margin|ratio|pct|percent|score|nps|count|qty|quantity|orders|units|returns/i;
+
+function withDefaultCurrency(typeInfo: ColumnType | undefined, column: string | undefined, currency: DefaultCurrency | null) {
+  if (!currency || !column || typeInfo?.type !== 'number') return typeInfo;
+  if (!MONEY_NAME.test(column) || NOT_MONEY_NAME.test(column)) return typeInfo;
+  return { type: 'money', ...CURRENCY_SYMBOL[currency] } as ColumnType;
 }
 
-// Puts the decimals back without trailing zeros: 4.50 → "4.5", 7.00 → "7".
-function withFraction(grouped: string, fraction: string | undefined) {
-  const digits = fraction?.replace(/0+$/, '');
-  return digits ? `${grouped}.${digits}` : grouped;
-}
-
-// Indian digit grouping: 1234567 → "12,34,567".
-function groupIndian(value: number, decimals: number) {
-  const [whole, fraction] = value.toFixed(decimals).split('.');
-  const lastThree = whole.slice(-3);
-  const rest = whole.slice(0, -3);
-  const grouped = rest ? `${rest.replace(/\B(?=(\d{2})+(?!\d))/g, ',')},${lastThree}` : lastThree;
-  return withFraction(grouped, fraction);
-}
-
-function groupInternational(value: number, decimals: number) {
-  const [whole, fraction] = value.toFixed(decimals).split('.');
-  return withFraction(whole.replace(/\B(?=(\d{3})+(?!\d))/g, ','), fraction);
-}
-
-// A number for people, not spreadsheets: rupee amounts and plain numbers in
-// lakh / crore (लाख / करोड़ in Hindi), other currencies in K / M / B, and
-// percentages with one decimal. Blanks show as a dash, never as 0.
-export function formatAmount(value: number | null | undefined, typeInfo: ColumnType | undefined, language: Language): string {
-  if (value === null || value === undefined || !Number.isFinite(value)) return '—';
-  if (typeInfo?.type === 'percent') return `${trimNumber(value, 1)}%`;
-
-  const symbol = typeInfo?.type === 'money' ? (typeInfo.symbol ?? '') : '';
-  const sign = value < 0 ? '-' : '';
-  const abs = Math.abs(value);
-  const decimals = Number.isInteger(abs) ? 0 : abs < 100 ? 2 : 1;
-  let core: string;
-
-  if (INDIAN_SYMBOLS.has(symbol)) {
-    if (abs >= 1e7) core = `${trimNumber(abs / 1e7, 2)} ${translate(language, 'unit.crore')}`;
-    else if (abs >= 1e5) core = `${trimNumber(abs / 1e5, abs >= 1e6 ? 1 : 2)} ${translate(language, 'unit.lakh')}`;
-    else core = groupIndian(abs, decimals);
-  } else if (abs >= 1e9) core = `${trimNumber(abs / 1e9, 2)}B`;
-  else if (abs >= 1e6) core = `${trimNumber(abs / 1e6, 2)}M`;
-  else if (abs >= 1e4) core = `${trimNumber(abs / 1e3, 1)}K`;
-  else core = groupInternational(abs, decimals);
-
-  return `${sign}${symbol}${core}`;
-}
-
-// Whole counts with digit grouping, e.g. rows: 1240 → "1,240".
-export function formatCount(value: number): string {
-  return groupIndian(Math.round(value), 0);
-}
-
-// Exact figures for a result table, so they can be matched with the words of
-// an answer: digit grouping and at most two decimals, never lakh or K.
-export function formatExact(value: number): string {
-  if (!Number.isFinite(value)) return '—';
-  const abs = Math.abs(value);
-  return `${value < 0 ? '-' : ''}${groupIndian(abs, Number.isInteger(abs) ? 0 : 2)}`;
+export function makeNumbers(
+  language: Language,
+  style: NumberStyleChoice = 'auto',
+  defaultCurrency: DefaultCurrency | null = null,
+): Numbers {
+  const format = resolveNumberFormat(language, style);
+  const locale = `${languageInfo(language).locale}-u-nu-latn`;
+  return {
+    format,
+    amount: (value, typeInfo, column) =>
+      formatAmount(value ?? null, withDefaultCurrency(typeInfo, column, defaultCurrency), format),
+    amountParts: (value, typeInfo, column) =>
+      formatAmountParts(value ?? null, withDefaultCurrency(typeInfo, column, defaultCurrency), format),
+    count: (value) => formatCount(value, format),
+    exact: (value) => formatExact(value, format),
+    number: (value, decimals = 2) => formatNumber(value, format, { maxDecimals: decimals }),
+    percent: (value, decimals = 1) => formatPercent(value, format, decimals),
+    signedPercent: (value) => formatSignedPercent(value, format),
+    date: (timestamp) => {
+      try {
+        return new Date(timestamp).toLocaleDateString(locale, { day: 'numeric', month: 'short', year: 'numeric' });
+      } catch {
+        return new Date(timestamp).toDateString();
+      }
+    },
+  };
 }
 
 // Column names as people would say them: "avg_order_value" → "Avg order value".
 export function prettyColumn(column: string): string {
   const spaced = column.replace(/[_]+/g, ' ').replace(/\s+/g, ' ').trim();
   return spaced ? spaced.charAt(0).toUpperCase() + spaced.slice(1) : column;
-}
-
-export function formatDate(timestamp: number, language: Language): string {
-  try {
-    return new Date(timestamp).toLocaleDateString(language === 'hi' ? 'hi-IN' : 'en-IN', {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric',
-    });
-  } catch {
-    return new Date(timestamp).toDateString();
-  }
 }

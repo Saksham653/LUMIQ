@@ -1,67 +1,104 @@
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 import { AppIcon } from '@/components/app-icon';
 import { AppText } from '@/components/app-text';
-import { PrivacyNote } from '@/components/privacy-note';
-import { Radius, Spacing } from '@/constants/theme';
+import { PrismRing } from '@/components/prism-ring';
+import { Numeral, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import type { Grade } from '@/utils/file-check';
+import type { NumberFormat } from '@/utils/format';
 
-// The score out of 100 in a coloured ring, a one-word grade and one sentence
-// saying what it means.
-export function ScoreCard({
+export type ScoreTerm = { value: string; label: string };
+
+// The File check score: the ring drawn in the prism gradient, then the score
+// as a plain sum so every lost point shows (100 − 2 = 98), a small verified
+// mark saying it was checked on the phone, and one sentence on what it means.
+export function ScoreSummary({
   score,
-  grade,
+  format,
+  reveal,
   outOf,
-  gradeLabel,
+  start,
+  deductions,
+  total,
+  checkedLine,
   sentence,
-  privacy,
+  spoken,
 }: {
   score: number;
-  grade: Grade;
+  format: NumberFormat;
+  reveal: boolean;
   outOf: string;
-  gradeLabel: string;
+  start: ScoreTerm;
+  deductions: ScoreTerm[];
+  total: ScoreTerm;
+  checkedLine: string;
   sentence: string;
-  privacy: string;
+  spoken: string;
 }) {
   const colors = useTheme();
-  const good = grade === 'great' || grade === 'good';
-  const tone = grade === 'great' ? colors.success : grade === 'good' ? colors.primary : colors.accent;
-  const container = grade === 'great' ? colors.successContainer : grade === 'good' ? colors.primaryContainer : colors.accentContainer;
-
   return (
-    <View
-      style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}
-      accessible
-      accessibilityLabel={`${score} ${outOf}. ${gradeLabel}. ${sentence}`}>
-      <View style={[styles.ring, { borderColor: tone }]}>
-        <AppText style={[styles.score, { color: colors.text }]}>{String(score)}</AppText>
-        <AppText variant="small" tone="secondary" style={styles.center}>
-          {outOf}
-        </AppText>
-      </View>
-      <View style={[styles.badge, { backgroundColor: container }]}>
-        <AppIcon
-          name={good ? { ios: 'checkmark.seal.fill', android: 'verified' } : { ios: 'exclamationmark.triangle.fill', android: 'warning' }}
-          size={18}
-          color={tone}
-        />
-        <AppText variant="label" snug style={{ color: tone }}>
-          {gradeLabel}
+    <View style={styles.wrap} accessible accessibilityLabel={spoken}>
+      <PrismRing score={score} outOf={outOf} format={format} reveal={reveal} />
+      {deductions.length > 0 ? (
+        // A sum reads left to right in every language.
+        <View style={styles.sum}>
+          <Term term={start} />
+          {deductions.map((term, index) => (
+            <View key={index} style={styles.pair}>
+              <Text style={[styles.operator, { color: colors.textTertiary }]}>−</Text>
+              <Term term={term} tone={colors.accent} />
+            </View>
+          ))}
+          <View style={styles.pair}>
+            <Text style={[styles.operator, { color: colors.textTertiary }]}>=</Text>
+            <Term term={total} strong />
+          </View>
+        </View>
+      ) : null}
+      <View style={styles.checked}>
+        <View style={[styles.checkDot, { backgroundColor: colors.success }]}>
+          <AppIcon name={{ ios: 'checkmark', android: 'check' }} size={11} color={colors.onSuccess} />
+        </View>
+        <AppText variant="small" tone="secondary" style={styles.flexText}>
+          {checkedLine}
         </AppText>
       </View>
       <AppText variant="heading" style={styles.center}>
         {sentence}
       </AppText>
-      <PrivacyNote text={privacy} />
+    </View>
+  );
+}
+
+function Term({ term, tone, strong }: { term: ScoreTerm; tone?: string; strong?: boolean }) {
+  const colors = useTheme();
+  return (
+    <View style={styles.term}>
+      <Text style={[styles.termValue, { color: tone ?? colors.text, fontWeight: strong ? '800' : '700' }]} maxFontSizeMultiplier={1.3}>
+        {term.value}
+      </Text>
+      <AppText variant="small" tone="secondary" style={styles.termLabel}>
+        {term.label}
+      </AppText>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  card: { alignItems: 'center', gap: Spacing.md, padding: Spacing.xl, borderRadius: Radius.lg, borderWidth: 1 },
-  ring: { width: 148, height: 148, borderRadius: 74, borderWidth: 10, alignItems: 'center', justifyContent: 'center' },
-  score: { fontSize: 48, lineHeight: 56, fontWeight: '800', textAlign: 'center', alignSelf: 'stretch' },
-  badge: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs, paddingHorizontal: Spacing.md, paddingVertical: Spacing.xs, borderRadius: Radius.pill },
+  wrap: { alignItems: 'center', gap: Spacing.lg, paddingVertical: Spacing.sm },
+  sum: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'center', flexWrap: 'wrap', gap: Spacing.md, direction: 'ltr' },
+  pair: { flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.md },
+  operator: { fontSize: Numeral.medium, lineHeight: Math.round(Numeral.medium * 1.2), fontWeight: '400' },
+  term: { alignItems: 'center', maxWidth: 120 },
+  termValue: {
+    fontSize: Numeral.medium,
+    lineHeight: Math.round(Numeral.medium * 1.2),
+    fontVariant: ['tabular-nums'],
+    letterSpacing: -0.5,
+  },
+  termLabel: { textAlign: 'center', alignSelf: 'stretch' },
+  checked: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, justifyContent: 'center' },
+  checkDot: { width: 16, height: 16, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
+  flexText: { flexShrink: 1, textAlign: 'center' },
   center: { textAlign: 'center', alignSelf: 'stretch' },
 });

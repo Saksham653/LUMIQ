@@ -2,12 +2,22 @@ import { File, Paths } from 'expo-file-system';
 
 import type { Language } from '@/i18n';
 
+// A number style picked by hand on the Numbers & currency screen, or "auto"
+// to follow the language (see @core/lib/numberFormat.js).
+export type NumberStyleChoice = 'auto' | 'comma-dot' | 'dot-comma' | 'space-comma' | 'indian' | 'cjk';
+
+// The currency for amount columns when a file shows none, or null for plain
+// numbers. Never used to convert anything.
+export type DefaultCurrency = 'USD' | 'EUR' | 'GBP' | 'JPY' | 'CNY' | 'INR' | 'ILS';
+
 // Small app settings, kept in one JSON file in the app's private storage on the
 // phone. Nothing here ever leaves the device.
 export type StoredSettings = {
   language?: Language;
   onboarded?: boolean;
   activeDatasetId?: string;
+  numberStyle?: NumberStyleChoice;
+  defaultCurrency?: DefaultCurrency | null;
 };
 
 const settingsFile = () => new File(Paths.document, 'lumiq-settings.json');
@@ -24,11 +34,14 @@ export function loadSettings(): StoredSettings {
   }
 }
 
+// Written synchronously: `write()` is asynchronous, so two saves in a row
+// (Welcome's "Try with sample data" saves twice) could land out of order and
+// lose the newer one, and a save just before the Hebrew restart could miss it.
 export function saveSettings(settings: StoredSettings): void {
   try {
     const file = settingsFile();
     if (!file.exists) file.create();
-    file.write(JSON.stringify(settings));
+    file.writeSync(JSON.stringify(settings));
   } catch (error) {
     console.warn('LUMIQ: could not save settings', error);
   }

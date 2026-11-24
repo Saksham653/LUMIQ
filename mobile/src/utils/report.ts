@@ -3,7 +3,7 @@ import { buildReportData } from '@core/engine/reportData.js';
 import type { ColumnType, Dataset } from '@/data/types';
 import type { Language, StringKey } from '@/i18n';
 import { checkFile, type Grade } from '@/utils/file-check';
-import { formatAmount, formatCount, formatDate, prettyColumn } from '@/utils/format';
+import { prettyColumn, type Numbers } from '@/utils/format';
 import { describeInsights } from '@/utils/insight-text';
 
 type Translate = (key: StringKey, params?: Record<string, string | number>) => string;
@@ -15,7 +15,13 @@ type EngineItem = { kind: 'rows' | 'sum' | 'avg'; column: string | null; value: 
 const SAYS_AVERAGE = /^(avg|average|mean)\b/i;
 const SAYS_TOTAL = /^(total|sum)\b/i;
 
-export type ReportNumber = { label: string; value: string; footnote: string };
+// `parts` is the same value split for a big numeral (digits, lighter unit).
+export type ReportNumber = {
+  label: string;
+  value: string;
+  parts: { prefix: string; number: string; suffix: string; rtl: boolean };
+  footnote: string;
+};
 
 export type Report = {
   name: string;
@@ -28,19 +34,26 @@ export type Report = {
 // The report's contents, worded in the app's language: the shared engine's
 // headline numbers with their footnotes, what LUMIQ noticed, and the File
 // check score. Everything is worked out on the phone.
-export function buildReport(dataset: Dataset, name: string, t: Translate, language: Language): Report {
+export function buildReport(dataset: Dataset, name: string, t: Translate, formatter: Numbers, language: Language): Report {
   const engine = buildReportData(dataset) as { items: EngineItem[] };
-  const rows = formatCount(dataset.data.length);
+  const rows = formatter.count(dataset.data.length);
 
   const numbers = engine.items.map((item): ReportNumber => {
     if (item.kind === 'rows' || !item.column) {
-      return { label: t('report.rows'), value: formatCount(item.value ?? 0), footnote: t('report.footRows', { name }) };
+      const count = formatter.count(item.value ?? 0);
+      return {
+        label: t('report.rows'),
+        value: count,
+        parts: { prefix: '', number: count, suffix: '', rtl: false },
+        footnote: t('report.footRows', { name }),
+      };
     }
     const column = prettyColumn(item.column);
     const saysItself = item.kind === 'avg' ? SAYS_AVERAGE.test(column) : SAYS_TOTAL.test(column);
     return {
       label: saysItself ? column : t(item.kind === 'avg' ? 'report.average' : 'report.total', { column }),
-      value: formatAmount(item.value, item.typeInfo, language),
+      value: formatter.amount(item.value, item.typeInfo, item.column),
+      parts: formatter.amountParts(item.value, item.typeInfo, item.column),
       footnote: t(item.kind === 'avg' ? 'report.footAvg' : 'report.footSum', { column, rows }),
     };
   });
@@ -48,9 +61,9 @@ export function buildReport(dataset: Dataset, name: string, t: Translate, langua
   const check = checkFile(dataset);
   return {
     name,
-    meta: t('report.meta', { rows, cols: dataset.columns.length, date: formatDate(Date.now(), language) }),
+    meta: t('report.meta', { rows, cols: dataset.columns.length, date: formatter.date(Date.now()) }),
     numbers,
-    noticed: describeInsights(dataset, t, language).map(({ title, body }) => ({ title, body })),
+    noticed: describeInsights(dataset, t, formatter, language).map(({ title, body }) => ({ title, body })),
     check: { score: check.score, grade: check.grade },
   };
 }

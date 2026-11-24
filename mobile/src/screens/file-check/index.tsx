@@ -1,24 +1,27 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/components/app-text';
 import { FileHeader } from '@/components/file-header';
 import { NoFileChosen } from '@/components/no-file-chosen';
-import { Section } from '@/components/section';
-import { Radius, Spacing } from '@/constants/theme';
+import { Group, SectionTitle } from '@/components/grouped';
+import { PrivacyNote } from '@/components/privacy-note';
+import { Spacing } from '@/constants/theme';
 import type { ColumnKind, Dataset } from '@/data/types';
 import { useTheme } from '@/hooks/use-theme';
-import type { StringKey } from '@/i18n';
-import { useAppState, useT } from '@/state/app-state';
+import { listJoin, type Language, type StringKey } from '@/i18n';
+import { useAppState, useNumbers, useT } from '@/state/app-state';
 import { useActiveDataset } from '@/state/datasets';
 import { CHECKS, checkFile, profileColumn, type CheckKind, type Deduction, type Grade } from '@/utils/file-check';
-import { formatAmount, formatCount, formatExact } from '@/utils/format';
 
 import { CheckRow } from './check-row';
-import { ColumnCard } from './column-card';
-import { ScoreCard } from './score-card';
+import { ColumnRow } from './column-card';
+import { ScoreSummary } from './score-card';
 
 const FIRST_COLUMNS = 4;
+
+// Files whose score has already been revealed in this session.
+const revealed = new Set<string>();
 
 const CHECK_TITLE: Record<CheckKind, StringKey> = {
   empty: 'check.empty',
@@ -31,6 +34,12 @@ const FIX_TIP: Record<CheckKind, StringKey> = {
   repeats: 'check.fixTip.repeats',
   mixed: 'check.fixTip.mixed',
   unusual: 'check.fixTip.unusual',
+};
+const SUM_LABEL: Record<CheckKind, StringKey> = {
+  empty: 'check.sum.empty',
+  repeats: 'check.sum.repeats',
+  mixed: 'check.sum.mixed',
+  unusual: 'check.sum.unusual',
 };
 const GRADE_LABEL: Record<Grade, StringKey> = {
   great: 'check.grade.great',
@@ -53,7 +62,8 @@ const TYPE_LABEL: Record<ColumnKind, StringKey> = {
 };
 
 // "17, 18, 19, 20" — with "…" when there are more than the examples shown.
-const rowList = (rows: number[], total: number) => `${rows.join(', ')}${total > rows.length ? ', …' : ''}`;
+const rowList = (rows: string[], total: number, language: Language) =>
+  `${listJoin(rows, language)}${total > rows.length ? (language === 'ja' || language === 'zh' ? '、…' : ', …') : ''}`;
 
 // File check: is the file clean and ready? The shared health score (the same
 // four checks as the web app), every lost point explained, where it is and
@@ -66,15 +76,23 @@ export function FileCheck() {
 function DatasetCheck({ dataset }: { dataset: Dataset }) {
   const colors = useTheme();
   const t = useT();
+  const numbers = useNumbers();
   const { language } = useAppState();
   const [allColumns, setAllColumns] = useState(false);
+  // The ring draws only the first time this file is checked in a session.
+  const [firstLook] = useState(() => !revealed.has(dataset.id));
+  useEffect(() => {
+    revealed.add(dataset.id);
+  }, [dataset.id]);
 
   const result = useMemo(() => checkFile(dataset), [dataset]);
   const profiles = useMemo(() => dataset.columns.map((column) => profileColumn(dataset, column)), [dataset]);
   const shown = allColumns ? profiles : profiles.slice(0, FIRST_COLUMNS);
   const clearCount = CHECKS.filter((kind) => result.checks[kind].length === 0).length;
 
-  const amountIn = (column: string, value: number) => formatAmount(value, dataset.columnTypes?.[column], language);
+  const amountIn = (column: string, value: number) => numbers.amount(value, dataset.columnTypes?.[column], column);
+  const formatCount = numbers.count;
+  const formatExact = numbers.exact;
   const points = (list: Deduction[]) => list.reduce((total, item) => total + item.points, 0);
 
   const summaryFor = (kind: CheckKind): string => {
@@ -92,9 +110,9 @@ function DatasetCheck({ dataset }: { dataset: Dataset }) {
     for (const item of result.checks[kind]) {
       if (item.kind === 'empty') {
         lines.push(t('check.emptyLine', { column: item.facts.column, empty: formatCount(item.facts.empty), rows: formatCount(item.facts.rows), points: item.points }));
-        lines.push(t('check.rows', { rows: rowList(item.facts.examples, item.facts.empty) }));
+        lines.push(t('check.rows', { rows: rowList(item.facts.examples.map(formatCount), item.facts.empty, language) }));
       } else if (item.kind === 'repeats') {
-        lines.push(t('check.rows', { rows: rowList(item.facts.examples, item.facts.repeats) }));
+        lines.push(t('check.rows', { rows: rowList(item.facts.examples.map(formatCount), item.facts.repeats, language) }));
       } else if (item.kind === 'mixed') {
         lines.push(t('check.mixedLine', { column: item.facts.column, numericish: item.facts.numericish, total: item.facts.total, points: item.points }));
       } else if (item.kind === 'unusual') {
@@ -124,81 +142,103 @@ function DatasetCheck({ dataset }: { dataset: Dataset }) {
       return t('check.range', { low: amountIn(profile.name, profile.range.low), high: amountIn(profile.name, profile.range.high) });
     }
     if (profile.dates) return t('check.dateRange', { first: profile.dates.first, last: profile.dates.last });
-    if (profile.values) return t('check.values', { unique: formatCount(profile.values.unique), common: profile.values.common.join(', ') });
+    if (profile.values) return t('check.values', { unique: formatCount(profile.values.unique), common: listJoin(profile.values.common, language) });
     return t('check.noneFound');
   };
+
+  // The sum under the ring: the start, each kind of lost point, the score.
+  const deductions = CHECKS.map((kind) => ({ kind, lost: points(result.checks[kind]) }))
+    .filter((item) => item.lost > 0)
+    .map((item) => ({ value: formatCount(item.lost), label: t(SUM_LABEL[item.kind]) }));
 
   return (
     <ScrollView contentInsetAdjustmentBehavior="automatic" style={{ backgroundColor: colors.background }} contentContainerStyle={styles.content}>
       <FileHeader dataset={dataset} />
-      <AppText tone="secondary">{t('check.intro')}</AppText>
 
-      <ScoreCard
+      <ScoreSummary
         score={result.score}
-        grade={result.grade}
+        format={numbers.format}
+        reveal={firstLook}
         outOf={t('check.outOf')}
-        gradeLabel={t(GRADE_LABEL[result.grade])}
+        start={{ value: formatCount(100), label: t('check.sumStart') }}
+        deductions={result.noRows ? [] : deductions}
+        total={{ value: formatCount(result.score), label: t('check.sumScore') }}
+        checkedLine={t('check.checkedRows', { rows: formatCount(dataset.data.length), total: formatCount(dataset.data.length) })}
         sentence={result.noRows ? t('check.noRows') : t(GRADE_SENTENCE[result.grade])}
-        privacy={t('privacy.short')}
+        spoken={`${result.score} ${t('check.outOf')}. ${t(GRADE_LABEL[result.grade])}. ${
+          result.noRows ? t('check.noRows') : t(GRADE_SENTENCE[result.grade])
+        }`}
       />
 
       {!result.noRows && (
-        <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <View style={styles.cardTitle}>
-            <AppText variant="heading" style={styles.flex}>
-              {t('check.whatWeChecked')}
-            </AppText>
-            <AppText variant="small" snug tone={clearCount === CHECKS.length ? 'success' : 'secondary'}>
-              {t('check.clearCount', { clear: clearCount })}
-            </AppText>
-          </View>
-          {CHECKS.map((kind) => (
-            <CheckRow
-              key={kind}
-              title={t(CHECK_TITLE[kind])}
-              summary={summaryFor(kind)}
-              clear={result.checks[kind].length === 0}
-              okLabel={t('check.ok')}
-              seeLabel={t('check.seeIt')}
-              hideLabel={t('check.hide')}>
-              {detailsFor(kind)}
-            </CheckRow>
-          ))}
+        <View>
+          <SectionTitle
+            title={t('check.whatWeChecked')}
+            trailing={
+              <AppText variant="small" snug tone={clearCount === CHECKS.length ? 'success' : 'secondary'}>
+                {t('check.clearCount', { clear: clearCount })}
+              </AppText>
+            }
+          />
+          <Group>
+            {CHECKS.map((kind) => (
+              <CheckRow
+                key={kind}
+                title={t(CHECK_TITLE[kind])}
+                summary={summaryFor(kind)}
+                clear={result.checks[kind].length === 0}
+                okLabel={t('check.ok')}
+                seeLabel={t('check.seeIt')}
+                hideLabel={t('check.hide')}>
+                {detailsFor(kind)}
+              </CheckRow>
+            ))}
+          </Group>
         </View>
       )}
 
-      <Section title={t('check.yourColumns')}>
-        <AppText variant="small" tone="secondary">
-          {t('check.columnsCount', { count: dataset.columns.length, rows: formatCount(dataset.data.length) })}
-        </AppText>
-        {shown.map((profile) => (
-          <ColumnCard
-            key={profile.name}
-            name={profile.name}
-            type={profile.type}
-            typeLabel={t(TYPE_LABEL[profile.type])}
-            summary={columnSummary(profile)}
-            note={profile.blanks > 0 ? t('check.blanks', { count: formatCount(profile.blanks) }) : null}
-          />
-        ))}
-        {profiles.length > FIRST_COLUMNS && (
-          <Pressable onPress={() => setAllColumns((value) => !value)} accessibilityRole="button" style={[styles.more, { borderColor: colors.border }]}>
-            <AppText variant="label" tone="primary" style={styles.center}>
-              {allColumns ? t('check.showFewer') : t('check.seeAll', { count: profiles.length })}
+      <View>
+        <SectionTitle
+          title={t('check.yourColumns')}
+          trailing={
+            <AppText variant="small" tone="secondary" snug>
+              {t('check.columnsCount', { count: formatCount(dataset.columns.length), rows: formatCount(dataset.data.length) })}
             </AppText>
-          </Pressable>
-        )}
-      </Section>
+          }
+        />
+        <Group>
+          {[
+            ...shown.map((profile) => (
+              <ColumnRow
+                key={profile.name}
+                name={profile.name}
+                type={profile.type}
+                typeLabel={t(TYPE_LABEL[profile.type])}
+                summary={columnSummary(profile)}
+                note={profile.blanks > 0 ? t('check.blanks', { count: formatCount(profile.blanks) }) : null}
+              />
+            )),
+            ...(profiles.length > FIRST_COLUMNS
+              ? [
+                  <Pressable key="more" onPress={() => setAllColumns((value) => !value)} accessibilityRole="button" style={styles.more}>
+                    <AppText variant="label" tone="primary" style={styles.center}>
+                      {allColumns ? t('check.showFewer') : t('check.seeAll', { count: formatCount(profiles.length) })}
+                    </AppText>
+                  </Pressable>,
+                ]
+              : []),
+          ]}
+        </Group>
+      </View>
+
+      <PrivacyNote text={t('privacy.short')} />
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  content: { padding: Spacing.xl, gap: Spacing.lg, paddingBottom: Spacing.xxxl },
-  card: { gap: Spacing.sm, padding: Spacing.lg, borderRadius: Radius.lg, borderWidth: 1 },
-  cardTitle: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, marginBottom: Spacing.xs },
-  flex: { flex: 1 },
+  content: { padding: Spacing.xl, gap: Spacing.xxl, paddingBottom: Spacing.huge },
   tip: { marginTop: Spacing.xs },
-  more: { minHeight: 48, justifyContent: 'center', borderRadius: Radius.lg, borderWidth: 1 },
+  more: { minHeight: 52, justifyContent: 'center', paddingHorizontal: Spacing.lg },
   center: { textAlign: 'center', alignSelf: 'stretch' },
 });

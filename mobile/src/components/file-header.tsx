@@ -2,25 +2,30 @@ import { router } from 'expo-router';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/components/app-text';
-import { Spacing } from '@/constants/theme';
+import { Radius, Spacing } from '@/constants/theme';
 import type { Dataset } from '@/data/types';
-import { useT } from '@/state/app-state';
+import { useTheme } from '@/hooks/use-theme';
+import { useNumbers, useT } from '@/state/app-state';
 import { useDatasets } from '@/state/datasets';
-import { formatCount } from '@/utils/format';
 
-// The chosen file's name and size, with a way back to Home to pick another.
+// The chosen file's name and size on a quiet panel, with a way back to Home
+// to pick another.
 export function FileHeader({ dataset }: { dataset: Dataset }) {
+  const colors = useTheme();
   const t = useT();
+  const numbers = useNumbers();
   const { datasetName } = useDatasets();
   return (
-    <View style={styles.row}>
+    <View style={[styles.panel, { backgroundColor: colors.card }]}>
       <View style={styles.text}>
-        <AppText variant="heading">{datasetName(dataset.id) ?? dataset.name}</AppText>
+        <AppText variant="heading" numberOfLines={2}>
+          {datasetName(dataset.id) ?? dataset.name}
+        </AppText>
         <AppText variant="small" tone="secondary">
-          {t('home.rowsCols', { rows: formatCount(dataset.data.length), cols: dataset.columns.length })}
+          {t('home.rowsCols', { rows: numbers.count(dataset.data.length), cols: numbers.count(dataset.columns.length) })}
         </AppText>
       </View>
-      <Pressable onPress={() => router.navigate('/')} accessibilityRole="button" hitSlop={8} style={styles.change}>
+      <Pressable onPress={() => router.navigate('/')} accessibilityRole="button" hitSlop={12} style={styles.change}>
         <AppText variant="label" snug tone="primary">
           {t('common.changeFile')}
         </AppText>
@@ -30,7 +35,14 @@ export function FileHeader({ dataset }: { dataset: Dataset }) {
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md },
+  panel: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+    paddingHorizontal: Spacing.lg + 4,
+    paddingVertical: Spacing.lg,
+    borderRadius: Radius.xxl,
+  },
   text: { flex: 1, gap: 2 },
-  change: { paddingVertical: Spacing.sm },
+  change: { minHeight: 44, justifyContent: 'center' },
 });
