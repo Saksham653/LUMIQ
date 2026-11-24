@@ -16,8 +16,9 @@ Done:
 - **Report (More):** one page with the shared engine's key numbers (each with a footnote saying how it was worked out), what LUMIQ noticed and the File check score; "Share report" sends it as text through the phone's share sheet (WhatsApp, email, notes). The file itself is never sent.
 - **More:** the language switch, the tools, and the privacy promise.
 - **Languages:** every string is in English and Hindi. Settings and imported files stay on the phone.
+- **App icon and splash:** the LUMIQ prism on navy for iOS and Android (an adaptive icon, with a one-colour version for Android 13+ themed icons), and a light/dark splash. They show in a real build, not in Expo Go.
 
-Next: the LUMIQ app icon and splash screen, then store builds.
+Next: store builds (EAS) and testing on real phones.
 
 ## Run it
 
@@ -63,6 +64,7 @@ src/i18n/        every string, in English and Hindi
 src/state/       app state: language, first launch, selected file, imported files
 src/constants/   theme tokens: colours, sizes
 metro.config.js  lets Metro serve ../src, the shared web logic, with this app's packages
+scripts/         make-icons.js: draws the icon, adaptive icon, splash and favicon (npm run icons)
 ```
 
 Design rules, from the Stitch designs:
