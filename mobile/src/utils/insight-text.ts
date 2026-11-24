@@ -62,7 +62,7 @@ export function describeInsights(dataset: Dataset, t: Translate, numbers: Number
       views.push({
         id,
         icon: up ? { ios: 'chart.line.uptrend.xyaxis', android: 'trending_up' } : { ios: 'chart.line.downtrend.xyaxis', android: 'trending_down' },
-        tone: 'accent',
+        tone: 'primary',
         title: t(up ? 'insight.trendUp.title' : 'insight.trendDown.title', params),
         body: t('insight.trend.body', params),
       });
@@ -75,7 +75,8 @@ export function describeInsights(dataset: Dataset, t: Translate, numbers: Number
       views.push({
         id,
         icon: { ios: 'exclamationmark.triangle.fill', android: 'warning' },
-        tone: 'secondary',
+        // Amber means "needs a look".
+        tone: 'accent',
         title: t('insight.unusual.title', params),
         body: t(f.direction === 'above' ? 'insight.unusualAbove.body' : 'insight.unusualBelow.body', params),
       });
