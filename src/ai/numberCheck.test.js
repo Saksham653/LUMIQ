@@ -12,6 +12,26 @@ describe("extractNumbers", () => {
     expect(nums.map((n) => n.value)).toEqual([25.3, 97000, 4680000, 120000, 20000000]);
   });
 
+  it("reads लाख and करोड़ in Hindi answers, both ways of typing ड़", () => {
+    const nums = extractNumbers("बिक्री 2.45 लाख रही, कुल 1.2 करोड़ और 3 करोड़।");
+    [245000, 12000000, 30000000].forEach((value, i) => expect(nums[i].value).toBeCloseTo(value, 6));
+    expect(nums).toHaveLength(3);
+    expect(nums.map((n) => n.unit)).toEqual(["lakh", "crore", "crore"]);
+    expect(nums[0].tolerance).toBeCloseTo(500, 9);
+    expect(verifyNumbers("Jan में 2.45 लाख", [245000]).unverified).toBe(0);
+    expect(verifyNumbers("Jan में 2.9 लाख", [245000]).unverified).toBe(1);
+  });
+
+  it("reads thousands grouped with thin or no-break spaces, not ordinary ones", () => {
+    const nums = extractNumbers("Jan 780 000, Jun 1 014 000 and 4 677 000.");
+    expect(nums.map((n) => n.value)).toEqual([780000, 1014000, 4677000]);
+    expect(verifyNumbers("Jan 780 000.", [780000]).unverified).toBe(0);
+    // An ordinary space keeps two numbers apart: a year next to a count.
+    expect(extractNumbers("In 2024 780 orders").map((n) => n.value)).toEqual([2024, 780]);
+    // A space before something other than three digits is not grouping.
+    expect(extractNumbers("12 34").map((n) => n.value)).toEqual([12, 34]);
+  });
+
   it("a number at the end of a sentence still parses with its unit", () => {
     const nums = extractNumbers("It reached 4.68M.");
     expect(nums).toHaveLength(1);
