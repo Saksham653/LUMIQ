@@ -6,33 +6,28 @@ import { AppText } from '@/components/app-text';
 import { BigButton } from '@/components/big-button';
 import { Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import { useAppState, useT } from '@/state/app-state';
-import { useDatasets } from '@/state/datasets';
+import { useT } from '@/state/app-state';
 
-// Holding screen for a tab that is being built next. It says what will appear
-// here for the chosen file, or points back to Home when no file is chosen.
-export function ComingSoon({ messageKey }: { messageKey: 'soon.ask' }) {
+// Shown by Insights and Ask when no file is chosen: what to do, and a big
+// button back to Home.
+export function NoFileChosen() {
   const colors = useTheme();
   const t = useT();
-  const { activeDatasetId } = useAppState();
-  const { datasetName } = useDatasets();
-  const name = datasetName(activeDatasetId);
-
   return (
     <ScrollView
       contentInsetAdjustmentBehavior="automatic"
       style={{ backgroundColor: colors.background }}
       contentContainerStyle={styles.content}>
       <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
-        <AppIcon name={{ ios: 'sparkles', android: 'auto_awesome' }} size={36} color={colors.secondary} />
+        <AppIcon name={{ ios: 'doc.text.magnifyingglass', android: 'manage_search' }} size={36} color={colors.secondary} />
         <AppText variant="heading" style={styles.center}>
-          {t('soon.title')}
+          {t('noFile.title')}
         </AppText>
         <AppText tone="secondary" style={styles.center}>
-          {name ? t(messageKey, { name }) : t('soon.noFile')}
+          {t('noFile.body')}
         </AppText>
       </View>
-      {!name && <BigButton label={t('soon.goHome')} onPress={() => router.navigate('/')} />}
+      <BigButton label={t('noFile.goHome')} onPress={() => router.navigate('/')} />
     </ScrollView>
   );
 }
