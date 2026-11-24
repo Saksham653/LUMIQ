@@ -56,7 +56,7 @@ export function fixDirectionAtLaunch(language: Language): boolean {
       return false;
     }
     if (!note.exists) note.create();
-    note.write(wanted);
+    note.writeSync(wanted);
   } catch {
     // Without the note there is no loop guard, so no restart either.
     matchLayoutDirection(language);

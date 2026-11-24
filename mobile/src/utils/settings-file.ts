@@ -34,11 +34,14 @@ export function loadSettings(): StoredSettings {
   }
 }
 
+// Written synchronously: `write()` is asynchronous, so two saves in a row
+// (Welcome's "Try with sample data" saves twice) could land out of order and
+// lose the newer one, and a save just before the Hebrew restart could miss it.
 export function saveSettings(settings: StoredSettings): void {
   try {
     const file = settingsFile();
     if (!file.exists) file.create();
-    file.write(JSON.stringify(settings));
+    file.writeSync(JSON.stringify(settings));
   } catch (error) {
     console.warn('LUMIQ: could not save settings', error);
   }
