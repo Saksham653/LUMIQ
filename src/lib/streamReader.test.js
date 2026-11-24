@@ -87,4 +87,33 @@ describe("createStreamReader (F5)", () => {
       "data: [DONE]\n\n";
     expect(consume([payload])).toBe("xy");
   });
+
+  // Chunks shaped like Groq's GPT-OSS stream: an opening role chunk,
+  // reasoning deltas (only sent if include_reasoning were left on),
+  // answer deltas, a closing chunk with finish_reason and usage, and
+  // a usage-only chunk with no choices.
+  it("yields only the answer text from GPT-OSS chunks", () => {
+    const chunk = (delta, finishReason = null) =>
+      `data: ${JSON.stringify({
+        id: "chatcmpl-test",
+        object: "chat.completion.chunk",
+        model: "openai/gpt-oss-120b",
+        choices: [{ index: 0, delta, logprobs: null, finish_reason: finishReason }],
+      })}\n\n`;
+    const answer = "Revenue reached 780 000 in March.";
+    const payload =
+      chunk({ role: "assistant", content: "" }) +
+      chunk({ reasoning: "The user wants the March total. " }) +
+      chunk({ reasoning: "It is 780000." }) +
+      chunk({ content: "Revenue reached " }) +
+      chunk({ content: "780 000" }) +
+      chunk({ content: " in March." }) +
+      chunk({}, "stop") +
+      `data: ${JSON.stringify({ choices: [], x_groq: { id: "req_test", usage: { completion_tokens: 42 } } })}\n\n` +
+      "data: [DONE]\n\n";
+    expect(consume([payload])).toBe(answer);
+    for (let i = 0; i <= payload.length; i += 11) {
+      expect(consume([payload.slice(0, i), payload.slice(i)]), `split at ${i}`).toBe(answer);
+    }
+  });
 });

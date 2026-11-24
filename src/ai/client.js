@@ -18,6 +18,16 @@ function groqErrorMessage(status, detail) {
   return detail || `Groq API error (${status}).`;
 }
 
+// Extra request fields for a reasoning model. GPT-OSS models take
+// reasoning_effort and include_reasoning (not reasoning_format).
+// With include_reasoning false the reasoning stays on Groq's side, so
+// the stream carries only the answer. Other models get no extra
+// fields, because Groq rejects reasoning settings they do not support.
+export function reasoningFields(model) {
+  if (!model.startsWith("openai/gpt-oss")) return {};
+  return { reasoning_effort: AI_CONFIG.reasoningEffort, include_reasoning: false };
+}
+
 // Streams a chat completion. Lines split across network chunks are
 // buffered (createStreamReader), the request can be stopped from the
 // UI via options.signal, and a stream that goes silent for 30 seconds
@@ -51,8 +61,11 @@ export async function callGroq(apiKey, messages, onStream, { signal, temperature
         model: AI_CONFIG.model,
         messages,
         stream: true,
-        max_tokens: AI_CONFIG.maxTokens,
+        // Counts reasoning tokens as well as the answer (max_tokens
+        // is the older, deprecated name).
+        max_completion_tokens: AI_CONFIG.maxCompletionTokens,
         temperature,
+        ...reasoningFields(AI_CONFIG.model),
       }),
       signal: controller.signal,
     });
