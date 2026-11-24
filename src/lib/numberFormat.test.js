@@ -9,6 +9,7 @@ import {
   formatExact,
   formatNumber,
   formatPercent,
+  formatSignedPercent,
   resolveNumberFormat,
   setIntlEnabled,
 } from "./numberFormat.js";
@@ -90,6 +91,14 @@ describe.each([
     expect(formatPercent(12.34, resolveNumberFormat("de"))).toBe(`12,3${NBSP}%`);
     expect(formatPercent(45, resolveNumberFormat("he"))).toBe(ltr("45%"));
     expect(formatAmount(28.46, { type: "percent" }, resolveNumberFormat("en"))).toBe("28.5%");
+  });
+
+  it("writes a change in percent with its sign", () => {
+    expect(formatSignedPercent(5.56, resolveNumberFormat("en"))).toBe("+5.6%");
+    expect(formatSignedPercent(-2, resolveNumberFormat("en"))).toBe("-2%");
+    expect(formatSignedPercent(0.01, resolveNumberFormat("en"))).toBe("0%");
+    expect(formatSignedPercent(5.5, resolveNumberFormat("fr"))).toBe(`+5,5${NNBSP}%`);
+    expect(formatSignedPercent(-10, resolveNumberFormat("he"))).toBe(ltr("-10%"));
   });
 
   it("places the file's currency the way the language writes it, never converting", () => {
