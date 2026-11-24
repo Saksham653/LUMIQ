@@ -18,7 +18,7 @@ const LANGUAGE_LABELS = ['English', 'हिंदी'];
 const TOOLS: { icon: IconName; titleKey: StringKey; descKey: StringKey; href?: Href }[] = [
   { icon: { ios: 'slider.horizontal.3', android: 'tune' }, titleKey: 'more.whatIf', descKey: 'more.whatIfDesc', href: '/what-if' },
   { icon: { ios: 'checkmark.shield', android: 'verified' }, titleKey: 'more.fileCheck', descKey: 'more.fileCheckDesc', href: '/file-check' },
-  { icon: { ios: 'doc.richtext', android: 'description' }, titleKey: 'more.report', descKey: 'more.reportDesc' },
+  { icon: { ios: 'doc.richtext', android: 'description' }, titleKey: 'more.report', descKey: 'more.reportDesc', href: '/report' },
 ];
 
 // More: the app language, the tools, and the privacy promise in plain words.

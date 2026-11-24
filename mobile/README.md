@@ -13,10 +13,11 @@ Done:
 - **Ask:** questions in your own words (English, Hindi or Hinglish), answered by LUMIQ's built-in AI. The phone runs the calculation; every number in the answer is checked against it, and the steps, result table and exact prompts are one tap away.
 - **What if…? (More):** pick a number column, a change from -50% to +50% (slider or presets) and all rows or one group; the shared engine recalculates every row on the phone and says the result in words, with now/after bars. The file itself is never changed.
 - **File check (More):** a score out of 100 from the shared health checks (empty cells, repeated rows, mixed types, unusual values), each lost point explained with the rows it is in and how to fix it, and how LUMIQ read every column.
+- **Report (More):** one page with the shared engine's key numbers (each with a footnote saying how it was worked out), what LUMIQ noticed and the File check score; "Share report" sends it as text through the phone's share sheet (WhatsApp, email, notes). The file itself is never sent.
 - **More:** the language switch, the tools, and the privacy promise.
 - **Languages:** every string is in English and Hindi. Settings and imported files stay on the phone.
 
-Next: Report, the LUMIQ app icon, and store builds.
+Next: the LUMIQ app icon and splash screen, then store builds.
 
 ## Run it
 
@@ -52,8 +53,8 @@ Users need no key: the app calls LUMIQ's own server, which adds the owner's Groq
 ## How it is put together
 
 ```
-src/app/         routes only (Expo Router): welcome, (tabs)/(home|insights|ask|more), more/what-if, more/file-check
-src/screens/     screen bodies: welcome, home, insights, ask, what-if, file-check, more
+src/app/         routes only (Expo Router): welcome, (tabs)/(home|insights|ask|more), more/what-if|file-check|report
+src/screens/     screen bodies: welcome, home, insights, ask, what-if, file-check, report, more
 src/components/  shared UI: AppText, AppIcon, BigButton, ChoiceChips, FileHeader, NoFileChosen, HBarChart
 src/ai/          Ask: the proof flow, the client for the lumiq-ask function, the install id
 src/data/        samples, Excel/CSV import, the files saved on the phone
