@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/components/app-text';
+import { ChoiceChips } from '@/components/choice-chips';
 import { FileHeader } from '@/components/file-header';
 import { HBarChart } from '@/components/h-bar-chart';
 import { NoFileChosen } from '@/components/no-file-chosen';
@@ -19,7 +20,6 @@ import { computeKpis } from '@/utils/kpis';
 
 import { InsightCard } from './insight-card';
 import { KpiCard } from './kpi-card';
-import { MetricChips } from './metric-chips';
 
 // Insights for the chosen file: pick a number column, see four big numbers,
 // a chart and what LUMIQ noticed. All worked out on the phone with the same
@@ -60,7 +60,11 @@ function DatasetInsights({ dataset }: { dataset: Dataset }) {
       ) : (
         <>
           <Section title={t('insights.showing')}>
-            <MetricChips columns={numeric} selected={metric} onSelect={setPicked} />
+            <ChoiceChips
+              choices={numeric.map((column) => ({ value: column, label: prettyColumn(column) }))}
+              selected={metric}
+              onSelect={setPicked}
+            />
           </Section>
 
           <View style={styles.kpiGrid}>

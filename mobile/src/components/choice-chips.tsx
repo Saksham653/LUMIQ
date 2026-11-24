@@ -3,28 +3,35 @@ import { Pressable, ScrollView, StyleSheet } from 'react-native';
 import { AppText } from '@/components/app-text';
 import { Radius, Spacing, TouchTarget } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import { prettyColumn } from '@/utils/format';
 
-// The number columns as big chips in one scrolling row. Every choice is
-// visible at once, rather than hidden in a menu.
-export function MetricChips({
-  columns,
+export type Choice = { value: string; label: string };
+
+// A row of big chips, one per choice, scrolling sideways when they don't fit.
+// Every choice is visible at once, rather than hidden in a menu.
+export function ChoiceChips({
+  choices,
   selected,
   onSelect,
+  accessibilityLabel,
 }: {
-  columns: string[];
-  selected: string;
-  onSelect: (column: string) => void;
+  choices: Choice[];
+  selected: string | null;
+  onSelect: (value: string) => void;
+  accessibilityLabel?: string;
 }) {
   const colors = useTheme();
   return (
-    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.row}>
-      {columns.map((column) => {
-        const active = column === selected;
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      contentContainerStyle={styles.row}
+      accessibilityLabel={accessibilityLabel}>
+      {choices.map((choice) => {
+        const active = choice.value === selected;
         return (
           <Pressable
-            key={column}
-            onPress={() => onSelect(column)}
+            key={choice.value}
+            onPress={() => onSelect(choice.value)}
             accessibilityRole="button"
             accessibilityState={{ selected: active }}
             style={[
@@ -34,7 +41,7 @@ export function MetricChips({
                 : { backgroundColor: colors.card, borderColor: colors.border },
             ]}>
             <AppText variant="label" style={{ color: active ? colors.onPrimary : colors.text }}>
-              {prettyColumn(column)}
+              {choice.label}
             </AppText>
           </Pressable>
         );
