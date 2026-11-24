@@ -21,7 +21,7 @@ export function FileHeader({ dataset }: { dataset: Dataset }) {
         </AppText>
       </View>
       <Pressable onPress={() => router.navigate('/')} accessibilityRole="button" hitSlop={8} style={styles.change}>
-        <AppText variant="label" tone="primary">
+        <AppText variant="label" snug tone="primary">
           {t('common.changeFile')}
         </AppText>
       </Pressable>

@@ -40,7 +40,7 @@ export function ChoiceChips({
                 ? { backgroundColor: colors.primary, borderColor: colors.primary }
                 : { backgroundColor: colors.card, borderColor: colors.border },
             ]}>
-            <AppText variant="label" style={{ color: active ? colors.onPrimary : colors.text }}>
+            <AppText variant="label" snug style={{ color: active ? colors.onPrimary : colors.text }}>
               {choice.label}
             </AppText>
           </Pressable>

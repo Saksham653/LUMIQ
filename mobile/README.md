@@ -12,10 +12,11 @@ Done:
 - **Insights:** pick a number column, four big numbers, a bar chart by period or group, and what LUMIQ noticed, in lakh and crore.
 - **Ask:** questions in your own words (English, Hindi or Hinglish), answered by LUMIQ's built-in AI. The phone runs the calculation; every number in the answer is checked against it, and the steps, result table and exact prompts are one tap away.
 - **What if…? (More):** pick a number column, a change from -50% to +50% (slider or presets) and all rows or one group; the shared engine recalculates every row on the phone and says the result in words, with now/after bars. The file itself is never changed.
+- **File check (More):** a score out of 100 from the shared health checks (empty cells, repeated rows, mixed types, unusual values), each lost point explained with the rows it is in and how to fix it, and how LUMIQ read every column.
 - **More:** the language switch, the tools, and the privacy promise.
 - **Languages:** every string is in English and Hindi. Settings and imported files stay on the phone.
 
-Next: File check, Report, the LUMIQ app icon, and store builds.
+Next: Report, the LUMIQ app icon, and store builds.
 
 ## Run it
 
@@ -51,8 +52,8 @@ Users need no key: the app calls LUMIQ's own server, which adds the owner's Groq
 ## How it is put together
 
 ```
-src/app/         routes only (Expo Router): welcome, (tabs)/(home|insights|ask|more), more/what-if
-src/screens/     screen bodies: welcome, home, insights, ask, what-if, more
+src/app/         routes only (Expo Router): welcome, (tabs)/(home|insights|ask|more), more/what-if, more/file-check
+src/screens/     screen bodies: welcome, home, insights, ask, what-if, file-check, more
 src/components/  shared UI: AppText, AppIcon, BigButton, ChoiceChips, FileHeader, NoFileChosen, HBarChart
 src/ai/          Ask: the proof flow, the client for the lumiq-ask function, the install id
 src/data/        samples, Excel/CSV import, the files saved on the phone

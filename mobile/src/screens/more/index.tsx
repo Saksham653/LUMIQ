@@ -17,7 +17,7 @@ const LANGUAGE_LABELS = ['English', 'हिंदी'];
 // The tools: a tool with an href opens; the others are still on the way.
 const TOOLS: { icon: IconName; titleKey: StringKey; descKey: StringKey; href?: Href }[] = [
   { icon: { ios: 'slider.horizontal.3', android: 'tune' }, titleKey: 'more.whatIf', descKey: 'more.whatIfDesc', href: '/what-if' },
-  { icon: { ios: 'checkmark.shield', android: 'verified' }, titleKey: 'more.fileCheck', descKey: 'more.fileCheckDesc' },
+  { icon: { ios: 'checkmark.shield', android: 'verified' }, titleKey: 'more.fileCheck', descKey: 'more.fileCheckDesc', href: '/file-check' },
   { icon: { ios: 'doc.richtext', android: 'description' }, titleKey: 'more.report', descKey: 'more.reportDesc' },
 ];
 

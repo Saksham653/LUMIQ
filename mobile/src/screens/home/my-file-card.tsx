@@ -49,7 +49,7 @@ export function MyFileCard({
           </AppText>
           {selected && (
             <View style={[styles.badge, { backgroundColor: colors.successContainer }]}>
-              <AppText variant="small" tone="success">
+              <AppText variant="small" snug tone="success">
                 {selectedLabel}
               </AppText>
             </View>
