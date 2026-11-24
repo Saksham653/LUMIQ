@@ -21,7 +21,13 @@ describe("computeHealth (F15)", () => {
     // 137-141 cluster — the score says so instead of hiding it.
     const sales = computeHealth(SAMPLE_DATASETS.sales);
     expect(sales.score).toBe(98);
-    expect(sales.deductions).toEqual([{ points: 2, text: "1 unusual value in avg_order_value" }]);
+    expect(sales.deductions).toHaveLength(1);
+    expect(sales.deductions[0]).toMatchObject({
+      points: 2,
+      text: "1 unusual value in avg_order_value",
+      kind: "unusual",
+      facts: { column: "avg_order_value", count: 1, examples: [{ row: 2, value: 128.6 }] },
+    });
     // Marketing has wide spreads everywhere — nothing unusual.
     expect(computeHealth(SAMPLE_DATASETS.marketing).score).toBe(100);
   });
@@ -32,6 +38,7 @@ describe("computeHealth (F15)", () => {
     const d = h.deductions.find((x) => x.text.includes("revenue"));
     expect(d.points).toBe(6);
     expect(d.text).toBe("6 of 100 cells in revenue are empty");
+    expect(d).toMatchObject({ kind: "empty", facts: { column: "revenue", empty: 6, rows: 100, examples: [1, 2, 3, 4, 5] } });
     expect(h.score).toBe(94);
   });
 
@@ -41,6 +48,7 @@ describe("computeHealth (F15)", () => {
     const h = computeHealth(ds(["g", "v"], rows));
     const d = h.deductions.find((x) => x.text.includes("repeats"));
     expect(d.text).toBe("4 of 20 rows are exact repeats");
+    expect(d).toMatchObject({ kind: "repeats", facts: { repeats: 4, rows: 20, examples: [17, 18, 19, 20] } });
     expect(d.points).toBe(10); // 20% × 0.5
     expect(h.score).toBe(90);
   });
@@ -54,6 +62,7 @@ describe("computeHealth (F15)", () => {
     const d = h.deductions.find((x) => x.text.includes("mixes"));
     expect(d.points).toBe(5);
     expect(d.text).toBe("code mixes numbers and text (2 of 5 values look like numbers)");
+    expect(d).toMatchObject({ kind: "mixed", facts: { column: "code", numericish: 2, total: 5 } });
     expect(h.score).toBe(95);
   });
 
@@ -63,11 +72,18 @@ describe("computeHealth (F15)", () => {
     const d = h.deductions.find((x) => x.text.includes("unusual"));
     expect(d.points).toBe(2);
     expect(d.text).toBe("1 unusual value in v");
+    expect(d).toMatchObject({ kind: "unusual", facts: { column: "v", count: 1, typical: 100.5, examples: [{ row: 8, value: 5000 }] } });
     expect(h.score).toBe(98);
   });
 
   it("the score never goes below zero", () => {
     const rows = Array.from({ length: 10 }, () => ({ a: null, b: null }));
     expect(computeHealth(ds(["a", "b"], rows)).score).toBe(0);
+  });
+
+  it("a file with no rows says so as its own check", () => {
+    const h = computeHealth(ds(["a"], []));
+    expect(h.score).toBe(0);
+    expect(h.deductions).toEqual([{ points: 100, text: "The dataset has no rows.", kind: "noRows", facts: {} }]);
   });
 });
