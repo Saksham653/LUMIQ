@@ -51,6 +51,10 @@
         "projectId": "cc3c0371-109e-40ac-8f1f-98d23f39bbab"
       }
     },
-    "owner": "sam_7001"
+    "owner": "sam_7001",
+    "updates": {
+      "enabled": false,
+      "checkAutomatically": "NEVER"
+    }
   }
 }
