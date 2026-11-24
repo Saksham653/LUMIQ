@@ -111,7 +111,7 @@ export function Welcome() {
 
         <View style={styles.actions}>
           <BigButton label={t('welcome.trySample')} onPress={startWithSample} />
-          <BigButton variant="outlined" label={t('welcome.openFile')} onPress={openOwnFile} />
+          <BigButton variant="tonal" label={t('welcome.openFile')} onPress={openOwnFile} />
           <PrivacyNote text={t('privacy.welcome')} />
         </View>
       </ScrollView>
