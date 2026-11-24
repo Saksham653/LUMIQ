@@ -50,6 +50,16 @@ describe("change over time uses time order, not row order", () => {
     expect(inOrder.title).toContain("190.6%");
     expect(inOrder.description).toContain("Jan");
     expect(inOrder.description).toContain("Dec");
+    // The same finding as raw facts, for the phone app's English and Hindi
+    expect(inOrder.facts).toMatchObject({
+      metric: "revenue",
+      direction: "up",
+      change: 190.6,
+      from: 245000,
+      fromLabel: "Jan",
+      to: 712000,
+      toLabel: "Dec",
+    });
 
     // Sort rows by revenue (as the table sort would) — same insight.
     const shuffled = [...ds.data].sort((a, b) => a.revenue - b.revenue);
@@ -73,6 +83,7 @@ describe("top contributor", () => {
     expect(top).toBeTruthy();
     expect(top.title).toBe("Google Ads leads spend");
     expect(top.description).toContain("44.9%");
+    expect(top.facts).toMatchObject({ metric: "spend", groupColumn: "channel", group: "Google Ads", share: 44.9, groups: 4 });
   });
 
   it("needs at least 2 groups", () => {
