@@ -18,7 +18,12 @@ function RootStack() {
   const { onboarded, language } = useAppState();
 
   useEffect(() => {
-    if (fixDirectionAtLaunch(language)) return;
+    if (fixDirectionAtLaunch(language)) {
+      // A restart normally ends this JS before the timer fires; if it never
+      // comes, open the app anyway rather than leave the splash up.
+      const fallback = setTimeout(() => SplashScreen.hideAsync(), 2000);
+      return () => clearTimeout(fallback);
+    }
     SplashScreen.hideAsync();
     // Only at launch: a language picked later restarts from its own screen.
     // eslint-disable-next-line react-hooks/exhaustive-deps
