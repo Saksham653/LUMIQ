@@ -143,6 +143,8 @@ export const hi: Record<StringKey, string> = {
   'whatIf.result': 'नतीजा',
   'whatIf.totalWouldBe': 'कुल {metric} {value} हो जाएगा',
   'whatIf.averageWouldBe': 'औसत {metric} {value} हो जाएगा',
+  'whatIf.totalAfter': 'बदलाव के बाद कुल {metric}',
+  'whatIf.averageAfter': 'बदलाव के बाद औसत {metric}',
   'whatIf.more': 'यह अभी ({now}) से {diff} ज़्यादा है।',
   'whatIf.less': 'यह अभी ({now}) से {diff} कम है।',
   'whatIf.same': 'अभी ({now}) जितना ही।',

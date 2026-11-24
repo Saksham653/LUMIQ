@@ -143,6 +143,8 @@ export const ja: Record<StringKey, string> = {
   'whatIf.result': '結果',
   'whatIf.totalWouldBe': '{metric}の合計は{value}になります',
   'whatIf.averageWouldBe': '{metric}の平均は{value}になります',
+  'whatIf.totalAfter': '変更後の{metric}の合計',
+  'whatIf.averageAfter': '変更後の{metric}の平均',
   'whatIf.more': '現在（{now}）より{diff}多くなります。',
   'whatIf.less': '現在（{now}）より{diff}少なくなります。',
   'whatIf.same': '現在（{now}）と同じです。',

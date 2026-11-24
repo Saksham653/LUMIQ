@@ -1,18 +1,21 @@
 import { Host, Slider } from '@expo/ui';
-import { StyleSheet, View } from 'react-native';
+import { useRef } from 'react';
+import { StyleSheet, Text, View } from 'react-native';
 
 import { AppText } from '@/components/app-text';
 import { ChoiceChips } from '@/components/choice-chips';
-import { Spacing } from '@/constants/theme';
+import { hapticSelection } from '@/components/haptics';
+import { Numeral, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import { signedPercent } from '@/utils/what-if';
+import { useNumbers } from '@/state/app-state';
 
 const MIN = -50;
 const MAX = 50;
 const PRESETS = [-20, -10, 5, 10, 20, 50];
 
-// "By how much?": the change in big type, a native slider from -50% to +50%
-// in steps of 5, and one-tap presets for the usual changes.
+// "By how much?": the change as a big numeral, the phone's own slider from
+// -50% to +50% snapping to steps of 5 with a selection haptic at every
+// step, and one-tap presets for the usual changes.
 export function PercentPicker({
   value,
   onChange,
@@ -25,31 +28,52 @@ export function PercentPicker({
   sliderLabel: string;
 }) {
   const colors = useTheme();
-  const tone = value > 0 ? colors.primary : value < 0 ? colors.accent : colors.textSecondary;
+  const numbers = useNumbers();
+  const last = useRef(value);
+
+  const step = (next: number) => {
+    const rounded = Math.round(next / 5) * 5;
+    if (rounded === last.current) return;
+    last.current = rounded;
+    hapticSelection();
+    onChange(rounded);
+  };
+
   return (
     <View style={styles.wrap}>
-      <AppText variant="display" style={[styles.big, { color: tone }]} accessibilityLiveRegion="polite">
-        {signedPercent(value)}
-      </AppText>
+      <Text
+        style={[styles.big, { color: value < 0 ? colors.accent : colors.text }]}
+        accessibilityLiveRegion="polite"
+        maxFontSizeMultiplier={1.3}>
+        {numbers.signedPercent(value)}
+      </Text>
       <AppText tone="secondary" style={styles.center}>
         {description}
       </AppText>
-      <View accessible accessibilityLabel={sliderLabel} accessibilityValue={{ text: signedPercent(value) }}>
+      <View accessible accessibilityLabel={sliderLabel} accessibilityValue={{ text: numbers.signedPercent(value) }}>
         <Host matchContents={{ vertical: true }} seedColor={colors.primary} style={styles.slider}>
-          <Slider value={value} min={MIN} max={MAX} step={5} onValueChange={(next) => onChange(Math.round(next))} />
+          <Slider value={value} min={MIN} max={MAX} step={5} onValueChange={step} />
         </Host>
+        {/* The scale reads left to right in every language. */}
         <View style={styles.ends}>
-          <AppText variant="small" tone="secondary">{`${MIN}%`}</AppText>
           <AppText variant="small" tone="secondary">
-            0%
+            {numbers.signedPercent(MIN)}
           </AppText>
-          <AppText variant="small" tone="secondary">{`+${MAX}%`}</AppText>
+          <AppText variant="small" tone="secondary">
+            {numbers.percent(0)}
+          </AppText>
+          <AppText variant="small" tone="secondary">
+            {numbers.signedPercent(MAX)}
+          </AppText>
         </View>
       </View>
       <ChoiceChips
-        choices={PRESETS.map((preset) => ({ value: String(preset), label: signedPercent(preset) }))}
+        choices={PRESETS.map((preset) => ({ value: String(preset), label: numbers.signedPercent(preset) }))}
         selected={PRESETS.includes(value) ? String(value) : null}
-        onSelect={(preset) => onChange(Number(preset))}
+        onSelect={(preset) => {
+          last.current = Number(preset);
+          onChange(Number(preset));
+        }}
       />
     </View>
   );
@@ -57,8 +81,16 @@ export function PercentPicker({
 
 const styles = StyleSheet.create({
   wrap: { gap: Spacing.md },
-  big: { textAlign: 'center', alignSelf: 'stretch', fontSize: 44, lineHeight: 56 },
+  big: {
+    textAlign: 'center',
+    alignSelf: 'stretch',
+    fontSize: Numeral.hero,
+    lineHeight: Math.round(Numeral.hero * 1.15),
+    fontWeight: '800',
+    letterSpacing: -1,
+    fontVariant: ['tabular-nums'],
+  },
   center: { textAlign: 'center', alignSelf: 'stretch' },
   slider: { alignSelf: 'stretch' },
-  ends: { flexDirection: 'row', justifyContent: 'space-between' },
+  ends: { flexDirection: 'row', justifyContent: 'space-between', direction: 'ltr' },
 });
