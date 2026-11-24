@@ -7,6 +7,9 @@
 //   time points, compared in time order, never by row position;
 // - unusual values: a robust median-based check (MAD), so it works
 //   on small files without the average being dragged by the outlier.
+// Each insight carries English title/description strings (the web app)
+// and the raw `facts` behind them, so the phone app can word the same
+// finding in English or Hindi without re-deriving it.
 
 import { runPlan } from "./runPlan.js";
 import { FORECAST_MIN_POINTS } from "./forecast.js";
@@ -132,6 +135,7 @@ function topContributorInsight(ds, rows, numeric) {
       title: `${top[groupCol]} leads ${metric}`,
       description: `${top[groupCol]} accounts for ${pct1(top.share)}% of total ${metric} (${formatCell(top.total, typeInfo)} across ${table.length} ${groupCol} groups).`,
       severity: top.share >= evenShare * 1.5 ? "high" : "medium",
+      facts: { metric, groupColumn: groupCol, group: top[groupCol], share: pct1(top.share), total: top.total, groups: table.length },
     };
   }
   return null;
@@ -165,6 +169,16 @@ function changeOverTimeInsight(ds, rows, numeric) {
     title: `${metric} ${up ? "rose" : "fell"} ${pct1(Math.abs(change))}% over time`,
     description: `In ${time.column} order, ${metric} went from ${formatCell(first.v, typeInfo)} (${first[time.column]}) to ${formatCell(last.v, typeInfo)} (${last[time.column]}).`,
     severity: Math.abs(change) > 50 ? "high" : "medium",
+    facts: {
+      metric,
+      timeColumn: time.column,
+      direction: up ? "up" : "down",
+      change: pct1(Math.abs(change)),
+      from: first.v,
+      fromLabel: first[time.column],
+      to: last.v,
+      toLabel: last[time.column],
+    },
   };
 }
 
@@ -192,6 +206,7 @@ function unusualValueInsights(ds, rows, numeric, limit) {
       title: `Unusual value in ${col}`,
       description: `${formatCell(extreme.value, typeInfo)} is far ${extreme.z > 0 ? "above" : "below"} the typical ${col} of ${formatCell(med, typeInfo)} (based on the middle value, so one outlier cannot hide itself).`,
       severity: "high",
+      facts: { column: col, value: extreme.value, typical: med, direction: extreme.z > 0 ? "above" : "below" },
     });
   }
   return out;
