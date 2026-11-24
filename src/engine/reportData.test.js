@@ -26,6 +26,12 @@ describe("buildReportData (F17)", () => {
     expect(aov).toBeTruthy(); // rate-like name → averaged, never summed
   });
 
+  it("every item says what it is, for wording in other languages", () => {
+    expect(report.items[0]).toMatchObject({ label: "Rows", kind: "rows", column: null, value: 12 });
+    expect(report.items.find((i) => i.label === "Total revenue")).toMatchObject({ kind: "sum", column: "revenue" });
+    expect(report.items.find((i) => i.label === "Average profit_margin")).toMatchObject({ kind: "avg", column: "profit_margin" });
+  });
+
   it("candidates cover every reported value for the number checker", () => {
     const candidates = reportCandidates(report);
     expect(candidates).toContain(4677000);

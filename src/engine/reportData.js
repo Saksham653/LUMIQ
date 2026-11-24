@@ -1,7 +1,9 @@
 // The Report's headline numbers (F17), every one computed by the
 // engine with a footnote saying exactly how: "Sum of revenue across
 // all 12 rows (blank cells skipped)." Rate-like columns are
-// averaged per the F9 rule.
+// averaged per the F9 rule. Each item also says what it is (`kind`:
+// rows, sum or avg, and the `column`), so the phone app can word the
+// label and footnote in English or Hindi.
 
 import { numericColumns } from "../data/dataset.js";
 import { aggregationRule } from "../data/columnTypes.js";
@@ -16,6 +18,8 @@ export function buildReportData(ds) {
     value: rowCount,
     typeInfo: { type: "number" },
     footnote: `Count of rows in ${ds.name}.`,
+    kind: "rows",
+    column: null,
   });
 
   for (const col of numericColumns(ds)) {
@@ -27,6 +31,8 @@ export function buildReportData(ds) {
         value: mean(values),
         typeInfo: ds.columnTypes?.[col],
         footnote: `Average of ${col} across all ${rowCount} rows (blank cells skipped).`,
+        kind: "avg",
+        column: col,
       });
     } else {
       items.push({
@@ -34,6 +40,8 @@ export function buildReportData(ds) {
         value: sum(values),
         typeInfo: ds.columnTypes?.[col],
         footnote: `Sum of ${col} across all ${rowCount} rows (blank cells skipped).`,
+        kind: "sum",
+        column: col,
       });
     }
   }
