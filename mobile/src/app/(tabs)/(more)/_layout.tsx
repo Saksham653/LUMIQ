@@ -10,6 +10,7 @@ export default function MoreStack() {
       <Stack.Screen name="more" options={{ title: t('more.title') }} />
       <Stack.Screen name="what-if" options={{ title: t('whatIf.title'), headerLargeTitleEnabled: false }} />
       <Stack.Screen name="file-check" options={{ title: t('check.title'), headerLargeTitleEnabled: false }} />
+      <Stack.Screen name="report" options={{ title: t('report.title'), headerLargeTitleEnabled: false }} />
     </Stack>
   );
 }
