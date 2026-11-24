@@ -222,6 +222,15 @@ export function formatPercent(value, format, decimals = 1) {
   return isolate(`${formatDigits(value, format, decimals)}${format.percent}`, format);
 }
 
+// A change in percent with its sign, one decimal at most: "+5.5%",
+// "-2%", "0%", "+5,5 %" in French, left-to-right in Hebrew.
+export function formatSignedPercent(value, format) {
+  if (!Number.isFinite(value)) return "—";
+  const rounded = Number(value.toFixed(1));
+  const sign = rounded > 0 ? "+" : rounded < 0 ? "-" : "";
+  return isolate(`${sign}${formatDigits(Math.abs(rounded), format, 1)}${format.percent}`, format);
+}
+
 // How a currency symbol from a file is written for this language. ¥ is the
 // one symbol two currencies share: a clue in the file (円, 元, JPY, CNY,
 // RMB) decides; without one the app language does (yen in Japanese, yuan in
