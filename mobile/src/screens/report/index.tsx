@@ -80,10 +80,14 @@ function DatasetReport({ dataset }: { dataset: Dataset }) {
                 style={[styles.tile, { backgroundColor: colors.background }]}
                 accessible
                 accessibilityLabel={`${item.label}: ${item.value}. ${item.footnote}`}>
-                <AppText variant="small" tone="secondary">
-                  {item.label}
-                  <AppText variant="small" tone="tertiary">{` ${numbers.count(index + 1)}`}</AppText>
-                </AppText>
+                <View style={styles.tileTop}>
+                  <AppText variant="small" tone="secondary" style={styles.flex}>
+                    {item.label}
+                  </AppText>
+                  <AppText variant="small" tone="tertiary" style={styles.tileMark}>
+                    {numbers.count(index + 1)}
+                  </AppText>
+                </View>
                 <Numeral parts={item.parts} format={numbers.format} size="medium" />
               </View>
             ))}
@@ -161,6 +165,9 @@ const styles = StyleSheet.create({
   kicker: { fontWeight: '700', letterSpacing: 1 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm },
   tile: { flexGrow: 1, flexBasis: '45%', padding: Spacing.md, borderRadius: Radius.lg, gap: 2 },
+  // The footnote number keeps to the tile's end corner, however the label wraps.
+  tileTop: { flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.xs },
+  tileMark: { fontVariant: ['tabular-nums'] },
   noticed: { gap: 2 },
   footnote: { flexDirection: 'row', gap: Spacing.sm },
   footnoteMark: { minWidth: 14, fontVariant: ['tabular-nums'] },
