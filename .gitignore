@@ -6,3 +6,6 @@ dist/
 *.local
 test-results/
 playwright-report/
+
+# local Claude Code settings
+.claude/

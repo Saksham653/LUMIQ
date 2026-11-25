@@ -38,7 +38,7 @@ body {
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }
-img { max-width: 100%; display: block; }
+img { max-width: 100%; height: auto; display: block; }
 a { color: var(--blue-ink); text-underline-offset: 3px; }
 a:hover { color: var(--blue-deep); }
 :focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; border-radius: 6px; }
@@ -81,6 +81,7 @@ p { margin: 0; }
 .nav-row { display: flex; align-items: center; gap: 28px; min-height: 68px; }
 .brand { display: inline-flex; align-items: center; gap: 12px; color: var(--ink); text-decoration: none; }
 .brand img { border-radius: 9px; }
+.brand-small img { height: 30px; width: auto; border-radius: 0; }
 .wordmark { height: 20px; width: auto; color: var(--ink); }
 .nav-links { display: flex; gap: 22px; margin-left: auto; }
 .nav-links a { color: var(--ink-2); text-decoration: none; font-weight: 500; font-size: 16px; }
@@ -220,7 +221,8 @@ section { scroll-margin-top: 80px; }
 .inside { padding: 110px 0 80px; }
 .gallery {
   display: grid; grid-auto-flow: column; grid-auto-columns: 270px; gap: 22px; overflow-x: auto;
-  padding: 10px max(24px, calc((100vw - 1180px) / 2)) 30px; scroll-snap-type: x mandatory; scrollbar-width: thin;
+  padding: 10px max(24px, calc((100vw - 1180px) / 2)) 30px; scroll-padding-inline: max(24px, calc((100vw - 1180px) / 2));
+  scroll-snap-type: x mandatory; scrollbar-width: thin;
 }
 .card-shot { margin: 0; scroll-snap-align: start; }
 .card-shot img { border-radius: 28px; border: 8px solid #1f1c17; background: var(--paper); box-shadow: var(--lift); transition: transform 300ms var(--ease-out); }
