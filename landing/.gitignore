@@ -1,0 +1,6 @@
+# The launch film carries a licensed track: it is deployed with the page but never committed.
+assets/video/*.mp4
+.vercel
+
+.vercel
+.env*

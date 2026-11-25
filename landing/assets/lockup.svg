@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 174.5 48" width="174.5" height="48" role="img" aria-label="LUMIQ">
+  <!-- The one lockup. Tile 48 (corner 22.5 percent), the art 1.5 right and 1.5 up, a gap of 14, then the name with a cap height of half the tile. The name takes the color of its parent. -->
+  <rect width="48" height="48" rx="10.8" fill="#2440C0"/>
+  <g transform="translate(1.5 -1.5)">
+    <path fill="#FFFFFF" d="M10 8H15A2 2 0 0 1 17 10V19A12 12 0 0 0 29 31H38A2 2 0 0 1 40 33V38A2 2 0 0 1 38 40H13A5 5 0 0 1 8 35V10A2 2 0 0 1 10 8Z"/>
+    <path fill="#FFD033" d="M37 19A8 8 0 1 1 21 19A8 8 0 0 1 37 19Z"/>
+  </g>
+  <g transform="translate(62 9) scale(0.75)">
+    <path fill="currentColor" d="M0 5.5A1.5 1.5 0 0 1 1.5 4L5.5 4A1.5 1.5 0 0 1 7 5.5L7 29L16.5 29A1.5 1.5 0 0 1 18 30.5L18 34.5A1.5 1.5 0 0 1 16.5 36L4 36A4 4 0 0 1 0 32Z"/>
+    <path fill="currentColor" d="M23.5 4H27.5A1.5 1.5 0 0 1 29 5.5V23.5A6.5 6.5 0 0 0 42 23.5V5.5A1.5 1.5 0 0 1 43.5 4H47.5A1.5 1.5 0 0 1 49 5.5V23.5A13.5 13.5 0 0 1 22 23.5V5.5A1.5 1.5 0 0 1 23.5 4Z"/>
+    <path fill="currentColor" d="M56.5 5.5A1.5 1.5 0 0 1 58 4L64.27 4A1 1 0 0 1 65.17 4.57L73.96 22.87A.6 .6 0 0 0 75.04 22.87L83.83 4.57A1 1 0 0 1 84.73 4L91 4A1.5 1.5 0 0 1 92.5 5.5L92.5 34.5A1.5 1.5 0 0 1 91 36L87 36A1.5 1.5 0 0 1 85.5 34.5L85.5 15.87L76.06 35.55A.8 .8 0 0 1 75.34 36L73.66 36A.8 .8 0 0 1 72.94 35.55L63.5 15.87L63.5 34.5A1.5 1.5 0 0 1 62 36L58 36A1.5 1.5 0 0 1 56.5 34.5Z"/>
+    <path fill="currentColor" d="M100 5.5A1.5 1.5 0 0 1 101.5 4L105.5 4A1.5 1.5 0 0 1 107 5.5L107 34.5A1.5 1.5 0 0 1 105.5 36L101.5 36A1.5 1.5 0 0 1 100 34.5Z"/>
+    <path id="q" fill="currentColor" d="M139.79 34.24A17 17 0 1 1 144.74 29.29L148.96 33.51A3.5 3.5 0 0 1 148.96 38.46A3.5 3.5 0 0 1 144.01 38.46ZM139.6 24.15A10 10 0 1 0 134.65 29.1L133.33 27.78A1.5 1.5 0 0 1 133.33 25.66L136.16 22.83A1.5 1.5 0 0 1 138.28 22.83Z"/>
+  </g>
+</svg>

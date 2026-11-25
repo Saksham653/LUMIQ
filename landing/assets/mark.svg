@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48" role="img" aria-label="LUMIQ mark">
+  <rect width="48" height="48" rx="10.8" fill="#2440C0"/>
+  <g transform="translate(1.5 -1.5)">
+    <path fill="#FFFFFF" d="M10 8H15A2 2 0 0 1 17 10V19A12 12 0 0 0 29 31H38A2 2 0 0 1 40 33V38A2 2 0 0 1 38 40H13A5 5 0 0 1 8 35V10A2 2 0 0 1 10 8Z"/>
+    <path fill="#FFD033" d="M37 19A8 8 0 1 1 21 19A8 8 0 0 1 37 19Z"/>
+  </g>
+</svg>
