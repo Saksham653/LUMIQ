@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { StyleSheet, Text, TextInput, View, type StyleProp, type TextStyle, type ViewStyle } from 'react-native';
+import { Platform, StyleSheet, Text, TextInput, View, type StyleProp, type TextStyle, type ViewStyle } from 'react-native';
 import Animated, { useAnimatedProps, useReducedMotion, useSharedValue, withTiming } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 
@@ -147,9 +147,13 @@ export function Numeral({
   );
 }
 
+// The browser preview has no layout direction on a view (and no mirrored
+// layout), so the style is given to phones only.
+const LEFT_TO_RIGHT = Platform.OS === 'web' ? null : ({ direction: 'ltr' } as const);
+
 const styles = StyleSheet.create({
   // Numbers read left to right in every language, Hebrew included.
-  row: { flexDirection: 'row', alignItems: 'flex-end', gap: 4, direction: 'ltr', flexWrap: 'wrap' },
+  row: { flexDirection: 'row', alignItems: 'flex-end', gap: 4, flexWrap: 'wrap', ...LEFT_TO_RIGHT },
   center: { justifyContent: 'center' },
   prefix: { marginRight: -2 },
   hidden: { opacity: 0 },

@@ -1,4 +1,4 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { Platform, StyleSheet, Text, View } from 'react-native';
 
 import { AppIcon } from '@/components/app-icon';
 import { AppText } from '@/components/app-text';
@@ -86,7 +86,16 @@ function Term({ term, tone, strong }: { term: ScoreTerm; tone?: string; strong?:
 
 const styles = StyleSheet.create({
   wrap: { alignItems: 'center', gap: Spacing.lg, paddingVertical: Spacing.sm },
-  sum: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'center', flexWrap: 'wrap', gap: Spacing.md, direction: 'ltr' },
+  // The sum reads left to right in every language. The browser preview has
+  // no layout direction on a view, so the style is given to phones only.
+  sum: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'center',
+    flexWrap: 'wrap',
+    gap: Spacing.md,
+    ...(Platform.OS === 'web' ? null : ({ direction: 'ltr' } as const)),
+  },
   pair: { flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.md },
   operator: { fontSize: Numeral.medium, lineHeight: Math.round(Numeral.medium * 1.2), fontWeight: '400' },
   term: { alignItems: 'center', maxWidth: 120 },
