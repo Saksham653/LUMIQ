@@ -1,14 +1,16 @@
 import { formatAmount, formatNumber, resolveNumberFormat } from '@core/lib/numberFormat.js';
 import { router } from 'expo-router';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text } from 'react-native';
 
-import { AppText } from '@/components/app-text';
-import { Chevron, Group, ListRow, Radio, SectionTitle } from '@/components/grouped';
 import { hapticSelection } from '@/components/haptics';
-import { Numeral, Radius, Spacing } from '@/constants/theme';
-import { useTheme } from '@/hooks/use-theme';
 import type { StringKey } from '@/i18n';
+import { RadioMark } from '@/screens/more/parts';
 import { useAppState, useNumbers, useT } from '@/state/app-state';
+import { figureFont, numeralLine, numeralSize, rhythm, space, useTheme } from '@/theme';
+import { Card } from '@/ui/card';
+import { List, ListRow } from '@/ui/list';
+import { Section } from '@/ui/section';
+import { Txt } from '@/ui/text';
 import type { NumberStyleChoice } from '@/utils/settings-file';
 
 const SAMPLE = 1234567.8;
@@ -27,7 +29,7 @@ const STYLES: { style: Exclude<NumberStyleChoice, 'auto'>; key: StringKey }[] = 
 // the one written in the file, never converted; for files without one, an
 // optional default currency for amount columns.
 export function NumbersScreen() {
-  const colors = useTheme();
+  const { colors } = useTheme();
   const t = useT();
   const numbers = useNumbers();
   const { language, numberStyle, setNumberStyle, defaultCurrency } = useAppState();
@@ -48,82 +50,71 @@ export function NumbersScreen() {
   return (
     <ScrollView
       contentInsetAdjustmentBehavior="automatic"
-      style={{ backgroundColor: colors.background }}
+      style={{ backgroundColor: colors.ground }}
       contentContainerStyle={styles.content}>
-      <View style={[styles.preview, { backgroundColor: colors.card }]}>
-        <AppText variant="small" tone="secondary">
+      <Card style={styles.preview}>
+        <Txt variant="small" tone="soft">
           {t('numbers.preview')}
-        </AppText>
+        </Txt>
         <Text
-          style={[styles.previewNumber, { color: colors.text }]}
+          style={[figureFont('600'), styles.previewNumber, { color: colors.ink }]}
           maxFontSizeMultiplier={1.3}
           adjustsFontSizeToFit
           numberOfLines={1}>
           {numbers.number(SAMPLE, 1)}
         </Text>
-        <AppText>{t('numbers.previewLine', { big: numbers.amount(1200000, PLAIN), percent: numbers.percent(45) })}</AppText>
-      </View>
+        <Txt>{t('numbers.previewLine', { big: numbers.amount(1200000, PLAIN), percent: numbers.percent(45) })}</Txt>
+      </Card>
 
-      <View>
-        <SectionTitle title={t('numbers.format')} />
-        <Group>
+      <Section size="sm" title={t('numbers.format')}>
+        <List role="radiogroup" accessibilityLabel={t('numbers.format')}>
           <ListRow
-            onPress={() => choose('auto')}
-            accessibilityState={{ selected: numberStyle === 'auto' }}
+            leading={<RadioMark chosen={numberStyle === 'auto'} />}
             title={t('numbers.auto')}
             subtitle={t('numbers.autoDesc', { example: example('auto') })}
-            trailing={<Radio selected={numberStyle === 'auto'} />}
+            role="radio"
+            aria-checked={numberStyle === 'auto'}
+            onPress={() => choose('auto')}
           />
           {STYLES.map(({ style, key }) => (
             <ListRow
               key={style}
-              onPress={() => choose(style)}
-              accessibilityState={{ selected: numberStyle === style }}
-              title={<AppText variant="label" style={styles.tabular}>{example(style)}</AppText>}
+              leading={<RadioMark chosen={numberStyle === style} />}
+              title={example(style)}
               subtitle={t(key, { example: unitsExample(style) })}
-              trailing={<Radio selected={numberStyle === style} />}
+              role="radio"
+              aria-checked={numberStyle === style}
+              onPress={() => choose(style)}
             />
           ))}
-        </Group>
-        <AppText variant="small" tone="secondary" style={styles.note}>
+        </List>
+        <Txt variant="small" tone="soft" style={styles.inset}>
           {t('numbers.digits')}
-        </AppText>
-      </View>
+        </Txt>
+      </Section>
 
-      <View>
-        <SectionTitle title={t('numbers.currency')} />
-        <Group>
-          <ListRow title={t('numbers.fromFile')} subtitle={t('numbers.fromFileDesc')} />
+      <Section size="sm" title={t('numbers.currency')}>
+        <List>
+          <ListRow icon="file" title={t('numbers.fromFile')} subtitle={t('numbers.fromFileDesc')} />
           <ListRow
-            onPress={() => router.push('/currency')}
+            icon="currency"
             title={t('numbers.noneTitle')}
             subtitle={t('numbers.noneNote')}
-            trailing={
-              <View style={styles.value}>
-                <AppText variant="label" tone="primary" snug>
-                  {t(defaultCurrency ? `currency.${defaultCurrency}` : 'currency.none')}
-                </AppText>
-                <Chevron color={colors.primary} />
-              </View>
-            }
+            trailing={t(defaultCurrency ? `currency.${defaultCurrency}` : 'currency.none')}
+            chevron
+            onPress={() => router.push('/currency')}
           />
-        </Group>
-      </View>
+        </List>
+      </Section>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  content: { padding: Spacing.xl, gap: Spacing.xxl, paddingBottom: Spacing.huge },
-  preview: { padding: Spacing.xl, borderRadius: Radius.xxl, gap: Spacing.xs },
-  previewNumber: {
-    fontSize: Numeral.large + 10,
-    lineHeight: Math.round((Numeral.large + 10) * 1.2),
-    fontWeight: '800',
-    letterSpacing: -0.9,
-    fontVariant: ['tabular-nums'],
-  },
-  tabular: { fontVariant: ['tabular-nums'] },
-  note: { marginTop: Spacing.sm, paddingHorizontal: Spacing.xs },
-  value: { flexDirection: 'row', alignItems: 'center', gap: 2, maxWidth: '45%' },
+  content: { padding: rhythm.screenEdge, gap: rhythm.sectionGap, paddingBottom: space.huge },
+  preview: { gap: space.xs },
+  // The brand's large numeral: 40 on a line of 44.
+  previewNumber: { fontSize: numeralSize.large, lineHeight: numeralLine.large },
+  // Lines the note up with the words inside the card's round corner.
+  inset: { paddingHorizontal: space.xs },
 });
