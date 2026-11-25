@@ -1,21 +1,14 @@
-import type { SampleKey } from '@/data/samples';
 import type { IconName } from '@/ui/icon-set';
 import { ListRow } from '@/ui/list';
 import { Txt } from '@/ui/text';
 
 import { OpenTile } from './open-tile';
 
-// An icon of the family for each sample file (never emoji).
-const SAMPLE_ICON: Record<SampleKey, IconName> = {
-  sales: 'currency',
-  marketing: 'chart-line',
-  churn: 'chart-bar',
-};
-
 // One sample file as a row of the samples list: its name, what it holds and
-// its size. The one that is open now shows the filled tile with a tick.
+// its size, with an icon of the family (never emoji). The one that is open now
+// shows the filled tile with a tick.
 export function SampleRow({
-  sampleKey,
+  icon,
   name,
   description,
   meta,
@@ -23,7 +16,7 @@ export function SampleRow({
   selectedLabel,
   onPress,
 }: {
-  sampleKey: SampleKey;
+  icon: IconName;
   name: string;
   description: string;
   meta: string;
@@ -35,7 +28,7 @@ export function SampleRow({
     <ListRow
       title={name}
       subtitle={description}
-      icon={selected ? undefined : SAMPLE_ICON[sampleKey]}
+      icon={selected ? undefined : icon}
       leading={selected ? <OpenTile /> : undefined}
       chevron
       onPress={onPress}

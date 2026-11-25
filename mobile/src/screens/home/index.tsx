@@ -3,7 +3,7 @@ import { Alert, Platform, ScrollView, StyleSheet, View } from 'react-native';
 import Animated, { FadeIn, FadeOut, LinearTransition, ReduceMotion } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { SAMPLES } from '@/data/samples';
+import { SAMPLE_LIST } from '@/data/samples';
 import { useLocalT } from '@/i18n/local';
 import { useAppState, useNumbers, useT } from '@/state/app-state';
 import { useActiveDataset, useDatasets } from '@/state/datasets';
@@ -38,8 +38,8 @@ const APP_NAME = 'LUMIQ';
 const LANGUAGE_SCRIPTS = 'A अ';
 const LANGUAGE_MIN_WIDTH = 68;
 
-// The Story has its own route in Home's stack. It is written beside this
-// screen, so the route's name is not yet among the typed routes.
+// The Story has its own route over the tabs (app/story.tsx). Its name is not
+// yet among the typed routes.
 const STORY = '/story' as Href;
 // What if, File check, Report and Language live in the More tab. Going there
 // from Home keeps More's own first screen under them, so Back leads somewhere.
@@ -57,7 +57,7 @@ export function Home() {
   const t = useT();
   const tl = useLocalT(HOME_STRINGS);
   const numbers = useNumbers();
-  const { activeDatasetId, setActiveDatasetId } = useAppState();
+  const { activeDatasetId, setActiveDatasetId, language } = useAppState();
   const { myFiles, importFile, removeFile, importing, lastAddedId, datasetName } = useDatasets();
   const active = useActiveDataset();
 
@@ -200,12 +200,12 @@ export function Home() {
 
       <Section title={t('home.samples')}>
         <List>
-          {SAMPLES.map((sample) => (
+          {SAMPLE_LIST.map((sample) => (
             <SampleRow
               key={sample.id}
-              sampleKey={sample.key}
-              name={t(sample.nameKey)}
-              description={t(sample.descKey)}
+              icon={sample.icon}
+              name={sample.name(language)}
+              description={sample.description(language)}
               meta={t('home.rowsCols', { rows: numbers.count(sample.rows), cols: numbers.count(sample.columns) })}
               selected={sample.id === activeDatasetId}
               selectedLabel={t('home.selected')}
