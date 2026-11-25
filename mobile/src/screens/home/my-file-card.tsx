@@ -1,12 +1,15 @@
-import { Pressable, StyleSheet } from 'react-native';
+import { IconButton } from '@/ui/icon-button';
+import { ListRow } from '@/ui/list';
 
-import { AppIcon } from '@/components/app-icon';
-import { IconCircle, ListRow } from '@/components/grouped';
-import { TouchTarget } from '@/constants/theme';
-import { useTheme } from '@/hooks/use-theme';
+import { OpenTile } from './open-tile';
 
-// One of the user's own files as a row: tap to open it, or the bin to
-// delete it. The open file shows a check.
+// The name of the row's second action, for a screen reader.
+const DELETE_ACTION = 'delete';
+
+// One of the person's own files as a row of the "My files" list: tap to open
+// it, or the bin to delete it. The file that is open now shows the filled
+// tile with a tick. The name stays on one line and loses its middle, so its
+// ending and its extension stay.
 export function MyFileRow({
   name,
   meta,
@@ -24,35 +27,23 @@ export function MyFileRow({
   onOpen: () => void;
   onDelete: () => void;
 }) {
-  const colors = useTheme();
   return (
     <ListRow
+      title={name}
+      titleLines={1}
+      subtitle={meta}
+      icon={selected ? undefined : 'file'}
+      leading={selected ? <OpenTile /> : undefined}
+      trailing={<IconButton icon="delete" accessibilityLabel={deleteLabel} onPress={onDelete} />}
       onPress={onOpen}
       accessibilityLabel={`${name}. ${meta}${selected ? `. ${selectedLabel}` : ''}`}
-      accessibilityState={{ selected }}
-      icon={
-        <IconCircle
-          icon={selected ? { ios: 'checkmark', android: 'check' } : { ios: 'tablecells', android: 'table_chart' }}
-          color={selected ? colors.onSuccess : colors.textSecondary}
-          background={selected ? colors.success : undefined}
-        />
-      }
-      title={name}
-      subtitle={meta}
-      trailing={
-        <Pressable
-          onPress={onDelete}
-          accessibilityRole="button"
-          accessibilityLabel={deleteLabel}
-          hitSlop={8}
-          style={styles.delete}>
-          <AppIcon name={{ ios: 'trash', android: 'delete_outline' }} size={22} color={colors.textTertiary} />
-        </Pressable>
-      }
+      aria-selected={selected}
+      // On an iPhone the row hides the bin from a screen reader, so deleting
+      // is also offered as an action of the row itself.
+      accessibilityActions={[{ name: DELETE_ACTION, label: deleteLabel }]}
+      onAccessibilityAction={(event) => {
+        if (event.nativeEvent.actionName === DELETE_ACTION) onDelete();
+      }}
     />
   );
 }
-
-const styles = StyleSheet.create({
-  delete: { width: TouchTarget - 8, height: TouchTarget - 8, alignItems: 'center', justifyContent: 'center' },
-});

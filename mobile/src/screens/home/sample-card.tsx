@@ -1,17 +1,19 @@
-import { AppIcon, type IconName } from '@/components/app-icon';
-import { Chevron, IconCircle, ListRow } from '@/components/grouped';
 import type { SampleKey } from '@/data/samples';
-import { useTheme } from '@/hooks/use-theme';
+import type { IconName } from '@/ui/icon-set';
+import { ListRow } from '@/ui/list';
+import { Txt } from '@/ui/text';
 
-// A symbol for each sample file (system icons, never emoji).
+import { OpenTile } from './open-tile';
+
+// An icon of the family for each sample file (never emoji).
 const SAMPLE_ICON: Record<SampleKey, IconName> = {
-  sales: { ios: 'cart', android: 'shopping_cart' },
-  marketing: { ios: 'megaphone', android: 'campaign' },
-  churn: { ios: 'person.2', android: 'group' },
+  sales: 'currency',
+  marketing: 'chart-line',
+  churn: 'chart-bar',
 };
 
-// One sample file as a row of the samples group: its name, what it holds and
-// its size; the open one shows a check instead of a chevron.
+// One sample file as a row of the samples list: its name, what it holds and
+// its size. The one that is open now shows the filled tile with a tick.
 export function SampleRow({
   sampleKey,
   name,
@@ -29,23 +31,19 @@ export function SampleRow({
   selectedLabel: string;
   onPress: () => void;
 }) {
-  const colors = useTheme();
   return (
     <ListRow
-      onPress={onPress}
-      accessibilityLabel={`${name}. ${description}. ${meta}${selected ? `. ${selectedLabel}` : ''}`}
-      accessibilityState={{ selected }}
-      icon={<IconCircle icon={SAMPLE_ICON[sampleKey]} color={colors.textSecondary} />}
       title={name}
       subtitle={description}
-      detail={meta}
-      trailing={
-        selected ? (
-          <AppIcon name={{ ios: 'checkmark.circle.fill', android: 'check_circle' }} size={24} color={colors.success} />
-        ) : (
-          <Chevron />
-        )
-      }
-    />
+      icon={selected ? undefined : SAMPLE_ICON[sampleKey]}
+      leading={selected ? <OpenTile /> : undefined}
+      chevron
+      onPress={onPress}
+      accessibilityLabel={`${name}. ${description}. ${meta}${selected ? `. ${selectedLabel}` : ''}`}
+      aria-selected={selected}>
+      <Txt variant="small" tone="soft">
+        {meta}
+      </Txt>
+    </ListRow>
   );
 }
