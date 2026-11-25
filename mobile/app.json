@@ -2,20 +2,27 @@
   "expo": {
     "name": "LUMIQ",
     "slug": "lumiq",
-    "version": "1.0.0",
+    "version": "2.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "lumiq",
     "userInterfaceStyle": "automatic",
     "android": {
       "package": "com.saksham653.lumiq",
+      "versionCode": 2,
       "adaptiveIcon": {
-        "backgroundColor": "#050914",
+        "backgroundColor": "#2440C0",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "blockedPermissions": [
+        "android.permission.SYSTEM_ALERT_WINDOW",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE"
+      ],
+      "allowBackup": false
     },
     "web": {
       "output": "single",
@@ -26,11 +33,11 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#f8fafc",
+          "backgroundColor": "#F1F0EC",
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 200,
           "dark": {
-            "backgroundColor": "#050914",
+            "backgroundColor": "#151412",
             "image": "./assets/images/splash-icon.png"
           }
         }
