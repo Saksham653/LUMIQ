@@ -23,6 +23,8 @@ export type StoredSettings = {
   // Whether the person has allowed questions to be sent to the AI (see
   // @/state/consent). Missing means they have not been asked yet.
   aiConsent?: 'yes' | 'no';
+  // True once the full opening has played; later opens play only its end.
+  launchSeen?: boolean;
 };
 
 const settingsFile = () => new File(Paths.document, 'lumiq-settings.json');

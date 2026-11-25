@@ -5,12 +5,14 @@ import { Stack } from 'expo-router/stack';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useRef, useState } from 'react';
-import { Platform } from 'react-native';
+import { Platform, StyleSheet, View } from 'react-native';
 
 import { AppStateProvider, useAppState } from '@/state/app-state';
 import { DatasetsProvider } from '@/state/datasets';
 import { fixDirectionAtLaunch } from '@/state/layout-direction';
 import { FONT, palettes, useAppFonts, useTheme, type Scheme } from '@/theme';
+import { LaunchMoment } from '@/ui/launch-moment';
+import { loadSettings, saveSettings } from '@/utils/settings-file';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -85,6 +87,16 @@ function useFontsOrBackstop(): boolean {
   return loaded || waitedEnough;
 }
 
+// The opening: the full moment on the very first open, only its end (the sun
+// coming on) on every later one. In the browser preview "?opening=full" plays
+// the full moment again, for showing it.
+function openingMode(): 'full' | 'short' {
+  if (Platform.OS === 'web' && typeof window !== 'undefined' && window.location.search.includes('opening=full')) {
+    return 'full';
+  }
+  return loadSettings().launchSeen ? 'short' : 'full';
+}
+
 // First launch shows Welcome; after that the app opens straight on the tabs.
 // The splash stays up if the layout direction needs a restart first, and
 // until the fonts are in (`ready`): nothing is drawn before that, so no text
@@ -93,6 +105,9 @@ function RootStack({ ready }: { ready: boolean }) {
   const { onboarded, language } = useAppState();
   // True when the launch check below has asked for a restart.
   const restarting = useRef(false);
+  // Decided once per start, before anything is drawn.
+  const [opening] = useState(openingMode);
+  const [opened, setOpened] = useState(false);
 
   useEffect(() => {
     if (fixDirectionAtLaunch(language)) {
@@ -115,14 +130,30 @@ function RootStack({ ready }: { ready: boolean }) {
   if (!ready) return null;
 
   return (
-    <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Protected guard={onboarded}>
-        <Stack.Screen name="(tabs)" />
-      </Stack.Protected>
-      <Stack.Protected guard={!onboarded}>
-        <Stack.Screen name="welcome" />
-      </Stack.Protected>
-    </Stack>
+    <View style={styles.fill}>
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Protected guard={onboarded}>
+          <Stack.Screen name="(tabs)" />
+        </Stack.Protected>
+        <Stack.Protected guard={!onboarded}>
+          <Stack.Screen name="welcome" />
+        </Stack.Protected>
+      </Stack>
+      {/* Over everything, once per start. Its first frame is the phone's start
+          screen (the tile with the still L), so nothing jumps; the browser has
+          no start screen, so there the L draws itself. */}
+      {!opened ? (
+        <LaunchMoment
+          mode={opening}
+          drawMark={Platform.OS === 'web'}
+          style={StyleSheet.absoluteFill}
+          onDone={() => {
+            setOpened(true);
+            if (opening === 'full') saveSettings({ ...loadSettings(), launchSeen: true });
+          }}
+        />
+      ) : null}
+    </View>
   );
 }
 
@@ -143,3 +174,7 @@ export default function RootLayout() {
     </ThemeProvider>
   );
 }
+
+const styles = StyleSheet.create({
+  fill: { flex: 1 },
+});
