@@ -4,17 +4,19 @@ import Animated, { useReducedMotion } from 'react-native-reanimated';
 import { AppText } from '@/components/app-text';
 import { CSS_EASE_OUT } from '@/constants/motion';
 import { Motion, Spacing } from '@/constants/theme';
-import { useTheme } from '@/hooks/use-theme';
+import { useTheme } from '@/theme';
 import type { ChartBar } from '@/utils/chart';
 
 const GROW = 350;
 
 // A horizontal bar chart: label, bar, value on every row. On a phone this
 // keeps long names and the numbers readable, unlike thin vertical bars.
-// The biggest bar is amber; every row reads out as "label: value".
+// One series, so one blue: the biggest bar is the action blue with its name
+// and value in heavier ink, the others are neutral. Every row reads out as
+// "label: value".
 // With `animate` (a new file or a new column), the bars grow from the start
 // edge one after another (25 ms apart, 350 ms each) and the biggest turns
-// amber as it lands. Right-to-left languages grow them from the right.
+// blue as it lands. Right-to-left languages grow them from the right.
 export function HBarChart({
   bars,
   formatValue,
@@ -24,7 +26,7 @@ export function HBarChart({
   formatValue: (value: number) => string;
   animate?: boolean;
 }) {
-  const colors = useTheme();
+  const { colors } = useTheme();
   const reduced = useReducedMotion();
   const grow = animate && !reduced;
   const largest = Math.max(...bars.map((bar) => Math.abs(bar.value)), 0) || 1;
@@ -35,17 +37,17 @@ export function HBarChart({
       {bars.map((bar, index) => {
         const peak = index === peakIndex;
         const width = `${Math.max(2, (Math.abs(bar.value) / largest) * 100)}%` as const;
-        const fill = peak ? colors.accent : colors.primary;
+        const fill = peak ? colors.chartPeak : colors.chartRest;
         return (
           <View
             key={`${bar.label}-${index}`}
             style={styles.row}
             accessible
             accessibilityLabel={`${bar.label}: ${formatValue(bar.value)}`}>
-            <AppText variant="small" tone={peak ? 'accent' : 'secondary'} numberOfLines={1} style={[styles.label, peak && styles.peak]}>
+            <AppText variant="small" tone={peak ? 'default' : 'secondary'} numberOfLines={1} style={[styles.label, peak && styles.peak]}>
               {bar.label}
             </AppText>
-            <View style={[styles.track, { backgroundColor: colors.surfaceVariant }]}>
+            <View style={[styles.track, { backgroundColor: colors.surfaceSunk }]}>
               {/* An absolutely placed fill with no children: the one element
                   allowed to animate its width (corners stay round). */}
               <Animated.View
@@ -56,9 +58,9 @@ export function HBarChart({
                     ? {
                         animationName: peak
                           ? {
-                              '0%': { width: '0%', backgroundColor: colors.primary },
-                              '80%': { backgroundColor: colors.primary },
-                              '100%': { width, backgroundColor: colors.accent },
+                              '0%': { width: '0%', backgroundColor: colors.chartRest },
+                              '80%': { backgroundColor: colors.chartRest },
+                              '100%': { width, backgroundColor: colors.chartPeak },
                             }
                           : { from: { width: '0%' }, to: { width } },
                         animationDuration: GROW,
@@ -70,7 +72,7 @@ export function HBarChart({
                 ]}
               />
             </View>
-            <AppText variant="small" numberOfLines={1} style={[styles.value, peak && styles.peak, peak && { color: colors.accent }]}>
+            <AppText variant="small" numberOfLines={1} style={[styles.value, peak && styles.peak]}>
               {formatValue(bar.value)}
             </AppText>
           </View>

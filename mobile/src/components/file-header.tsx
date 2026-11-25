@@ -8,7 +8,8 @@ import { useTheme } from '@/hooks/use-theme';
 import { useNumbers, useT } from '@/state/app-state';
 import { useDatasets } from '@/state/datasets';
 
-// The chosen file's name and size on a quiet panel, with a way back to Home
+// The chosen file's name and size on a card (paper with a thin edge, no
+// shadow), with a way back to Home
 // to pick another.
 export function FileHeader({ dataset }: { dataset: Dataset }) {
   const colors = useTheme();
@@ -16,7 +17,7 @@ export function FileHeader({ dataset }: { dataset: Dataset }) {
   const numbers = useNumbers();
   const { datasetName } = useDatasets();
   return (
-    <View style={[styles.panel, { backgroundColor: colors.card }]}>
+    <View style={[styles.panel, { backgroundColor: colors.card, borderColor: colors.border }]}>
       <View style={styles.text}>
         <AppText variant="heading" numberOfLines={2}>
           {datasetName(dataset.id) ?? dataset.name}
@@ -42,6 +43,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.lg + 4,
     paddingVertical: Spacing.lg,
     borderRadius: Radius.xxl,
+    borderWidth: 1,
   },
   text: { flex: 1, gap: 2 },
   change: { minHeight: 44, justifyContent: 'center' },

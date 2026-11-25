@@ -1,8 +1,10 @@
-import { useColorScheme } from 'react-native';
-
 import { Colors, type Palette } from '@/constants/theme';
+import { useTheme as useRoshniTheme } from '@/theme';
 
-// The LUMIQ palette for the phone's light or dark mode.
+// The OLD flat palette, for screens that have not been rebuilt yet. Its
+// values come from the new theme, for the scheme the new theme is showing, so
+// the Light or Dark choice made inside the app reaches every screen. New code
+// uses useTheme from '@/theme' instead.
 export function useTheme(): Palette {
-  return useColorScheme() === 'dark' ? Colors.dark : Colors.light;
+  return Colors[useRoshniTheme().scheme];
 }

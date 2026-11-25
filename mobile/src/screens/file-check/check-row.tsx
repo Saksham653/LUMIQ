@@ -3,12 +3,13 @@ import { Pressable, StyleSheet, View } from 'react-native';
 
 import { AppIcon } from '@/components/app-icon';
 import { AppText } from '@/components/app-text';
-import { Spacing, TouchTarget } from '@/constants/theme';
+import { Radius, Spacing, TouchTarget } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
 // One of the four checks, as a row of the "What we checked" group: a green
-// tick and "OK" when clear; otherwise what was found in amber, and "See it"
-// (an action, so cyan) to show where and how to fix it.
+// tick and "OK" when clear; otherwise what was found in the warning colour,
+// and "See it" (an action, so blue) to show where and how to fix it in a
+// sunk well.
 export function CheckRow({
   title,
   summary,
@@ -61,7 +62,7 @@ export function CheckRow({
           </Pressable>
         )}
       </View>
-      {!clear && open && <View style={[styles.details, { backgroundColor: colors.background }]}>{children}</View>}
+      {!clear && open && <View style={[styles.details, { backgroundColor: colors.surfaceVariant }]}>{children}</View>}
     </View>
   );
 }
@@ -74,5 +75,5 @@ const styles = StyleSheet.create({
   okText: { fontWeight: '700' },
   see: { minHeight: 44, width: 96, justifyContent: 'center' },
   seeText: { textAlign: 'center', alignSelf: 'stretch' },
-  details: { borderRadius: 12, padding: Spacing.md, gap: Spacing.xs },
+  details: { borderRadius: Radius.md, padding: Spacing.md, gap: Spacing.xs },
 });

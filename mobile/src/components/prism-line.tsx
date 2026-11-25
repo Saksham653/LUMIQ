@@ -1,6 +1,5 @@
 import { I18nManager, StyleSheet, View } from 'react-native';
 import Animated, { useReducedMotion } from 'react-native-reanimated';
-import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 
 import { AppIcon } from '@/components/app-icon';
 import { CSS_EASE_OUT } from '@/constants/motion';
@@ -9,27 +8,19 @@ import { useTheme } from '@/hooks/use-theme';
 
 const HEIGHT = 3;
 
-function Gradient({ id }: { id: string }) {
+// The line itself: one solid stroke of the action blue.
+function Stroke() {
   const colors = useTheme();
-  return (
-    <Svg width="100%" height={HEIGHT} preserveAspectRatio="none">
-      <Defs>
-        <LinearGradient id={id} x1="0" y1="0" x2="1" y2="0">
-          <Stop offset="0" stopColor={colors.prism[0]} />
-          <Stop offset="0.5" stopColor={colors.prism[1]} />
-          <Stop offset="1" stopColor={colors.prism[2]} />
-        </LinearGradient>
-      </Defs>
-      <Rect width="100%" height={HEIGHT} rx={HEIGHT / 2} fill={`url(#${id})`} />
-    </Svg>
-  );
+  return <View style={[styles.stroke, { backgroundColor: colors.primary }]} />;
 }
 
-// LUMIQ's one signature and the app's only gradient: a thin cyan → violet →
-// amber line that appears only while LUMIQ is working something out, or once
-// it has verified it.
-// - "working": a short stretch of light flows along the line, on a loop, for
-//   as long as the real work takes (never a timer pretending to be progress).
+// The line LUMIQ draws only while it is working something out, or once it
+// has verified it. One solid action blue (the name is from the old look,
+// when it was a cyan, violet and amber gradient; the new look has no
+// gradient anywhere).
+// - "working": a short stretch of the line flows along a sunk track, on a
+//   loop, for as long as the real work takes (never a timer pretending to be
+//   progress).
 // - "verified": the line draws across (300 ms) and ends in a small check.
 // Right-to-left languages run it from the right. With reduced motion the
 // flow becomes a gentle fade and the line simply appears.
@@ -40,7 +31,11 @@ export function PrismLine({ state, label }: { state: 'working' | 'verified'; lab
 
   if (state === 'working') {
     return (
-      <View style={[styles.track, mirror]} accessible accessibilityLabel={label} accessibilityRole="progressbar">
+      <View
+        style={[styles.track, { backgroundColor: colors.surfaceVariant }, mirror]}
+        accessible
+        accessibilityLabel={label}
+        accessibilityRole="progressbar">
         <Animated.View
           style={[
             styles.flow,
@@ -63,7 +58,7 @@ export function PrismLine({ state, label }: { state: 'working' | 'verified'; lab
                   animationTimingFunction: 'linear',
                 },
           ]}>
-          <Gradient id="prism-flow" />
+          <Stroke />
         </Animated.View>
       </View>
     );
@@ -71,7 +66,7 @@ export function PrismLine({ state, label }: { state: 'working' | 'verified'; lab
 
   // In right-to-left languages the row already runs from the right, so the
   // check lands at the end on its own; only the line itself is mirrored, so
-  // its colours and its drawing start from the right.
+  // its drawing starts from the right.
   return (
     <View style={styles.verified} accessible accessibilityLabel={label}>
       <View style={[styles.line, mirror]}>
@@ -88,7 +83,7 @@ export function PrismLine({ state, label }: { state: 'working' | 'verified'; lab
                   animationFillMode: 'both',
                 },
           ]}>
-          <Gradient id="prism-done" />
+          <Stroke />
         </Animated.View>
       </View>
       <Animated.View
@@ -114,6 +109,7 @@ export function PrismLine({ state, label }: { state: 'working' | 'verified'; lab
 const styles = StyleSheet.create({
   track: { height: HEIGHT, borderRadius: HEIGHT / 2, overflow: 'hidden' },
   flow: { width: '38%', height: HEIGHT },
+  stroke: { height: HEIGHT, borderRadius: HEIGHT / 2 },
   verified: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   line: { flex: 1, height: HEIGHT },
   fill: { height: HEIGHT },

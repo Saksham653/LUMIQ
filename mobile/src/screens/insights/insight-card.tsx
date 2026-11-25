@@ -4,8 +4,9 @@ import { useTheme } from '@/hooks/use-theme';
 import type { InsightView } from '@/utils/insight-text';
 
 // One finding in plain words, as a row of the "What LUMIQ noticed" group.
-// Amber marks the one kind that needs a look (an unusual number); the rest
-// stay neutral.
+// The one kind that needs a look (an unusual number) has its icon in full
+// ink; the rest are in soft ink. "Look here" is said with heavier ink, never
+// with a colour.
 export function InsightRow({ insight }: { insight: InsightView }) {
   const colors = useTheme();
   const needsLook = insight.tone === 'accent';
@@ -15,8 +16,7 @@ export function InsightRow({ insight }: { insight: InsightView }) {
       icon={
         <IconCircle
           icon={insight.icon}
-          color={needsLook ? colors.accent : colors.textSecondary}
-          background={needsLook ? colors.accentContainer : colors.surfaceVariant}
+          color={needsLook ? colors.text : colors.textSecondary}
         />
       }
       title={<AppText variant="label">{insight.title}</AppText>}

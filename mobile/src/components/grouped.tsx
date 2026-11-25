@@ -4,12 +4,16 @@ import { I18nManager, StyleSheet, View, type StyleProp, type ViewStyle } from 'r
 import { AppIcon, type IconName } from '@/components/app-icon';
 import { AppText } from '@/components/app-text';
 import { PressableRow } from '@/components/pressable-scale';
-import { Radius, Spacing, TouchTarget } from '@/constants/theme';
+import { Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
-// Grouped sections, like the phone's own Settings: one white panel with
-// rows separated by hairlines. No borders and no shadows; the panel stands
-// out from the page by background contrast alone.
+// Grouped sections, like the phone's own Settings: one card (paper with a
+// thin edge, corner 20, no shadow) with rows separated by hairlines.
+
+// A list row is at least this high (brand spec, section 6).
+const ROW_MIN = 56;
+// The corner of an icon tile, as a part of its side: 14 on a tile of 40.
+const TILE_CORNER = 0.35;
 
 export function SectionTitle({ title, trailing }: { title: string; trailing?: ReactNode }) {
   return (
@@ -26,7 +30,7 @@ export function Group({ children, style }: { children: ReactNode; style?: StyleP
   const colors = useTheme();
   const rows = Children.toArray(children).filter(isValidElement);
   return (
-    <View style={[styles.group, { backgroundColor: colors.card }, style]}>
+    <View style={[styles.group, { backgroundColor: colors.card, borderColor: colors.border }, style]}>
       {rows.map((row, index) => (
         <Fragment key={row.key ?? index}>
           {index > 0 ? <View style={[styles.hairline, { backgroundColor: colors.border }]} /> : null}
@@ -37,14 +41,15 @@ export function Group({ children, style }: { children: ReactNode; style?: StyleP
   );
 }
 
-// A small symbol in a quiet tinted circle.
+// A small symbol on a sunk tile with a soft corner (the name is from the old
+// look, when the tile was a circle).
 export function IconCircle({ icon, color, background, size = 40 }: { icon: IconName; color?: string; background?: string; size?: number }) {
   const colors = useTheme();
   return (
     <View
       style={[
         styles.iconCircle,
-        { width: size, height: size, borderRadius: size / 2, backgroundColor: background ?? colors.surfaceVariant },
+        { width: size, height: size, borderRadius: Math.round(size * TILE_CORNER), backgroundColor: background ?? colors.surfaceVariant },
       ]}>
       <AppIcon name={icon} size={Math.round(size * 0.5)} color={color ?? colors.textSecondary} />
     </View>
@@ -136,10 +141,10 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.sm,
   },
   sectionText: { fontWeight: '600', flexShrink: 1 },
-  group: { borderRadius: Radius.xxl, overflow: 'hidden' },
-  hairline: { height: StyleSheet.hairlineWidth, marginStart: Spacing.lg },
+  group: { borderRadius: Radius.xxl, borderWidth: 1, overflow: 'hidden' },
+  hairline: { height: 1 },
   row: {
-    minHeight: TouchTarget + 12,
+    minHeight: ROW_MIN,
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.md,
@@ -149,17 +154,23 @@ const styles = StyleSheet.create({
   text: { flex: 1, gap: 2 },
   iconCircle: { alignItems: 'center', justifyContent: 'center' },
   flip: { transform: [{ scaleX: -1 }] },
-  radio: { width: 24, height: 24, borderRadius: 12, borderWidth: 2, alignItems: 'center', justifyContent: 'center' },
-  radioDot: { width: 12, height: 12, borderRadius: 6 },
+  // 22 across with a 1.5 ring; chosen, an 8 dot (brand spec, section 6).
+  radio: { width: 22, height: 22, borderRadius: 11, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center' },
+  radioDot: { width: 8, height: 8, borderRadius: 4 },
   tag: { paddingHorizontal: Spacing.sm, borderRadius: Radius.pill },
 });
 
-// A radio button: a cyan ring with a filled centre when chosen.
+// A radio button: a thin ring; when chosen, filled with the action blue with
+// a small dot in the middle.
 export function Radio({ selected }: { selected: boolean }) {
   const colors = useTheme();
   return (
-    <View style={[styles.radio, { borderColor: selected ? colors.primary : colors.textTertiary }]}>
-      {selected ? <View style={[styles.radioDot, { backgroundColor: colors.primary }]} /> : null}
+    <View
+      style={[
+        styles.radio,
+        selected ? { backgroundColor: colors.primary, borderColor: colors.primary } : { borderColor: colors.textTertiary },
+      ]}>
+      {selected ? <View style={[styles.radioDot, { backgroundColor: colors.onPrimary }]} /> : null}
     </View>
   );
 }

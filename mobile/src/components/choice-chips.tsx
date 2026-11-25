@@ -5,7 +5,7 @@ import Animated from 'react-native-reanimated';
 import { AppText } from '@/components/app-text';
 import { hapticSelection } from '@/components/haptics';
 import { CSS_EASE_OUT } from '@/constants/motion';
-import { Motion, Radius, Spacing, TouchTarget } from '@/constants/theme';
+import { Motion, Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
 export type Choice = { value: string; label: string };
@@ -29,13 +29,14 @@ function Chip({ choice, active, onSelect }: { choice: Choice; active: boolean; o
           styles.chip,
           {
             backgroundColor: active ? colors.primary : pressed ? colors.pressed : colors.card,
+            borderColor: active ? colors.primary : colors.textTertiary,
             transform: [{ scale: pressed ? 0.97 : 1 }],
             transitionProperty: ['backgroundColor', 'transform'],
             transitionDuration: Motion.fast,
             transitionTimingFunction: CSS_EASE_OUT,
           },
         ]}>
-        <AppText variant="label" snug style={{ color: active ? colors.onPrimary : colors.text }}>
+        <AppText variant="label" snug style={{ color: active ? colors.onPrimary : colors.textSecondary }}>
           {choice.label}
         </AppText>
       </Animated.View>
@@ -44,7 +45,9 @@ function Chip({ choice, active, onSelect }: { choice: Choice; active: boolean; o
 }
 
 // A row of big chips, one per choice, scrolling sideways when they don't fit.
-// Every choice is visible at once, rather than hidden in a menu. Choosing one
+// Every choice is visible at once, rather than hidden in a menu. The chosen
+// chip is filled with the action blue; the others are paper with a thin edge
+// and a soft label, so the choice is never shown by a tint alone. Choosing one
 // changes its colour (150 ms) with a selection haptic in the same frame.
 export function ChoiceChips({
   choices,
@@ -72,10 +75,13 @@ export function ChoiceChips({
 
 const styles = StyleSheet.create({
   row: { gap: Spacing.sm, paddingEnd: Spacing.xl },
+  // At least 48 high, 18 at the sides, a 1.5 edge (brand spec, section 6).
   chip: {
-    minHeight: TouchTarget - 8,
+    minHeight: 48,
     justifyContent: 'center',
-    paddingHorizontal: Spacing.lg,
+    paddingHorizontal: 18,
+    paddingVertical: 6,
     borderRadius: Radius.pill,
+    borderWidth: 1.5,
   },
 });

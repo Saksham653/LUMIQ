@@ -18,7 +18,7 @@ export function NoFileChosen() {
       contentInsetAdjustmentBehavior="automatic"
       style={{ backgroundColor: colors.background }}
       contentContainerStyle={styles.content}>
-      <View style={[styles.panel, { backgroundColor: colors.card }]}>
+      <View style={[styles.panel, { backgroundColor: colors.card, borderColor: colors.border }]}>
         <FindFileIllustration size={84} />
         <AppText variant="heading" style={styles.center}>
           {t('noFile.title')}
@@ -34,6 +34,6 @@ export function NoFileChosen() {
 
 const styles = StyleSheet.create({
   content: { padding: Spacing.xl, gap: Spacing.xxl },
-  panel: { alignItems: 'center', gap: Spacing.md, padding: Spacing.xxl, borderRadius: Radius.xxl },
+  panel: { alignItems: 'center', gap: Spacing.md, padding: Spacing.xxl, borderRadius: Radius.xxl, borderWidth: 1 },
   center: { textAlign: 'center', alignSelf: 'stretch' },
 });

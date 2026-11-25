@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { StyleSheet, View } from 'react-native';
 import Animated, { useAnimatedProps, useReducedMotion, useSharedValue, withTiming } from 'react-native-reanimated';
-import Svg, { Circle, Defs, LinearGradient, Stop } from 'react-native-svg';
+import Svg, { Circle } from 'react-native-svg';
 
 import { AppText } from '@/components/app-text';
 import { Numeral } from '@/components/numeral';
@@ -12,8 +12,9 @@ import type { NumberFormat } from '@/utils/format';
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
-// The File check score: a ring drawn in the prism gradient to the score, with
-// the number in the middle. With `reveal`, the ring draws (900 ms, ease-out)
+// The File check score: a ring drawn in the solid action blue to the score
+// (the name is from the old look, when it was a gradient), on a sunk track,
+// with the number in the middle. With `reveal`, the ring draws (900 ms, ease-out)
 // while the number counts up in step; with reduced motion, or on a later
 // visit, both are simply there.
 export function PrismRing({
@@ -52,19 +53,12 @@ export function PrismRing({
     <View style={{ width: size, height: size }} accessible accessibilityLabel={`${score} ${outOf}`}>
       {/* Starts at 12 o'clock and runs clockwise. */}
       <Svg width={size} height={size} style={styles.rotate}>
-        <Defs>
-          <LinearGradient id="prism-ring" x1="0" y1="0" x2="1" y2="1">
-            <Stop offset="0" stopColor={colors.prism[0]} />
-            <Stop offset="0.55" stopColor={colors.prism[1]} />
-            <Stop offset="1" stopColor={colors.prism[2]} />
-          </LinearGradient>
-        </Defs>
         <Circle cx={size / 2} cy={size / 2} r={radius} stroke={colors.surfaceVariant} strokeWidth={stroke} fill="none" />
         <AnimatedCircle
           cx={size / 2}
           cy={size / 2}
           r={radius}
-          stroke="url(#prism-ring)"
+          stroke={colors.primary}
           strokeWidth={stroke}
           strokeLinecap="round"
           fill="none"

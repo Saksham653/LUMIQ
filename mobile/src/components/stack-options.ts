@@ -6,7 +6,10 @@ import { useTheme } from '@/hooks/use-theme';
 type ScreenOptions = Exclude<NonNullable<ComponentProps<typeof Stack.Screen>['options']>, (...args: never[]) => unknown>;
 
 // Shared header style for the stack inside each tab: a large title on iOS,
-// a plain title bar on Android, both on the LUMIQ background colour.
+// a plain title bar on Android, both on the LUMIQ paper colour. The title's
+// font comes from the navigation theme in the root layout, so every stack
+// has the same one. The back arrow and header buttons are the blue as text,
+// which stays readable in dark.
 export function useStackOptions(): ScreenOptions {
   const colors = useTheme();
   return {
@@ -17,7 +20,7 @@ export function useStackOptions(): ScreenOptions {
     headerLargeStyle: { backgroundColor: colors.background },
     headerTitleStyle: { color: colors.text },
     headerLargeTitleStyle: { color: colors.text },
-    headerTintColor: colors.primary,
+    headerTintColor: colors.primaryText,
     contentStyle: { backgroundColor: colors.background },
   };
 }

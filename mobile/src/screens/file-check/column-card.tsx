@@ -15,7 +15,8 @@ const TYPE_ICON: Record<ColumnKind, IconName> = {
 };
 
 // One column as LUMIQ read it, as a row of the "Your columns" group: its
-// type and a one-line summary of its values; empty cells in amber.
+// type and a one-line summary of its values; empty cells in the warning
+// colour.
 export function ColumnRow({
   name,
   type,

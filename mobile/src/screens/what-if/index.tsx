@@ -134,7 +134,7 @@ function DatasetWhatIf({ dataset }: { dataset: Dataset }) {
       </Step>
 
       <Step title={t('whatIf.step2')}>
-        <View style={[styles.panel, { backgroundColor: colors.card }]}>
+        <View style={[styles.panel, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <PercentPicker value={change} onChange={setChange} description={description} sliderLabel={t('whatIf.changeA11y')} />
         </View>
       </Step>
@@ -223,7 +223,8 @@ function Step({ title, children }: { title: string; children: ReactNode }) {
 const styles = StyleSheet.create({
   content: { padding: Spacing.xl, gap: Spacing.xxl, paddingBottom: Spacing.huge },
   step: { gap: Spacing.sm },
-  panel: { padding: Spacing.xl, borderRadius: Radius.xxl },
+  // A card: paper with a thin edge, no shadow.
+  panel: { padding: Spacing.xl, borderRadius: Radius.xxl, borderWidth: 1 },
   segmented: { height: 44 },
   groupPick: { gap: Spacing.sm, marginTop: Spacing.sm },
 });

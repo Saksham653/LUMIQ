@@ -65,7 +65,7 @@ function DatasetInsights({ dataset }: { dataset: Dataset }) {
       <FileHeader dataset={dataset} />
 
       {!metric || !kpis ? (
-        <View style={[styles.panel, { backgroundColor: colors.card }]}>
+        <View style={[styles.panel, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <AppText tone="secondary" style={styles.center}>
             {t('insights.noNumbers')}
           </AppText>
@@ -113,7 +113,7 @@ function DatasetInsights({ dataset }: { dataset: Dataset }) {
             />
           </View>
 
-          <View style={[styles.panel, { backgroundColor: colors.card }]}>
+          <View style={[styles.panel, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <AppText variant="heading">
               {chart?.groupColumn
                 ? t('insights.chartBy', { metric: prettyColumn(metric), group: inSentence(prettyColumn(chart.groupColumn), language) })
@@ -144,7 +144,7 @@ function DatasetInsights({ dataset }: { dataset: Dataset }) {
             ))}
           </Group>
         ) : (
-          <View style={[styles.panel, { backgroundColor: colors.card }]}>
+          <View style={[styles.panel, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <AppText tone="secondary">{t('insights.nothingNoticed')}</AppText>
           </View>
         )}
@@ -156,6 +156,7 @@ function DatasetInsights({ dataset }: { dataset: Dataset }) {
 const styles = StyleSheet.create({
   content: { padding: Spacing.xl, gap: Spacing.xxl, paddingBottom: Spacing.huge },
   kpiGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.md },
-  panel: { gap: Spacing.md, padding: Spacing.xl, borderRadius: Radius.xxl },
+  // A card: paper with a thin edge, no shadow.
+  panel: { gap: Spacing.md, padding: Spacing.xl, borderRadius: Radius.xxl, borderWidth: 1 },
   center: { textAlign: 'center', alignSelf: 'stretch' },
 });

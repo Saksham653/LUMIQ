@@ -57,7 +57,7 @@ function DatasetReport({ dataset }: { dataset: Dataset }) {
         {t('report.intro')}
       </AppText>
 
-      <View style={[styles.page, { backgroundColor: colors.card }]}>
+      <View style={[styles.page, { backgroundColor: colors.card, borderColor: colors.border }]}>
         <View style={styles.block}>
           <AppText variant="small" tone="secondary" style={styles.kicker}>
             {t('report.label')}
@@ -77,7 +77,7 @@ function DatasetReport({ dataset }: { dataset: Dataset }) {
             {report.numbers.map((item, index) => (
               <View
                 key={item.label}
-                style={[styles.tile, { backgroundColor: colors.background }]}
+                style={[styles.tile, { backgroundColor: colors.surfaceVariant }]}
                 accessible
                 accessibilityLabel={`${item.label}: ${item.value}. ${item.footnote}`}>
                 <View style={styles.tileTop}>
@@ -138,7 +138,8 @@ function DatasetReport({ dataset }: { dataset: Dataset }) {
           ))}
         </View>
 
-        <AppText variant="small" tone="secondary" style={styles.footer}>
+        {/* Upright: the brand faces have no italic cut. */}
+        <AppText variant="small" tone="secondary">
           {t('report.footer')}
         </AppText>
       </View>
@@ -160,9 +161,12 @@ function Divider() {
 
 const styles = StyleSheet.create({
   content: { padding: Spacing.xl, gap: Spacing.xxl, paddingBottom: Spacing.huge },
-  page: { padding: Spacing.xl, borderRadius: Radius.xxl, gap: Spacing.lg },
+  // The page is a card: paper with a thin edge, no shadow. Its number tiles
+  // are sunk wells.
+  page: { padding: Spacing.xl, borderRadius: Radius.xxl, borderWidth: 1, gap: Spacing.lg },
   block: { gap: Spacing.sm },
-  kicker: { fontWeight: '700', letterSpacing: 1 },
+  // Sentence case and no letter spacing: the label can be Devanagari.
+  kicker: { fontWeight: '600' },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm },
   tile: { flexGrow: 1, flexBasis: '45%', padding: Spacing.md, borderRadius: Radius.lg, gap: 2 },
   // The footnote number keeps to the tile's end corner, however the label wraps.
@@ -172,8 +176,7 @@ const styles = StyleSheet.create({
   footnote: { flexDirection: 'row', gap: Spacing.sm },
   footnoteMark: { minWidth: 14, fontVariant: ['tabular-nums'] },
   flex: { flex: 1 },
-  divider: { height: StyleSheet.hairlineWidth },
-  footer: { fontStyle: 'italic' },
+  divider: { height: 1 },
   actions: { gap: Spacing.md },
   center: { textAlign: 'center', alignSelf: 'stretch' },
 });

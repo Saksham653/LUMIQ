@@ -5,13 +5,16 @@ import { AppText } from '@/components/app-text';
 import { PrismRing } from '@/components/prism-ring';
 import { Numeral, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { figureFont } from '@/theme';
 import type { NumberFormat } from '@/utils/format';
 
 export type ScoreTerm = { value: string; label: string };
 
-// The File check score: the ring drawn in the prism gradient, then the score
-// as a plain sum so every lost point shows (100 − 2 = 98), a small verified
-// mark saying it was checked on the phone, and one sentence on what it means.
+// The File check score: the ring drawn in the action blue, then the score as
+// a plain sum so every lost point shows (100 − 2 = 98), a plain line of
+// proof saying it was checked on the phone (a small tick in soft ink: this is
+// a number the phone worked out, so it never takes the checked stamp or the
+// yellow), and one sentence on what it means.
 export function ScoreSummary({
   score,
   format,
@@ -56,9 +59,7 @@ export function ScoreSummary({
         </View>
       ) : null}
       <View style={styles.checked}>
-        <View style={[styles.checkDot, { backgroundColor: colors.success }]}>
-          <AppIcon name={{ ios: 'checkmark', android: 'check' }} size={11} color={colors.onSuccess} />
-        </View>
+        <AppIcon name={{ ios: 'checkmark', android: 'check' }} size={18} color={colors.textSecondary} />
         <AppText variant="small" tone="secondary" style={styles.flexText}>
           {checkedLine}
         </AppText>
@@ -74,7 +75,7 @@ function Term({ term, tone, strong }: { term: ScoreTerm; tone?: string; strong?:
   const colors = useTheme();
   return (
     <View style={styles.term}>
-      <Text style={[styles.termValue, { color: tone ?? colors.text, fontWeight: strong ? '800' : '700' }]} maxFontSizeMultiplier={1.3}>
+      <Text style={[styles.termValue, strong ? styles.termStrong : null, { color: tone ?? colors.text }]} maxFontSizeMultiplier={1.3}>
         {term.value}
       </Text>
       <AppText variant="small" tone="secondary" style={styles.termLabel}>
@@ -97,17 +98,14 @@ const styles = StyleSheet.create({
     ...(Platform.OS === 'web' ? null : ({ direction: 'ltr' } as const)),
   },
   pair: { flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.md },
-  operator: { fontSize: Numeral.medium, lineHeight: Math.round(Numeral.medium * 1.2), fontWeight: '400' },
+  // Digits and signs are set in the figures face: the lighter cut for the
+  // parts of the sum, the heavier one for the score it comes to.
+  operator: { ...figureFont('500'), fontSize: Numeral.medium, lineHeight: Math.round(Numeral.medium * 1.2) },
   term: { alignItems: 'center', maxWidth: 120 },
-  termValue: {
-    fontSize: Numeral.medium,
-    lineHeight: Math.round(Numeral.medium * 1.2),
-    fontVariant: ['tabular-nums'],
-    letterSpacing: -0.5,
-  },
+  termValue: { ...figureFont('500'), fontSize: Numeral.medium, lineHeight: Math.round(Numeral.medium * 1.2) },
+  termStrong: figureFont('600'),
   termLabel: { textAlign: 'center', alignSelf: 'stretch' },
   checked: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, justifyContent: 'center' },
-  checkDot: { width: 16, height: 16, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
   flexText: { flexShrink: 1, textAlign: 'center' },
   center: { textAlign: 'center', alignSelf: 'stretch' },
 });

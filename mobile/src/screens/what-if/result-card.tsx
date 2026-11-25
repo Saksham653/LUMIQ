@@ -11,8 +11,9 @@ import type { NumberFormat } from '@/utils/format';
 const UPDATE = 200;
 
 // The answer to the what-if: the value after the change as a big numeral,
-// the difference in words, then two bars, now and after. When the change
-// moves, the bars slide to their new length (200 ms).
+// the difference in words, then two bars on sunk tracks: now in neutral ink,
+// after in the action blue (a fall as much as a rise: the words say which).
+// When the change moves, the bars slide to their new length (200 ms).
 export function ResultCard({
   title,
   label,
@@ -43,10 +44,12 @@ export function ResultCard({
   const colors = useTheme();
   const largest = Math.max(Math.abs(before), Math.abs(after), Number.EPSILON);
   const share = (value: number) => `${Math.max(Math.min(Math.abs(value) / largest, 1), 0.02) * 100}%` as const;
-  const afterColor = after < before ? colors.accent : colors.primary;
 
   return (
-    <View style={[styles.card, { backgroundColor: colors.card }]} accessible accessibilityLabel={`${label}: ${afterText}. ${detail}`}>
+    <View
+      style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}
+      accessible
+      accessibilityLabel={`${label}: ${afterText}. ${detail}`}>
       <AppText variant="small" tone="secondary" style={styles.title}>
         {title}
       </AppText>
@@ -61,7 +64,7 @@ export function ResultCard({
 
       <View style={styles.bars}>
         <Bar label={nowLabel} valueText={beforeText} width={share(before)} color={colors.textTertiary} />
-        <Bar label={afterLabel} valueText={afterText} width={share(after)} color={afterColor} strong />
+        <Bar label={afterLabel} valueText={afterText} width={share(after)} color={colors.primary} strong />
       </View>
     </View>
   );
@@ -111,7 +114,7 @@ function Bar({
 }
 
 const styles = StyleSheet.create({
-  card: { gap: Spacing.sm, padding: Spacing.xl, borderRadius: Radius.xxl },
+  card: { gap: Spacing.sm, padding: Spacing.xl, borderRadius: Radius.xxl, borderWidth: 1 },
   title: { fontWeight: '600' },
   bars: { gap: Spacing.md, marginTop: Spacing.md },
   barBlock: { gap: Spacing.xs },

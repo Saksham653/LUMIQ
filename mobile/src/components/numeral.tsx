@@ -6,11 +6,25 @@ import { scheduleOnRN } from 'react-native-worklets';
 import { EASE_OUT } from '@/constants/motion';
 import { Motion, Numeral as NumeralSize } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { useAppState } from '@/state/app-state';
+import { figureFont, hasDevanagari, textFont } from '@/theme';
 import type { NumberFormat } from '@/utils/format';
 
 export type NumeralParts = { prefix: string; number: string; suffix: string; rtl?: boolean };
 
 const AnimatedTextInput = Animated.createAnimatedComponent(TextInput);
+
+// Where each font's baseline sits, as a part of the font size, so the small
+// sign and unit can be stood on the digits' baseline (the row lines its
+// children up by their bottom edges).
+// Digits: Outfit goes 0.26 below its baseline and its own line is 1.26; on
+// the 1.15 line used here the baseline is 0.26 - (1.26 - 1.15) / 2 above the
+// bottom of the line.
+const DIGIT_BASELINE = 0.205;
+// How far below its baseline the text face reaches: Anek Latin, and Anek
+// Devanagari, which keeps a lot of room there for marks under the letters.
+const TEXT_DESCENT = 0.2;
+const DEVANAGARI_DESCENT = 0.69;
 
 // The digits of a count-up frame, written the way the final number is:
 // same decimals, same grouping (Western or lakh/crore), same separators.
@@ -47,8 +61,10 @@ function readDigits(number: string, format: NumberFormat) {
   return { value: Number(plain), decimals: point === -1 ? 0 : plain.length - point - 1 };
 }
 
-// A big confident number: currency and digits in bold tabular figures, the
-// unit beside them lighter and smaller ("4.68" + "M", "₹46.8" + "lakh").
+// A big confident number: the digits in the figures face (Outfit, every digit
+// the same width), the currency sign and the unit beside them in the text
+// face, lighter and smaller ("₹" + "46.8" + "lakh", "4.68" + "M"). The
+// figures face has no rupee sign, which is one more reason the sign is text.
 // With `countUp`, the digits count up from 0 once (600 ms, ease-out) in the
 // final number's own format, on the UI thread; with reduced motion they
 // just appear. Numbers stay left-to-right, also in Hebrew.
@@ -76,6 +92,7 @@ export function Numeral({
   accessibilityLabel?: string;
 }) {
   const colors = useTheme();
+  const { language } = useAppState();
   const reduced = useReducedMotion();
   const fontSize = NumeralSize[size];
   const { value, decimals } = readDigits(parts.number, format);
@@ -100,20 +117,25 @@ export function Numeral({
   });
 
   const digitStyle: TextStyle = {
+    ...figureFont(),
     color: color ?? colors.text,
     fontSize,
     lineHeight: Math.round(fontSize * 1.15),
-    fontWeight: '800',
-    letterSpacing: -0.02 * fontSize,
-    fontVariant: ['tabular-nums'],
+    letterSpacing: 0,
     includeFontPadding: false,
   };
-  const unitStyle: TextStyle = {
+  // The currency sign and the unit: the text face (picked by what the words
+  // hold, so "लाख" is set in Anek Devanagari), soft ink, small, and lifted or
+  // lowered so they stand on the digits' baseline.
+  const besideSize = Math.max(14, Math.round(fontSize * 0.42));
+  const besideStyle = (words: string): TextStyle => ({
+    ...textFont('500', language, words),
     color: unitColor ?? colors.textSecondary,
-    fontSize: Math.max(14, Math.round(fontSize * 0.42)),
-    fontWeight: '500',
-    marginBottom: Math.round(fontSize * 0.12),
-  };
+    fontSize: besideSize,
+    includeFontPadding: false,
+    marginBottom: Math.round(fontSize * DIGIT_BASELINE - besideSize * (hasDevanagari(words) ? DEVANAGARI_DESCENT : TEXT_DESCENT)),
+  });
+  const unit = parts.suffix.replace(/^[  ]/, '');
 
   return (
     <View
@@ -121,7 +143,11 @@ export function Numeral({
       accessible
       accessibilityRole="text"
       accessibilityLabel={accessibilityLabel ?? `${parts.prefix}${parts.number}${parts.suffix}`}>
-      {parts.prefix ? <Text style={[digitStyle, styles.prefix]}>{parts.prefix}</Text> : null}
+      {parts.prefix ? (
+        <Text style={[besideStyle(parts.prefix), styles.prefix]} maxFontSizeMultiplier={1.3}>
+          {parts.prefix}
+        </Text>
+      ) : null}
       <View>
         <Text style={[digitStyle, counting && styles.hidden]} maxFontSizeMultiplier={1.3}>
           {parts.number}
@@ -139,8 +165,8 @@ export function Numeral({
         ) : null}
       </View>
       {parts.suffix ? (
-        <Text style={unitStyle} maxFontSizeMultiplier={1.3}>
-          {parts.suffix.replace(/^[  ]/, '')}
+        <Text style={besideStyle(unit)} maxFontSizeMultiplier={1.3}>
+          {unit}
         </Text>
       ) : null}
     </View>
