@@ -1,7 +1,8 @@
--- Messages sent from the LUMIQ landing page's query form (landing/app.js). Visitors can only add a message;
--- nobody can read, change or delete one through the public key (read them in the dashboard or with the
--- service role). NOT APPLIED YET: apply it to the "lumiq" project to switch the form on.
-create table if not exists public.lumiq_queries (
+-- Messages sent from the LUMIQ landing page's query form (landing/app.js). Applied to the "lumiq" project on
+-- 2026-11-26 as two migrations (lumiq_queries_insert_only, lumiq_queries_flood_guard_not_callable).
+-- Row level security is on with one policy: visitors (anon) can only add a message. With no select, update or
+-- delete policy, nobody can read, change or delete a message through the public key; read them in the dashboard.
+create table public.lumiq_queries (
   id uuid primary key default gen_random_uuid(),
   created_at timestamptz not null default now(),
   name text not null check (char_length(btrim(name)) between 1 and 80),
@@ -16,10 +17,6 @@ comment on table public.lumiq_queries is 'Queries sent from the LUMIQ landing pa
 
 alter table public.lumiq_queries enable row level security;
 
-revoke all on table public.lumiq_queries from anon, authenticated;
-grant insert (name, contact, topic, message, page) on table public.lumiq_queries to anon;
-
-drop policy if exists "Visitors can send a query" on public.lumiq_queries;
 create policy "Visitors can send a query"
   on public.lumiq_queries
   for insert
@@ -27,7 +24,7 @@ create policy "Visitors can send a query"
   with check (handled = false);
 
 -- A flood guard: at most 20 messages a minute and 500 a day from everyone together.
-create or replace function public.lumiq_queries_flood_guard()
+create function public.lumiq_queries_flood_guard()
 returns trigger
 language plpgsql
 security definer
@@ -44,11 +41,11 @@ begin
 end;
 $$;
 
-revoke all on function public.lumiq_queries_flood_guard() from public, anon, authenticated;
-
-drop trigger if exists lumiq_queries_flood_guard on public.lumiq_queries;
 create trigger lumiq_queries_flood_guard
   before insert on public.lumiq_queries
   for each row execute function public.lumiq_queries_flood_guard();
 
-create index if not exists lumiq_queries_created_at_idx on public.lumiq_queries (created_at desc);
+create index lumiq_queries_created_at_idx on public.lumiq_queries (created_at desc);
+
+-- The flood guard runs only as the table's trigger; it is not meant to be called through the API.
+revoke execute on function public.lumiq_queries_flood_guard() from public, anon, authenticated;
