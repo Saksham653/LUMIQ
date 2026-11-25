@@ -16,6 +16,9 @@
 //   DAILY_QUESTIONS_PER_DEVICE  optional, default 20
 //   DAILY_QUESTIONS_TOTAL       optional, default 2000 (whole app, all phones)
 //   LUMIQ_HASH_SALT             optional salt for hashing install ids
+//
+// A limit of 0 is ignored (the default is used). To switch Ask off for
+// everyone, remove the AI key secret: phones then say it is not switched on.
 
 const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
 // Llama 3.3 70B (the web app's model) is now Enterprise-only on Groq;
@@ -62,7 +65,9 @@ function positiveInt(name: string, fallback: number): number {
 function keyValues(name: string): string[] {
   try {
     const parsed: unknown = JSON.parse(Deno.env.get(name) ?? '{}');
-    return parsed && typeof parsed === 'object' ? Object.values(parsed).filter((v): v is string => typeof v === 'string') : [];
+    return parsed && typeof parsed === 'object'
+      ? Object.values(parsed).filter((v): v is string => typeof v === 'string' && v !== '')
+      : [];
   } catch {
     return [];
   }
@@ -122,8 +127,12 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
   if (req.method !== 'POST') return reply(405, { error: 'method_not_allowed' });
 
+  // With no key to compare against the function is not set up: refuse, rather
+  // than serve everyone. And a call must carry a key of its own.
   const keys = publicKeys();
-  if (keys.length > 0 && !keys.includes(req.headers.get('apikey') ?? '')) {
+  if (keys.length === 0) return reply(503, { error: 'not_configured' });
+  const sentKey = req.headers.get('apikey');
+  if (!sentKey || !keys.includes(sentKey)) {
     return reply(401, { error: 'unauthorized' });
   }
 
@@ -149,6 +158,8 @@ Deno.serve(async (req) => {
     return reply(503, { error: 'unavailable' });
   }
   if (!quota.allowed) {
+    // Which limit only, so the owner can tell a full day from a busy AI.
+    console.warn('lumiq-ask: limit reached', quota.reason ?? 'device_limit');
     return reply(429, { error: quota.reason ?? 'device_limit', questionsLeft: quota.questionsLeft, limit: perDevice });
   }
 
