@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { extractNumbers, collectCandidates, verifyNumbers } from "./numberCheck.js";
+import { extractNumbers, collectCandidates, collectLabelledCandidates, verifyNumbers } from "./numberCheck.js";
 import { resolveNumberFormat } from "../lib/numberFormat.js";
 
 describe("extractNumbers", () => {
@@ -200,5 +200,225 @@ describe("answers in every LUMIQ language", () => {
   it("a wrong number in any language is still caught", () => {
     expect(check("Der Dezember lag bei 713.000.", { language: "de" }).unverified).toBe(1);
     expect(check("12月は75万でした。", { language: "ja" }).unverified).toBe(1);
+  });
+});
+
+describe("Devanagari digits and Indian number words", () => {
+  it("reads ०-९ like 0-9, with Indian grouping, and keeps the text as written", () => {
+    const text = "दिसंबर में ७,१२,००० रहे, यानी ७.१२ लाख।";
+    const nums = extractNumbers(text, { language: "hi" });
+    expect(nums.map((n) => n.value)).toEqual([712000, 712000]);
+    expect(nums.map((n) => n.raw)).toEqual(["७,१२,०००", "७.१२ लाख"]);
+    const check = verifyNumbers(text, [712000], { language: "hi" });
+    expect(check).toMatchObject({ total: 2, checkedCount: 2, unverified: 0 });
+    expect(check.segments.map((s) => s.text).join("")).toBe(text);
+    expect(verifyNumbers("दिसंबर में ७,१३,००० रहे।", [712000]).unverified).toBe(1);
+  });
+
+  it("Devanagari digits glued to a Latin letter are still not numbers", () => {
+    expect(extractNumbers("W२ and Q१")).toHaveLength(0);
+  });
+
+  it("reads lac and करोड typed without the nukta", () => {
+    const nums = extractNumbers("5 lacs, 2.5 lac and 3 करोड");
+    expect(nums.map((n) => n.value)).toEqual([500000, 250000, 30000000]);
+    expect(nums.map((n) => n.unit)).toEqual(["lakh", "lakh", "crore"]);
+  });
+
+  it("Indian grouping, lakh and thin-space grouping verify the same value", () => {
+    for (const text of ["North 9,35,000", "North 9.35 lakh", "North 935 000", "North ९,३५,०००"]) {
+      expect(verifyNumbers(text, [935000]).unverified).toBe(0);
+    }
+  });
+});
+
+describe("verifyNumbers counts", () => {
+  it("gives total and checkedCount next to the old fields", () => {
+    const candidates = collectCandidates([{ region: "South", total: 1331000, share: 28.46 }], [12]);
+    expect(verifyNumbers("South made 1,331,000 (28.46%) from 12 rows, not 999.", candidates)).toMatchObject({
+      checked: 4,
+      total: 4,
+      checkedCount: 3,
+      unverified: 1,
+    });
+    expect(verifyNumbers("No numbers here.", candidates)).toMatchObject({ checked: 0, total: 0, checkedCount: 0, unverified: 0 });
+  });
+});
+
+describe("numbers tied to their row (labelled candidates)", () => {
+  const months = [
+    { month: "October", revenue: 1200 },
+    { month: "September", revenue: 900 },
+  ];
+  const extras = [24, 2];
+  const labelled = collectLabelledCandidates(months, extras);
+  const plain = collectCandidates(months, extras);
+
+  it("collectLabelledCandidates has the same values as collectCandidates, with row names", () => {
+    expect(labelled.map((c) => (typeof c === "number" ? c : c.value))).toEqual(plain);
+    expect(labelled[0]).toEqual({ value: 1200, label: "October" });
+    expect(labelled.slice(-2)).toEqual([24, 2]);
+    const mixed = collectLabelledCandidates([
+      { region: "North", month: "Oct", total: 5 },
+      { day: "2024-10-01", total: 7 },
+      { cohort: "2024-Q1", rate: 3 },
+    ]);
+    expect(mixed[0]).toEqual({ value: 5, label: ["North", "Oct"] });
+    expect(mixed.filter((c) => c.label === null).map((c) => c.value)).toEqual([2024, 10, 1, 7]);
+    expect(mixed.filter((c) => c.label === "2024-Q1").map((c) => c.value)).toEqual([2024, 3]);
+  });
+
+  it("a swapped pair fails (the old check passed it)", () => {
+    const text = "October 900 and September 1,200.";
+    expect(verifyNumbers(text, plain).unverified).toBe(0);
+    const check = verifyNumbers(text, labelled);
+    expect(check).toMatchObject({ total: 2, checkedCount: 0, unverified: 2 });
+    expect(check.segments.map((s) => s.text).join("")).toBe(text);
+  });
+
+  it("the correct pair passes", () => {
+    expect(verifyNumbers("October 1,200 and September 900.", labelled)).toMatchObject({
+      total: 2,
+      checkedCount: 2,
+      unverified: 0,
+    });
+    expect(verifyNumbers("October revenue was 1,200, while September had 900.", labelled).unverified).toBe(0);
+    expect(verifyNumbers("October 1,200 from 24 rows.", labelled).unverified).toBe(0);
+  });
+
+  it("a comma straight after the row name keeps the number tied to it", () => {
+    expect(verifyNumbers("In October, revenue was 900.", labelled).unverified).toBe(1);
+    expect(verifyNumbers("In October, revenue was 1,200.", labelled).unverified).toBe(0);
+  });
+
+  it("short and long month names name the same row", () => {
+    const short = collectLabelledCandidates([
+      { month: "Dec", revenue: 712000 },
+      { month: "Feb", revenue: 198000 },
+    ]);
+    expect(verifyNumbers("December was highest at 712,000 and February lowest at 198,000.", short).unverified).toBe(0);
+    expect(verifyNumbers("December was highest at 198,000 and February lowest at 712,000.", short).unverified).toBe(2);
+    expect(verifyNumbers("Dec 712,000, Feb 198,000.", short).unverified).toBe(0);
+  });
+
+  it("unlabelled numbers keep the old rule", () => {
+    for (const text of [
+      "Revenue reached 2,100 from 24 rows.",
+      "The 2 months add up to 2,100.",
+      "1,200 in October and 900 in September.",
+      "Sales were 900 in October and 1,200 in September.",
+      "october 900 and september 1,200.",
+      "Edge 5",
+      "",
+    ]) {
+      expect(verifyNumbers(text, labelled)).toEqual(verifyNumbers(text, plain));
+    }
+  });
+
+  it("plain-number callers get exactly the old result", () => {
+    const oldRule = (text, candidates) =>
+      extractNumbers(text).map((n) => candidates.some((c) => Math.abs(c - n.value) <= n.tolerance + 1e-9));
+    for (const text of ["October 900 and September 1,200.", "North made 999,999 which is 55% of sales.", "In October, 24 and 7."]) {
+      const { segments } = verifyNumbers(text, plain);
+      expect(segments.filter((s) => s.number !== undefined).map((s) => s.verified)).toEqual(oldRule(text, plain));
+    }
+  });
+
+  it("a percent quoted for the wrong group fails", () => {
+    const categories = collectLabelledCandidates([
+      { category: "Electronics", revenue: 2390000, share: 51.1 },
+      { category: "Fashion", revenue: 1412000, share: 30.2 },
+      { category: "Home", revenue: 875000, share: 18.7 },
+    ]);
+    expect(verifyNumbers("Electronics took 30.2% of revenue.", categories).unverified).toBe(1);
+    expect(verifyNumbers("Electronics took 30.2% of revenue.", collectCandidates([{ share: 30.2 }])).unverified).toBe(0);
+    expect(verifyNumbers("Electronics took 51.1% of revenue and Fashion 30.2%.", categories).unverified).toBe(0);
+    expect(verifyNumbers("Fashion's 18.7% share trails Electronics at 51.1%.", categories).unverified).toBe(1);
+  });
+
+  it("never fails a number the phrasing does not tie to that row", () => {
+    const short = collectLabelledCandidates([
+      { month: "Dec", revenue: 712000 },
+      { month: "Feb", revenue: 198000 },
+    ]);
+    for (const text of [
+      "December beat February with 712,000.",
+      "Revenue peaked in December at 712,000 and was lowest at 198,000 in February.",
+      "December 712,000 vs the lowest month at 198,000.",
+      "The top month was December with 712,000, almost 4 times the lowest month's 198,000.",
+    ]) {
+      expect(verifyNumbers(text, [...short, 4]).unverified).toBe(0);
+    }
+    // A row name straight after a number, with no number of its own, may be
+    // the number's name ("198,000 in Fashion"), so the number is not tied.
+    const twoLevel = collectLabelledCandidates([
+      { month: "Dec", category: "Electronics", revenue: 712000 },
+      { month: "Dec", category: "Fashion", revenue: 198000 },
+    ]);
+    expect(verifyNumbers("December was 712,000 in Electronics and 198,000 in Fashion.", twoLevel).unverified).toBe(0);
+    const quarters = collectLabelledCandidates([
+      { quarter: "Q1", churn: 7 },
+      { quarter: "Q2", churn: 9 },
+    ]);
+    expect(verifyNumbers("In Q1 churn was 7% versus 9% in Q2.", quarters).unverified).toBe(0);
+    expect(verifyNumbers("In Q1 churn was 9% versus Q2's 7%.", quarters).unverified).toBe(2);
+  });
+
+  it("a number inside a row name is checked the old way", () => {
+    const cohorts = collectLabelledCandidates([
+      { cohort: "2024-Q1", rate: 7 },
+      { cohort: "2024-Q2", rate: 9 },
+    ]);
+    expect(verifyNumbers("2024-Q1 churned at 7% and 2024-Q2 at 9%.", cohorts)).toMatchObject({ total: 4, unverified: 0 });
+    expect(verifyNumbers("2024-Q1 churned at 9% and 2024-Q2 at 7%.", cohorts)).toMatchObject({
+      total: 4,
+      checkedCount: 2,
+      unverified: 2,
+    });
+  });
+
+  it("Hindi row names and Devanagari digits", () => {
+    const cities = collectLabelledCandidates([
+      { city: "दिल्ली", sales: 500 },
+      { city: "मुंबई", sales: 700 },
+    ]);
+    expect(verifyNumbers("दिल्ली में ५०० और मुंबई में ७००।", cities, { language: "hi" }).unverified).toBe(0);
+    expect(verifyNumbers("दिल्ली में ७०० और मुंबई में ५००।", cities, { language: "hi" }).unverified).toBe(2);
+  });
+
+  it("Indian grouping on a swapped pair", () => {
+    const regions = collectLabelledCandidates([
+      { region: "North", total: 935000 },
+      { region: "South", total: 1331000 },
+    ]);
+    expect(verifyNumbers("North made 9,35,000 and South 13,31,000.", regions).unverified).toBe(0);
+    expect(verifyNumbers("North made 13,31,000 and South 9,35,000.", regions).unverified).toBe(2);
+    expect(verifyNumbers("North 9.35 lakh, South 13.31 lakh.", regions).unverified).toBe(0);
+  });
+
+  it("the sample answers in every language still pass with row names", () => {
+    const sample = collectLabelledCandidates(
+      [
+        { month: "Dec", revenue: 712000 },
+        { month: "Feb", revenue: 198000 },
+        { total: 4677000, share: 51.1 },
+      ],
+      [12, 12, 3]
+    );
+    const answers = [
+      ["en", "Revenue adds up to 4.68M across the 12 months; December was highest at 712,000 and Electronics took 51.1%."],
+      ["de", "Am höchsten war der Dezember mit 712.000, am niedrigsten der Februar mit 198.000. Elektronik: 51,1 %."],
+      ["es", "Los ingresos suman 4,68 M en 12 meses; diciembre llegó a 712 mil y febrero a 198.000."],
+      ["fr", "Total 4,68 M sur 12 mois. Décembre : 712 000 ; février : 198 000. Électronique 51,1 %."],
+      ["ja", "12か月の売上合計は468万です。最も多かったのは12月の71.2万、最も少なかったのは2月の19.8万でした。"],
+      ["he", "סך ההכנסות ב-12 החודשים הוא 4.68M. החודש הגבוה ביותר היה דצמבר עם 712,000."],
+      ["hi", "कुल revenue 46.8 लाख है; Dec में 7.12 लाख और Feb में 1.98 लाख।"],
+    ];
+    for (const [language, text] of answers) {
+      expect(verifyNumbers(text, sample, { language }).unverified).toBe(0);
+    }
+    expect(
+      verifyNumbers("कुल revenue 46.8 लाख है; Dec में 1.98 लाख और Feb में 7.12 लाख।", sample, { language: "hi" }).unverified
+    ).toBe(2);
   });
 });

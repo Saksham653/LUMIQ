@@ -1,4 +1,4 @@
-import { collectCandidates, verifyNumbers } from '@core/ai/numberCheck.js';
+import { collectLabelledCandidates, verifyNumbers } from '@core/ai/numberCheck.js';
 import { buildDescribePrompt, buildExplainPrompt, buildPlanPrompt, parsePlannerReply } from '@core/ai/oraclePlanner.js';
 import { buildSchemaSummary, renderSchemaSummary, schemaNumberCandidates } from '@core/ai/schemaSummary.js';
 import { runPlan } from '@core/engine/runPlan.js';
@@ -170,7 +170,9 @@ export async function answerQuestion({
   );
   sent.push({ label: 'answer', text: explainPrompt });
   const answer = await askAi(explainPrompt, 'explain', { signal });
-  const candidates = collectCandidates(result.table, [result.rowsUsed, result.totalRows, result.table.length]);
+  // Each value with the row it came from: a number the answer ties to a row
+  // ("October 1,200") must be that row's value, not just any value in the table.
+  const candidates = collectLabelledCandidates(result.table, [result.rowsUsed, result.totalRows, result.table.length]);
   const check = verifyNumbers(answer.text, candidates, numberFormat);
   return {
     kind: 'answer',
