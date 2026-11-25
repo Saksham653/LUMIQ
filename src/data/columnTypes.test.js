@@ -7,7 +7,11 @@ import {
   formatTileValue,
   aggregationRule,
   looksLikeDate,
+  describeColumns,
+  createColumnReader,
 } from "./columnTypes.js";
+import { datasetFromCsv } from "./dataset.js";
+import { detectTimeColumn } from "../engine/insights.js";
 import { SAMPLE_DATASETS } from "./sampleDatasets.js";
 
 describe("parseNumericString", () => {
@@ -165,5 +169,202 @@ describe("looksLikeDate", () => {
     expect(looksLikeDate("2024-Q1")).toBe(false);
     expect(looksLikeDate("Jan")).toBe(false);
     expect(looksLikeDate("W1")).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Reading numbers and dates per column (decimal comma, day first, ...)
+// ---------------------------------------------------------------------------
+
+const column = (cells) => cells.map((v) => ({ v }));
+const read = (cells, options) => {
+  const rows = column(cells);
+  const { types, decisions } = describeColumns(rows, ["v"], options);
+  return { type: types.v, decision: decisions.v, data: coerceRows(rows, ["v"], types).map((r) => r.v) };
+};
+
+describe("parseNumericString reads the cells the audit found misread", () => {
+  it("decimal commas, brackets, rupee words, /- and percent", () => {
+    expect(parseNumericString("1,5").value).toBe(1.5);
+    expect(parseNumericString("1.234,56").value).toBe(1234.56);
+    expect(parseNumericString("(1,200)")).toEqual({ value: -1200, kind: "number", symbol: null });
+    expect(parseNumericString("Rs. 500")).toEqual({ value: 500, kind: "money", symbol: "₹", currency: "INR" });
+    expect(parseNumericString("500/-")).toEqual({ value: 500, kind: "money", symbol: null });
+    expect(parseNumericString("12,5%")).toEqual({ value: 12.5, kind: "percent", symbol: null });
+  });
+
+  it("more money, groupings and negatives", () => {
+    expect(parseNumericString("INR 1,20,000.50")).toEqual({ value: 120000.5, kind: "money", symbol: "₹", currency: "INR" });
+    expect(parseNumericString("12.5 USD")).toEqual({ value: 12.5, kind: "money", symbol: "$", currency: "USD" });
+    expect(parseNumericString("Rs.500/-").value).toBe(500);
+    expect(parseNumericString("£1,234.50").symbol).toBe("£");
+    expect(parseNumericString("1 234,5").value).toBe(1234.5);
+    expect(parseNumericString("1'234.50").value).toBe(1234.5);
+    expect(parseNumericString("12,34,567.8").value).toBe(1234567.8);
+    expect(parseNumericString("1.234.567").value).toBe(1234567);
+    const negatives = [["-₹500", -500], ["₹-500", -500], ["(₹1,200.50)", -1200.5], ["$(500)", -500], ["500-", -500], ["−500", -500]];
+    for (const [cell, value] of negatives) expect(parseNumericString(cell).value).toBe(value);
+    expect(parseNumericString("(12.5%)")).toEqual({ value: -12.5, kind: "percent", symbol: null });
+  });
+
+  it("other digits", () => {
+    expect(parseNumericString("१२३४").value).toBe(1234);
+    expect(parseNumericString("₹१,२०,०००").value).toBe(120000);
+    expect(parseNumericString("١٢٣٤").value).toBe(1234);
+    expect(parseNumericString("١٬٢٣٤٫٥").value).toBe(1234.5);
+    expect(parseNumericString("२५%")).toEqual({ value: 25, kind: "percent", symbol: null });
+  });
+
+  it("follows the column's decimal mark", () => {
+    expect(parseNumericString("1,234", { type: "number", decimal: "," }).value).toBe(1.234);
+    expect(parseNumericString("1,5", { type: "number", decimal: "." }).value).toBe(15);
+    expect(parseNumericString("1,234").value).toBe(1234);
+  });
+});
+
+describe("the column decides how its numbers are written", () => {
+  it("decimal commas", () => {
+    const r = read(["1,5", "2,75", "10,25", "3"]);
+    expect(r.type).toEqual({ type: "number", decimal: "," });
+    expect(r.data).toEqual([1.5, 2.75, 10.25, 3]);
+    expect(r.decision.ambiguous).toBe(false);
+    expect(r.decision.number).toMatchObject({ decimal: ",", confidence: "high", reason: "seen" });
+  });
+
+  it("one clear cell settles the rest", () => {
+    expect(read(["1.234", "2.500", "1.234,56"]).data).toEqual([1234, 2500, 1234.56]);
+    expect(read(["1,234", "2,500", "0,75"]).data).toEqual([1.234, 2.5, 0.75]);
+  });
+
+  it("thousands as before, with nothing to ask", () => {
+    const r = read(["1,200", "950", "2,000"]);
+    expect(r.type).toEqual({ type: "number" });
+    expect(r.data).toEqual([1200, 950, 2000]);
+    expect(r.decision.number).toMatchObject({ decimal: ".", confidence: "medium", reason: "assumed" });
+    expect(r.decision.ambiguous).toBe(false);
+  });
+
+  it("1,5 alone is unsure, and says both readings", () => {
+    const r = read(["1,5", "2", "3"]);
+    expect(r.data).toEqual([1.5, 2, 3]);
+    expect(r.decision.ambiguous).toBe(true);
+    expect(r.decision.number).toMatchObject({ reason: "single", confidence: "low" });
+    expect(r.decision.number.sample).toEqual({ raw: "1,5", mark: ",", asDot: 15, asComma: 1.5, commaIgnored: true });
+    expect(read(["1.234", "2.500"]).decision.number.sample).toEqual({ raw: "1.234", mark: ".", asDot: 1.234, asComma: 1234, commaIgnored: false });
+    expect(read(["1,234.50", "2,000.00", "3,5"]).decision.number.sample).toMatchObject({ raw: "3,5", asDot: 35, asComma: 3.5 });
+    const chosen = read(["1,5", "2", "3"], { overrides: { v: { decimal: "." } } });
+    expect(chosen.type).toEqual({ type: "number", decimal: "." });
+    expect(chosen.data).toEqual([15, 2, 3]);
+    expect(chosen.decision.ambiguous).toBe(false);
+  });
+
+  it("another column settles it", () => {
+    const rows = [
+      { price: "1,5", qty: "1.234" },
+      { price: "2,75", qty: "2.500" },
+      { price: "10,25", qty: "12.000" },
+    ];
+    const { types, decisions } = describeColumns(rows, ["price", "qty"]);
+    expect(types.qty).toEqual({ type: "number", decimal: "," });
+    expect(decisions.qty.number.reason).toBe("other-columns");
+    expect(coerceRows(rows, ["price", "qty"], types).map((r) => r.qty)).toEqual([1234, 2500, 12000]);
+  });
+
+  it("a stray cell is still read, and the column is marked unsure", () => {
+    const r = read(["1,234.50", "2,000.00", "3,5", "950.25"]);
+    expect(r.data).toEqual([1234.5, 2000, 3.5, 950.25]);
+    expect(r.decision.number).toMatchObject({ reason: "mixed", confidence: "low", mixed: ["3,5"] });
+    expect(r.decision.counts.odd).toBe(1);
+  });
+
+  it("the person's choice wins", () => {
+    const r = read(["1,234", "2,500"], { overrides: { v: { decimal: "," } } });
+    expect(r.data).toEqual([1.234, 2.5]);
+    expect(r.decision.number.reason).toBe("chosen");
+  });
+
+  it("money and percent carry the mark", () => {
+    expect(read(["€ 1.234,50", "€ 99,90"]).type).toEqual({ type: "money", symbol: "€", decimal: "," });
+    expect(read(["Rs. 500", "Rs. 1,200", "Rs. 75/-"]).type).toEqual({ type: "money", symbol: "₹", currency: "INR" });
+    expect(read(["500/-", "1,200/-"]).type).toEqual({ type: "money" });
+    expect(read(["12,5%", "8%"]).type).toEqual({ type: "percent", decimal: "," });
+  });
+});
+
+describe("the column decides how its dates are written", () => {
+  it("day first", () => {
+    const r = read(["05/01/2024", "13/01/2024", "31/01/2024"]);
+    expect(r.type).toEqual({ type: "date", dateOrder: "dmy" });
+    expect(r.data).toEqual(["2024-01-05", "2024-01-13", "2024-01-31"]);
+  });
+
+  it("month first", () => {
+    const r = read(["1-31-24", "2-1-24", "12-25-23"]);
+    expect(r.type).toEqual({ type: "date", dateOrder: "mdy" });
+    expect(r.data).toEqual(["2024-01-31", "2024-02-01", "2023-12-25"]);
+  });
+
+  it("an order nothing settles stays as written until the person says", () => {
+    const cells = ["05/01/2024", "03/04/2024", "01/02/2024", "02/01/2024"];
+    const r = read(cells);
+    expect(r.type).toEqual({ type: "date", dateOrder: "ambiguous" });
+    expect(r.data).toEqual(cells);
+    expect(r.decision.ambiguous).toBe(true);
+    expect(r.decision.date.sample).toEqual({ raw: "05/01/2024", dmy: "2024-01-05", mdy: "2024-05-01" });
+    const chosen = read(cells, { overrides: { v: { dateOrder: "dmy" } } });
+    expect(chosen.data).toEqual(["2024-01-05", "2024-04-03", "2024-02-01", "2024-01-02"]);
+  });
+
+  it("another date column settles it", () => {
+    const rows = [
+      { ordered: "05/01/2024", shipped: "25/01/2024" },
+      { ordered: "03/04/2024", shipped: "13/04/2024" },
+      { ordered: "02/01/2024", shipped: "02/02/2024" },
+    ];
+    const { decisions } = describeColumns(rows, ["ordered", "shipped"]);
+    expect(decisions.ordered.date).toMatchObject({ order: "dmy", confidence: "medium", reason: "other-columns" });
+  });
+
+  it("ISO dates read exactly as before", () => {
+    const cells = ["2024-01-01", "2024-02-01", "2024-03-05 10:30", "2024-03-06T10:00:00Z"];
+    const r = read(cells);
+    expect(r.type).toEqual({ type: "date" });
+    expect(r.data).toEqual(cells);
+  });
+
+  it("other shapes become ISO", () => {
+    expect(read(["2024/01/31", "2024.02.01", "2024-3-5"]).data).toEqual(["2024-01-31", "2024-02-01", "2024-03-05"]);
+    expect(read(["Jan 2024", "Feb 2024", "March 2024"]).data).toEqual(["2024-01", "2024-02", "2024-03"]);
+    expect(read(["5 Jan 2024", "January 6, 2024"]).data).toEqual(["2024-01-05", "2024-01-06"]);
+  });
+
+  it("financial years stay text", () => {
+    expect(read(["2009-10", "2010-11", "2011-12"]).type.type).toBe("text");
+    expect(read(["2010-10", "2010-11", "2010-12"]).type.type).toBe("date");
+  });
+
+  it("the reader in pieces equals the reader at once", () => {
+    const rows = column(["05/01/2024", "13/01/2024", "1,5", "x", "2,5", ""]);
+    const reader = createColumnReader(["v"]);
+    for (let i = 0; i < rows.length; i += 2) reader.add(rows.slice(i, i + 2));
+    expect(reader.finish()).toEqual(describeColumns(rows, ["v"]));
+  });
+
+  it("whole pipeline: a day-first, decimal-comma CSV gets a working time column", () => {
+    const csv = ["date,amount", '05/01/2024,"1,5"', '13/01/2024,"2,5"', '25/02/2024,"3,5"', '03/03/2024,"4,5"', ""].join("\n");
+    const ds = datasetFromCsv(csv, "x");
+    expect(ds.columnTypes).toEqual({ date: { type: "date", dateOrder: "dmy" }, amount: { type: "number", decimal: "," } });
+    expect(ds.data.map((r) => r.amount)).toEqual([1.5, 2.5, 3.5, 4.5]);
+    expect(detectTimeColumn(ds).column).toBe("date");
+  });
+
+  it("old shapes stay exactly as they were", () => {
+    const rows = [{ p: "12.5%", m: "₹1,200", d: "2024-01-01", t: "North" }];
+    expect(detectColumnTypes(rows, ["p", "m", "d", "t"])).toEqual({
+      p: { type: "percent" },
+      m: { type: "money", symbol: "₹" },
+      d: { type: "date" },
+      t: { type: "text" },
+    });
   });
 });

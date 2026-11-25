@@ -1,0 +1,170 @@
+import { defineStrings } from '@/i18n/local';
+
+// The words of the import: why a file could not be opened, the screen that
+// shows a big file being read, and the review shown before a file is saved.
+// English and Hindi; the other languages fall back to English. Words the
+// shared dictionary already has (import.reading, import.rowsRead,
+// common.cancel, import.empty ...) still come from useT().
+export const IMPORT_STRINGS = defineStrings({
+  en: {
+    // Why a file could not be opened (the title is import.errorTitle).
+    tooLargeCsv: 'This CSV file is {size} MB. LUMIQ can open CSV files up to {max} MB on a phone. Save a smaller part of it and try again.',
+    tooLargeExcel:
+      'This Excel file is {size} MB. LUMIQ can open Excel files up to {max} MB on a phone. Save it as CSV, or save a smaller part of it, and try again.',
+    tooManyRows: 'This file has more than {max} rows. LUMIQ can open up to {max} rows on a phone. Save a smaller part of it and try again.',
+    notSpreadsheet: 'This file does not look like a spreadsheet. Please pick an Excel file (.xlsx or .xls) or a CSV file.',
+    oneColumn:
+      'This file has only one column. LUMIQ needs at least two, such as a name and a number. If it should have more, save it again as Excel, or as CSV with commas between the columns.',
+    password: 'This Excel file is locked with a password. Open it in Excel, remove the password, save it, and try again.',
+    busy: 'Another file is still being opened. Please wait a moment and try again.',
+    saveFailed: 'Your file could not be saved on this phone. Check that the phone has free space, then try again.',
+
+    // Reading a big file.
+    openingTitle: 'Opening your file',
+    checking: 'Checking the columns…',
+    checkedRows: '{rows} of {total} rows checked',
+    readingPart: 'This can take a little while for a big file.',
+
+    // The review.
+    title: 'Check your file',
+    useFile: 'Use this file',
+    close: 'Close without opening',
+    updating: 'Updating…',
+    reviseFailed: 'That change could not be made. Try again, or use the file as it is.',
+
+    headerFound: 'Headings found in row {row}',
+    headerFoundBody: 'The {count} rows above them look like a title, so they were skipped.',
+    headerFoundBodyOne: 'The row above them looks like a title, so it was skipped.',
+    headerUseFirst: 'Use row 1 as headings',
+    headerFirst: 'Row 1 is used as the headings',
+    headerUseFound: 'Use row {row} again',
+
+    questions: 'Please tell us',
+    questionsNote: 'LUMIQ could not tell from the file itself.',
+    decimalQuestion: 'In {column}, what does {value} mean?',
+    commaDecimal: 'The comma marks decimals',
+    commaThousands: 'The comma separates thousands',
+    commaIgnored: 'Ignore the comma',
+    dotDecimal: 'The dot marks decimals',
+    dotThousands: 'The dot separates thousands',
+    readAs: '{value} is {reading}',
+    dateQuestion: 'In {column}, what date is {value}?',
+    dayFirst: 'Day first',
+    monthFirst: 'Month first',
+    dateWaiting: 'Until you choose, these dates stay as written and no trend is drawn from them.',
+    chosen: 'Chosen',
+
+    rowsTitle: 'Rows to check',
+    rowTotal: 'Row {row} looks like a total of the rows above',
+    rowTotalNote: 'Adding it in would count everything twice.',
+    rowRepeat: 'Row {row} repeats the headings',
+    rowBlankKey: 'Row {row} has no {column}',
+    rowBlankKeyNote: 'It stays in the file.',
+    leftOut: 'Left out',
+    kept: 'Kept',
+    keepRow: 'Keep it',
+    leaveOut: 'Leave it out',
+    moreRows: 'And {count} more rows like these.',
+
+    columnsTitle: 'Columns',
+    columnsNote: 'Tap a column to change what it holds.',
+    examples: 'For example: {values}',
+    noExamples: 'Every cell is empty',
+    typeOf: '{column}: {type}. Tap to change.',
+    typeNumber: 'Number',
+    typeMoney: 'Money',
+    typePercent: 'Percent',
+    typeDate: 'Date',
+    typeText: 'Text',
+    notNumbers: '{count} cells here are not numbers. They stay blank.',
+    notNumbersOne: '1 cell here is not a number. It stays blank.',
+    notDates: '{count} cells here are not dates. They stay as written.',
+    notDatesOne: '1 cell here is not a date. It stays as written.',
+    otherWay: '{count} cells are written the other way round. They were still read.',
+    unsure: 'Not sure',
+
+    nothingTitle: 'Nothing to check',
+    nothingBody: 'Pick a file and LUMIQ will open it here.',
+    nothingAction: 'Open a file',
+  },
+  hi: {
+    tooLargeCsv: 'यह CSV फ़ाइल {size} MB की है। LUMIQ फ़ोन पर {max} MB तक की CSV फ़ाइल खोल सकता है। फ़ाइल का छोटा हिस्सा सेव करके फिर से कोशिश करें।',
+    tooLargeExcel:
+      'यह Excel फ़ाइल {size} MB की है। LUMIQ फ़ोन पर {max} MB तक की Excel फ़ाइल खोल सकता है। इसे CSV में सेव करें, या इसका छोटा हिस्सा सेव करके फिर से कोशिश करें।',
+    tooManyRows: 'इस फ़ाइल में {max} से ज़्यादा पंक्तियाँ हैं। LUMIQ फ़ोन पर {max} पंक्तियों तक खोल सकता है। फ़ाइल का छोटा हिस्सा सेव करके फिर से कोशिश करें।',
+    notSpreadsheet: 'यह फ़ाइल स्प्रेडशीट जैसी नहीं लगती। कृपया Excel फ़ाइल (.xlsx या .xls) या CSV फ़ाइल चुनें।',
+    oneColumn:
+      'इस फ़ाइल में सिर्फ़ एक कॉलम है। LUMIQ को कम से कम दो कॉलम चाहिए, जैसे एक नाम और एक संख्या। अगर इसमें ज़्यादा कॉलम होने चाहिए, तो इसे Excel में, या कॉलमों के बीच कॉमा वाली CSV में, फिर से सेव करें।',
+    password: 'यह Excel फ़ाइल पासवर्ड से बंद है। इसे Excel में खोलें, पासवर्ड हटाएँ, सेव करें और फिर से कोशिश करें।',
+    busy: 'एक और फ़ाइल अभी खुल रही है। थोड़ा रुककर फिर से कोशिश करें।',
+    saveFailed: 'आपकी फ़ाइल इस फ़ोन पर सेव नहीं हो पाई। देखें कि फ़ोन में जगह खाली है, फिर से कोशिश करें।',
+
+    openingTitle: 'आपकी फ़ाइल खुल रही है',
+    checking: 'कॉलम जाँचे जा रहे हैं…',
+    checkedRows: '{total} में से {rows} पंक्तियाँ जाँची गईं',
+    readingPart: 'बड़ी फ़ाइल में थोड़ा समय लग सकता है।',
+
+    title: 'अपनी फ़ाइल देख लें',
+    useFile: 'यह फ़ाइल खोलें',
+    close: 'बिना खोले बंद करें',
+    updating: 'बदला जा रहा है…',
+    reviseFailed: 'यह बदलाव नहीं हो पाया। फिर से कोशिश करें, या फ़ाइल को ऐसे ही खोलें।',
+
+    headerFound: 'शीर्षक पंक्ति {row} में मिले',
+    headerFoundBody: 'इनके ऊपर की {count} पंक्तियाँ टाइटल जैसी लगती हैं, इसलिए छोड़ दी गईं।',
+    headerFoundBodyOne: 'इनके ऊपर की पंक्ति टाइटल जैसी लगती है, इसलिए छोड़ दी गई।',
+    headerUseFirst: 'पंक्ति 1 को शीर्षक मानें',
+    headerFirst: 'पंक्ति 1 को शीर्षक माना गया है',
+    headerUseFound: 'फिर से पंक्ति {row} लें',
+
+    questions: 'कृपया बताएँ',
+    questionsNote: 'LUMIQ फ़ाइल से यह पक्का नहीं कर पाया।',
+    decimalQuestion: '{column} में {value} का मतलब क्या है?',
+    commaDecimal: 'कॉमा दशमलव दिखाता है',
+    commaThousands: 'कॉमा हज़ार अलग करता है',
+    commaIgnored: 'कॉमा को अनदेखा करें',
+    dotDecimal: 'बिंदु दशमलव दिखाता है',
+    dotThousands: 'बिंदु हज़ार अलग करता है',
+    readAs: '{value} = {reading}',
+    dateQuestion: '{column} में {value} कौन-सी तारीख है?',
+    dayFirst: 'पहले दिन',
+    monthFirst: 'पहले महीना',
+    dateWaiting: 'जब तक आप नहीं चुनते, ये तारीखें जैसी लिखी हैं वैसी रहेंगी और इनसे कोई रुझान नहीं बनेगा।',
+    chosen: 'चुना गया',
+
+    rowsTitle: 'इन पंक्तियों को देखें',
+    rowTotal: 'पंक्ति {row} ऊपर की पंक्तियों का कुल जोड़ लगती है',
+    rowTotalNote: 'इसे जोड़ने से सब कुछ दो बार गिना जाएगा।',
+    rowRepeat: 'पंक्ति {row} में शीर्षक दोबारा लिखे हैं',
+    rowBlankKey: 'पंक्ति {row} में {column} नहीं है',
+    rowBlankKeyNote: 'यह फ़ाइल में रहेगी।',
+    leftOut: 'छोड़ी गई',
+    kept: 'रखी गई',
+    keepRow: 'इसे रखें',
+    leaveOut: 'इसे छोड़ें',
+    moreRows: 'और ऐसी {count} पंक्तियाँ।',
+
+    columnsTitle: 'कॉलम',
+    columnsNote: 'कॉलम में क्या है, यह बदलने के लिए उस पर टैप करें।',
+    examples: 'जैसे: {values}',
+    noExamples: 'सारे खाने खाली हैं',
+    typeOf: '{column}: {type}। बदलने के लिए टैप करें।',
+    typeNumber: 'संख्या',
+    typeMoney: 'पैसा',
+    typePercent: 'प्रतिशत',
+    typeDate: 'तारीख',
+    typeText: 'शब्द',
+    notNumbers: 'यहाँ {count} खाने संख्या नहीं हैं। ये खाली रहेंगे।',
+    notNumbersOne: 'यहाँ 1 खाना संख्या नहीं है। यह खाली रहेगा।',
+    notDates: 'यहाँ {count} खाने तारीख नहीं हैं। ये जैसे लिखे हैं वैसे रहेंगे।',
+    notDatesOne: 'यहाँ 1 खाना तारीख नहीं है। यह जैसा लिखा है वैसा रहेगा।',
+    otherWay: '{count} खाने उल्टे तरीके से लिखे हैं। फिर भी पढ़ लिए गए।',
+    unsure: 'पक्का नहीं',
+
+    nothingTitle: 'देखने को कुछ नहीं है',
+    nothingBody: 'एक फ़ाइल चुनें, LUMIQ उसे यहाँ खोलेगा।',
+    nothingAction: 'फ़ाइल खोलें',
+  },
+});
+
+export type ImportStringKey = keyof (typeof IMPORT_STRINGS)['en'];

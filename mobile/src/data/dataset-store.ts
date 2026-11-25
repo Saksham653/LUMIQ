@@ -22,9 +22,13 @@ function ensureFolder() {
   if (!dir.exists) dir.create();
 }
 
+// Written synchronously, as utils/settings-file.ts does: `write()` is
+// asynchronous and was never awaited, so the index could be written before
+// the file it lists (or two saves land out of order), and a failed write went
+// unseen. Now a write has finished, or thrown, before the next line runs.
 function writeText(file: File, text: string) {
   if (!file.exists) file.create();
-  file.write(text);
+  file.writeSync(text);
 }
 
 export function listStoredFiles(): StoredFile[] {
@@ -73,7 +77,12 @@ export function deleteDataset(id: string, current: StoredFile[]): StoredFile[] {
     console.warn('LUMIQ: could not delete a dataset file', error);
   }
   const next = current.filter((file) => file.id !== id);
-  ensureFolder();
-  writeText(indexFile(), JSON.stringify(next));
+  try {
+    ensureFolder();
+    writeText(indexFile(), JSON.stringify(next));
+  } catch (error) {
+    // The file itself is gone; a list that still names it opens nothing.
+    console.warn('LUMIQ: could not update the list of files', error);
+  }
   return next;
 }
