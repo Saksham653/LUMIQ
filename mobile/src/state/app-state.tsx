@@ -38,21 +38,20 @@ function initialSettings(): StoredSettings {
 export function AppStateProvider({ children }: { children: ReactNode }) {
   const [settings, setSettings] = useState<StoredSettings>(initialSettings);
 
+  // Other parts of the app keep their own fields in the same settings file
+  // (the look, the AI permission). Each save therefore writes only this
+  // change on top of what the file holds now, never this provider's older copy.
   const update = useCallback((patch: Partial<StoredSettings>) => {
-    setSettings((previous) => {
-      const next = { ...previous, ...patch };
-      saveSettings(next);
-      return next;
-    });
+    saveSettings({ ...loadSettings(), ...patch });
+    setSettings((previous) => ({ ...previous, ...patch }));
   }, []);
 
   const value = useMemo<AppState>(
     () => ({
       language: isLanguage(settings.language) ? settings.language : 'en',
       setLanguage: (language) => {
-        const next = { ...settings, language };
-        saveSettings(next);
-        setSettings(next);
+        saveSettings({ ...loadSettings(), language });
+        setSettings({ ...settings, language });
       },
       numberStyle: settings.numberStyle ?? 'auto',
       setNumberStyle: (numberStyle) => update({ numberStyle }),

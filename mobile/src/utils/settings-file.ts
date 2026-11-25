@@ -18,6 +18,11 @@ export type StoredSettings = {
   activeDatasetId?: string;
   numberStyle?: NumberStyleChoice;
   defaultCurrency?: DefaultCurrency | null;
+  // Light, dark, or follow the phone (see @/theme/mode).
+  themeMode?: 'system' | 'light' | 'dark';
+  // Whether the person has allowed questions to be sent to the AI (see
+  // @/state/consent). Missing means they have not been asked yet.
+  aiConsent?: 'yes' | 'no';
 };
 
 const settingsFile = () => new File(Paths.document, 'lumiq-settings.json');

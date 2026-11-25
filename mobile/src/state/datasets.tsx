@@ -23,6 +23,9 @@ type DatasetsState = {
   lastAddedId: string | null;
   importFile: () => Promise<void>;
   removeFile: (id: string) => void;
+  // Deletes every stored file in one go (Erase everything). Throws if the
+  // phone refuses to delete one, after removing all it could.
+  removeAllFiles: () => void;
   getDataset: (id: string | null) => Dataset | null;
   datasetName: (id: string | null) => string | null;
 };
@@ -135,9 +138,20 @@ export function DatasetsProvider({ children }: { children: ReactNode }) {
     [activeDatasetId, myFiles, setActiveDatasetId],
   );
 
+  const removeAllFiles = useCallback(() => {
+    // One pass over the current list, each step working from the list the
+    // step before left, so no file comes back.
+    let remaining = myFiles;
+    for (const file of myFiles) remaining = deleteDataset(file.id, remaining);
+    cache.current.clear();
+    setMyFiles(remaining);
+    setActiveDatasetId(null);
+    if (remaining.length > 0) throw new Error('LUMIQ: some files could not be deleted');
+  }, [myFiles, setActiveDatasetId]);
+
   const value = useMemo<DatasetsState>(
-    () => ({ myFiles, importing: busy, lastAddedId, importFile, removeFile, getDataset, datasetName }),
-    [myFiles, busy, lastAddedId, importFile, removeFile, getDataset, datasetName],
+    () => ({ myFiles, importing: busy, lastAddedId, importFile, removeFile, removeAllFiles, getDataset, datasetName }),
+    [myFiles, busy, lastAddedId, importFile, removeFile, removeAllFiles, getDataset, datasetName],
   );
 
   return (
