@@ -24,6 +24,7 @@ import {
   useTheme,
   type Radius,
   type TypeVariant,
+  keepLeftToRight,
 } from '@/theme';
 import { useUIStrings } from '@/ui/strings';
 
@@ -345,7 +346,7 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
     gap: space.sm,
     borderBottomWidth: border.hairline,
-    direction: 'ltr',
+    ...keepLeftToRight,
   },
   bar: { flex: 1, borderTopStartRadius: BAR_TOP, borderTopEndRadius: BAR_TOP },
 });

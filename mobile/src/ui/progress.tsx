@@ -8,7 +8,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import Svg, { Circle } from 'react-native-svg';
 
-import { duration, radius, sizes, space, timing, transition, useIsRTL, useReducedMotion, useTheme } from '@/theme';
+import { duration, radius, sizes, space, timing, transition, useIsRTL, useReducedMotion, useTheme, keepLeftToRight } from '@/theme';
 import { useUIStrings } from '@/ui/strings';
 import { Txt } from '@/ui/text';
 
@@ -308,7 +308,7 @@ const styles = StyleSheet.create({
     width: '100%',
     overflow: 'hidden',
     borderRadius: radius.pill,
-    direction: 'ltr',
+    ...keepLeftToRight,
   },
   mirrored: { transform: [{ scaleX: -1 }] },
   // Absolutely placed and childless: scaling it lays nothing out again. The

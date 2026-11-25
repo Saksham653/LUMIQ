@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { Platform, ScrollView, StyleSheet, View } from 'react-native';
 import Animated, { useReducedMotion } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Path, Rect } from 'react-native-svg';
@@ -15,6 +15,13 @@ import { useTheme } from '@/hooks/use-theme';
 import { useAppState, useT } from '@/state/app-state';
 import { useDatasets } from '@/state/datasets';
 import { brand } from '@/theme';
+
+// Hidden from screen readers: the browser takes aria-hidden; a phone's SVG
+// view needs the two older props.
+const SILENT =
+  Platform.OS === 'web'
+    ? ({ 'aria-hidden': true } as const)
+    : ({ accessible: false, accessibilityElementsHidden: true, importantForAccessibility: 'no-hide-descendants' } as const);
 
 // The logo, drawn here so it looks the same before any image has loaded. The
 // numbers are the brand's own (brand/mark.svg, app-icon.svg, wordmark.svg):
@@ -57,8 +64,7 @@ function LogoTile() {
       width={TILE}
       height={TILE}
       viewBox={`${-MARK_SHIFT} ${MARK_SHIFT} ${MARK_GRID} ${MARK_GRID}`}
-      accessibilityElementsHidden
-      importantForAccessibility="no-hide-descendants">
+      {...SILENT}>
       <Rect x={-MARK_SHIFT} y={MARK_SHIFT} width={MARK_GRID} height={MARK_GRID} rx={TILE_CORNER} fill={brand.tile} />
       <Path d={MARK_L} fill={brand.onTile} />
       <Path d={MARK_SUN} fill={brand.sun} />

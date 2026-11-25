@@ -25,6 +25,7 @@ import {
   useIsRTL,
   useReducedMotion,
   useTheme,
+  keepLeftToRight,
 } from '@/theme';
 import { LOGO_ART, Wordmark } from '@/ui/logo';
 
@@ -500,10 +501,10 @@ const styles = StyleSheet.create({
   room: { flex: 1, alignSelf: 'stretch', alignItems: 'center' },
   // The mark never mirrors: its parts are placed from the left in every
   // language. The tile cuts the rising sun off at its own corners.
-  tile: { overflow: 'hidden', direction: 'ltr' },
+  tile: { overflow: 'hidden', ...keepLeftToRight },
   onTile: { position: 'absolute' },
   // The name never mirrors either.
-  ltr: { direction: 'ltr' },
+  ltr: { ...keepLeftToRight },
   fill: { ...StyleSheet.absoluteFill },
   clip: { overflow: 'hidden' },
   // The band's own corners, which cut the light as it comes and goes.

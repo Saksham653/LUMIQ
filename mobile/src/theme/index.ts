@@ -99,3 +99,8 @@ function subscribeDirection(listener: () => void): () => void {
 export function useIsRTL(): boolean {
   return useSyncExternalStore(subscribeDirection, isRTL, isRTL);
 }
+
+// For a row that must read left to right in every language (digits, a
+// chart's time axis, the mark). Phones honour `direction`; the browser preview
+// has no such style on a view and warns, so there it is left out.
+export const keepLeftToRight = Platform.OS === 'web' ? {} : ({ direction: 'ltr' } as const);

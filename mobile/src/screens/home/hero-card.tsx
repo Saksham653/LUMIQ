@@ -24,6 +24,7 @@ import {
   space,
   textFont,
   useTheme,
+  keepLeftToRight,
 } from '@/theme';
 import { Button } from '@/ui/button';
 import { Card } from '@/ui/card';
@@ -330,7 +331,7 @@ const styles = StyleSheet.create({
   // number when the two do not fit side by side.
   number: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'flex-end', columnGap: space.lg, rowGap: space.xs },
   // Digits never flip.
-  numeral: { flexShrink: 1, maxWidth: '100%', direction: 'ltr' },
+  numeral: { flexShrink: 1, maxWidth: '100%', ...keepLeftToRight },
   strip: {
     flexGrow: 1,
     flexBasis: STRIP_MIN_WIDTH,
@@ -339,7 +340,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-end',
     gap: BAR_GAP,
-    direction: 'ltr',
+    ...keepLeftToRight,
   },
   bar: {
     flexGrow: 1,

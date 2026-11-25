@@ -22,6 +22,7 @@ import {
   space,
   typeScale,
   useTheme,
+  keepLeftToRight,
 } from '@/theme';
 import { select } from '@/ui/haptics';
 import { IconButton, type IconButtonSize } from '@/ui/icon-button';
@@ -302,6 +303,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   // Numbers read left to right in every language, Hebrew included.
-  digitsRow: { direction: 'ltr' },
+  digitsRow: { ...keepLeftToRight },
   digits: { textAlign: 'center', writingDirection: 'ltr' },
 });

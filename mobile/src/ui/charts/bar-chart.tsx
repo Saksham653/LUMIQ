@@ -39,6 +39,7 @@ import {
   useIsRTL,
   useReducedMotion,
   useTheme,
+  keepLeftToRight,
 } from '@/theme';
 import {
   UNKNOWN,
@@ -1175,7 +1176,7 @@ const styles = StyleSheet.create({
   // every language. Inside it, the inline start is the left edge. The
   // browser's own focus outline is switched off (a solid line of no width):
   // the ring is drawn from the tokens.
-  plot: { direction: 'ltr', outlineStyle: 'solid', outlineWidth: 0 },
+  plot: { ...keepLeftToRight, outlineStyle: 'solid', outlineWidth: 0 },
   // In the browser a mouse shows that the plot can be pressed.
   live: { cursor: 'pointer' },
   // The drawing. It is silent and never takes a touch.
@@ -1190,12 +1191,12 @@ const styles = StyleSheet.create({
   rule: { position: 'absolute', insetInlineStart: 0 },
   ruleLabel: { position: 'absolute', insetInlineStart: 0, maxWidth: '100%', paddingEnd: space.sm },
   // The label lays itself out at the left edge and is moved from there.
-  pin: { flexDirection: 'row', direction: 'ltr' },
+  pin: { flexDirection: 'row', ...keepLeftToRight },
   pinned: { flexShrink: 1 },
-  axis: { flexDirection: 'row', direction: 'ltr' },
-  ends: { flexDirection: 'row', gap: space.md, direction: 'ltr' },
+  axis: { flexDirection: 'row', ...keepLeftToRight },
+  ends: { flexDirection: 'row', gap: space.md, ...keepLeftToRight },
   readOut: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
-  steps: { flexDirection: 'row', direction: 'ltr' },
+  steps: { flexDirection: 'row', ...keepLeftToRight },
   stepButton: {
     width: sizes.target,
     height: sizes.target,

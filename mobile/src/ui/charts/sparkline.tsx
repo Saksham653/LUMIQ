@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import Svg, { Circle, Path } from 'react-native-svg';
 
-import { border, useTheme } from '@/theme';
+import { border, useTheme, keepLeftToRight } from '@/theme';
 import { ChartEmpty, MARK_MIN, usePlotWidth, type ChartPaper, type ChartSize } from '@/ui/charts/bar-chart';
 import {
   bandLayout,
@@ -183,6 +183,6 @@ export function Sparkline({
 const styles = StyleSheet.create({
   // A plot never mirrors: time runs left to right in every language. Inside
   // it, the inline start is the left edge.
-  root: { direction: 'ltr', alignSelf: 'stretch' },
+  root: { ...keepLeftToRight, alignSelf: 'stretch' },
   bar: { position: 'absolute' },
 });
