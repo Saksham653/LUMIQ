@@ -35,7 +35,10 @@
           }
         }
       ],
-      "expo-localization"
+      "expo-localization",
+      "expo-sharing",
+      "expo-sqlite",
+      "expo-secure-store"
     ],
     "experiments": {
       "typedRoutes": true,
