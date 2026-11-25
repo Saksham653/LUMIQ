@@ -1,14 +1,6 @@
 import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
-import {
-  Alert,
-  ScrollView,
-  Share,
-  StyleSheet,
-  View,
-  useWindowDimensions,
-  type GestureResponderEvent,
-} from 'react-native';
+import { Platform, ScrollView, StyleSheet, View, useWindowDimensions, type GestureResponderEvent } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import type { Dataset } from '@/data/types';
@@ -25,10 +17,11 @@ import { buildStory } from '@/utils/story';
 
 import { Arrive } from './arrive';
 import { ProofThread } from './proof-thread';
+import { SharePreview } from './share-preview';
 import { StoryCardView } from './story-card';
 import { STORY_STRINGS, type StoryKey } from './strings';
 
-// The Story of your file: the open file told in up to five cards, one at a
+// The Story of your file: the open file told in up to six cards, one at a
 // time. Every card is built on the phone from what the app already works out
 // and has passed the number check before it is shown (see @/utils/story); no
 // AI and no network are used anywhere here.
@@ -38,8 +31,23 @@ import { STORY_STRINGS, type StoryKey } from './strings';
 // buttons, which are also the way through for a screen reader. The proof
 // thread at the top takes the light one segment per card shown.
 //
+// Share opens the exact picture of the card first (SharePreview), with Share
+// and Cancel; the picture is sent through the phone's share sheet, or the
+// card as text where a picture cannot be made.
+//
+// The tap surface lies under the card, never around it, so no pressable is
+// inside another: a tap on the card's words goes through to the surface, and
+// the card's own buttons take theirs.
+//
 // It fills the Home stack's screen under its own top edge: the route hides
 // the stack's header.
+
+// While the preview is open, what lies under it is silent to a screen reader.
+const SILENT_UNDER =
+  Platform.OS === 'web'
+    ? ({ 'aria-hidden': true } as const)
+    : ({ accessibilityElementsHidden: true, importantForAccessibility: 'no-hide-descendants' } as const);
+
 export function StoryScreen({ dataset, name }: { dataset: Dataset; name: string }) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
@@ -63,6 +71,8 @@ export function StoryScreen({ dataset, name }: { dataset: Dataset; name: string 
   const [index, setIndex] = useState(0);
   // The furthest card shown so far: the thread is lit up to here.
   const [reached, setReached] = useState(0);
+  // The picture of the current card is being looked at before sharing.
+  const [sharing, setSharing] = useState(false);
 
   const close = () => {
     if (router.canGoBack()) router.back();
@@ -105,8 +115,8 @@ export function StoryScreen({ dataset, name }: { dataset: Dataset; name: string 
   };
 
   // One tap surface under the whole card. Which half was tapped is read from
-  // where the finger was on the screen; the card's own buttons take their
-  // touches first.
+  // where the finger was on the screen; the card's own buttons sit above it
+  // and take their own touches.
   const onCardPress = (event: GestureResponderEvent) => {
     const leftHalf = event.nativeEvent.pageX < width / 2;
     const endHalf = rtl ? leftHalf : !leftHalf;
@@ -120,108 +130,116 @@ export function StoryScreen({ dataset, name }: { dataset: Dataset; name: string 
     }
   };
 
-  // The card as text: the sentence, the counted line, and how it was made.
-  const share = async () => {
-    const lines = [card.sentence];
-    if (countLine !== null) lines.push(countLine);
-    lines.push(t('ui.madeWith'));
-    try {
-      await Share.share({ message: lines.join('\n') });
-    } catch {
-      Alert.alert(t('ui.shareFailed'));
-    }
-  };
+  // The card's buttons: Ask and Insights on the last card, Share on every
+  // card with checked numbers.
+  const nextButtons =
+    card.kind === 'next' ? (
+      <VStack gap="sm" style={styles.passThrough}>
+        <Button
+          fullWidth
+          icon="ask"
+          label={t('ui.ask')}
+          onPress={() => router.navigate('/ask')}
+          testID="story-ask"
+        />
+        <Button
+          fullWidth
+          variant="quiet"
+          icon="insights"
+          label={t('ui.insights')}
+          onPress={() => router.navigate('/insights')}
+          testID="story-insights"
+        />
+      </VStack>
+    ) : null;
+  const shareButton =
+    countLine !== null ? (
+      <Button
+        variant="plain"
+        icon="share"
+        label={t('ui.share')}
+        accessibilityLabel={t('ui.shareLabel')}
+        onPress={() => setSharing(true)}
+        testID="story-share"
+        style={styles.share}
+      />
+    ) : null;
+  const actions =
+    nextButtons !== null && shareButton !== null ? (
+      <>
+        {nextButtons}
+        {shareButton}
+      </>
+    ) : (nextButtons ?? shareButton ?? undefined);
 
   return (
     <View style={[styles.screen, { backgroundColor: colors.ground, paddingTop: insets.top }]}>
-      <VStack gap="xs" style={styles.top}>
-        <ProofThread lit={cards.map((_, place) => place <= reached)} />
-        <HStack gap="md" justify="between">
-          <Txt variant="small" tone="soft" accessibilityLiveRegion="polite" style={styles.fill}>
-            {progress}
-          </Txt>
-          {closeButton}
+      <View style={styles.fill} {...(sharing ? SILENT_UNDER : {})}>
+        <VStack gap="xs" style={styles.top}>
+          <ProofThread lit={cards.map((_, place) => place <= reached)} />
+          <HStack gap="md" justify="between">
+            <Txt variant="small" tone="soft" accessibilityLiveRegion="polite" style={styles.fill}>
+              {progress}
+            </Txt>
+            {closeButton}
+          </HStack>
+        </VStack>
+
+        {/* Keyed by card: each card starts at its top and arrives once. */}
+        <ScrollView
+          key={card.id}
+          style={styles.fill}
+          contentContainerStyle={styles.scroll}
+          showsVerticalScrollIndicator={false}>
+          <View style={styles.stage}>
+            {/* The tap surface, under the card and as big as the room around it. Not an element for a
+                screen reader, so the words and buttons on the card stay reachable one by one; Back and
+                Next below do the same job there. */}
+            <Press
+              accessible={false}
+              feedback="none"
+              accessibilityLabel={t('ui.tapHint')}
+              onPress={onCardPress}
+              testID="story-tap"
+              style={StyleSheet.absoluteFill}
+            />
+            <Arrive>
+              <StoryCardView
+                card={card}
+                kicker={card.kind === 'cover' ? t('screen.title') : undefined}
+                countLine={countLine}
+                testID={`story-card-${card.kind}`}>
+                {actions}
+              </StoryCardView>
+            </Arrive>
+          </View>
+        </ScrollView>
+
+        <HStack gap="md" style={styles.bottom}>
+          <Button
+            variant="quiet"
+            icon="back"
+            label={t('ui.back')}
+            accessibilityLabel={t('ui.backLabel')}
+            disabled={current === 0}
+            onPress={() => show(current - 1)}
+            testID="story-back"
+            style={styles.half}
+          />
+          <Button
+            icon="chevron"
+            iconPosition="end"
+            label={t('ui.next')}
+            accessibilityLabel={t('ui.nextLabel')}
+            disabled={current === last}
+            onPress={() => show(current + 1)}
+            testID="story-next"
+            style={styles.half}
+          />
         </HStack>
-      </VStack>
+      </View>
 
-      {/* Keyed by card: each card starts at its top and arrives once. */}
-      <ScrollView
-        key={card.id}
-        style={styles.fill}
-        contentContainerStyle={styles.scroll}
-        showsVerticalScrollIndicator={false}>
-        {/* Not an element for a screen reader, so the words and buttons inside stay reachable one by one;
-            Back and Next below do the same job there. */}
-        <Press
-          accessible={false}
-          feedback="none"
-          accessibilityLabel={t('ui.tapHint')}
-          onPress={onCardPress}
-          testID="story-tap"
-          style={styles.stage}>
-          <Arrive>
-            <StoryCardView
-              card={card}
-              kicker={card.kind === 'cover' ? t('screen.title') : undefined}
-              countLine={countLine}
-              testID={`story-card-${card.kind}`}>
-              {card.kind === 'next' ? (
-                <VStack gap="sm">
-                  <Button
-                    fullWidth
-                    icon="ask"
-                    label={t('ui.ask')}
-                    onPress={() => router.navigate('/ask')}
-                    testID="story-ask"
-                  />
-                  <Button
-                    fullWidth
-                    variant="quiet"
-                    icon="insights"
-                    label={t('ui.insights')}
-                    onPress={() => router.navigate('/insights')}
-                    testID="story-insights"
-                  />
-                </VStack>
-              ) : null}
-              {countLine !== null ? (
-                <Button
-                  variant="plain"
-                  icon="share"
-                  label={t('ui.share')}
-                  accessibilityLabel={t('ui.shareLabel')}
-                  onPress={() => void share()}
-                  testID="story-share"
-                  style={styles.share}
-                />
-              ) : null}
-            </StoryCardView>
-          </Arrive>
-        </Press>
-      </ScrollView>
-
-      <HStack gap="md" style={styles.bottom}>
-        <Button
-          variant="quiet"
-          icon="back"
-          label={t('ui.back')}
-          accessibilityLabel={t('ui.backLabel')}
-          disabled={current === 0}
-          onPress={() => show(current - 1)}
-          testID="story-back"
-          style={styles.half}
-        />
-        <Button
-          icon="chevron"
-          iconPosition="end"
-          label={t('ui.next')}
-          accessibilityLabel={t('ui.nextLabel')}
-          disabled={current === last}
-          onPress={() => show(current + 1)}
-          testID="story-next"
-          style={styles.half}
-        />
-      </HStack>
+      {sharing ? <SharePreview card={card} countLine={countLine} onClose={() => setSharing(false)} /> : null}
     </View>
   );
 }
@@ -232,13 +250,16 @@ const styles = StyleSheet.create({
   top: { paddingHorizontal: rhythm.screenEdge, paddingTop: space.md },
   scroll: { flexGrow: 1 },
   // Fills the room between the top and the buttons, with the card in the
-  // middle, so a tap beside a short card still counts.
+  // middle, so a tap beside a short card still counts (the tap surface fills
+  // it).
   stage: {
     flexGrow: 1,
     justifyContent: 'center',
     paddingHorizontal: rhythm.screenEdge,
     paddingVertical: space.md,
   },
+  // The room between the last card's buttons goes to the tap surface too.
+  passThrough: { pointerEvents: 'box-none' },
   share: { alignSelf: 'flex-start' },
   bottom: { paddingHorizontal: rhythm.screenEdge, paddingTop: space.sm, paddingBottom: space.lg },
   half: { flex: 1 },

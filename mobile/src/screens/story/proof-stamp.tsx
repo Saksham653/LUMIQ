@@ -1,7 +1,7 @@
 import { Platform } from 'react-native';
 import Svg, { Circle, Path } from 'react-native-svg';
 
-import { border, useTheme } from '@/theme';
+import { border, useTheme, type Palette } from '@/theme';
 
 // The checked stamp (brand spec, sections 4 and 6): 28 across, a disc of
 // radius 12 in the light with its 2 ring, and the tick of the `check` icon at
@@ -19,10 +19,13 @@ const SILENT =
     ? ({ 'aria-hidden': true } as const)
     : ({ accessible: false, accessibilityElementsHidden: true, importantForAccessibility: 'no-hide-descendants' } as const);
 
-export function ProofStamp() {
-  const { colors } = useTheme();
+// `size` and `palette` are for the shared picture, which draws the stamp
+// larger and always on light paper; on screen both are left out.
+export function ProofStamp({ size = STAMP, palette }: { size?: number; palette?: Palette } = {}) {
+  const theme = useTheme();
+  const colors = palette ?? theme.colors;
   return (
-    <Svg width={STAMP} height={STAMP} viewBox={`0 0 ${STAMP} ${STAMP}`} fill="none" {...SILENT}>
+    <Svg width={size} height={size} viewBox={`0 0 ${STAMP} ${STAMP}`} fill="none" {...SILENT}>
       <Circle
         cx={STAMP / 2}
         cy={STAMP / 2}

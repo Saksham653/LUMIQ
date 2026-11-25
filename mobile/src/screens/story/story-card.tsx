@@ -21,6 +21,10 @@ const CARD_MAX_WIDTH = 520;
 // The card is paper with a hairline edge and no shadow. The only yellow on it
 // is the stamp, and the stamp is only there when `countLine` is: when the
 // phone has checked every number in the sentence.
+//
+// The card takes no touch itself: the story's tap surface lies under it, so a
+// tap on the words goes through to it, and only the buttons (the children)
+// take their own. No pressable is ever inside another.
 export function StoryCardView({
   card,
   kicker,
@@ -42,38 +46,41 @@ export function StoryCardView({
 
   return (
     <View testID={testID} style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.line }]}>
-      <VStack gap="xs">
-        {kicker !== undefined ? (
-          <Txt variant="small" tone="soft">
-            {kicker}
+      <View style={styles.words}>
+        <VStack gap="xs">
+          {kicker !== undefined ? (
+            <Txt variant="small" tone="soft">
+              {kicker}
+            </Txt>
+          ) : null}
+          <Txt variant={cover ? 'title' : 'label'} tone={cover ? 'ink' : 'soft'} accessibilityRole="header">
+            {card.title}
           </Txt>
+        </VStack>
+
+        {card.numeral ? <StoryNumeral parts={card.numeral} /> : null}
+
+        <Txt variant="heading">{card.sentence}</Txt>
+
+        {card.series ? <StoryBars series={card.series} peakIndex={card.peakIndex} /> : null}
+
+        {countLine !== null ? (
+          <HStack gap="sm" style={[styles.proof, { borderTopColor: colors.line }]}>
+            <ProofStamp />
+            <Txt variant="small" tone="soft" style={styles.count}>
+              {countLine}
+            </Txt>
+          </HStack>
         ) : null}
-        <Txt variant={cover ? 'title' : 'label'} tone={cover ? 'ink' : 'soft'} accessibilityRole="header">
-          {card.title}
-        </Txt>
-      </VStack>
+      </View>
 
-      {card.numeral ? <StoryNumeral parts={card.numeral} /> : null}
-
-      <Txt variant="heading">{card.sentence}</Txt>
-
-      {card.series ? <StoryBars series={card.series} peakIndex={card.peakIndex} /> : null}
-
-      {countLine !== null ? (
-        <HStack gap="sm" style={[styles.proof, { borderTopColor: colors.line }]}>
-          <ProofStamp />
-          <Txt variant="small" tone="soft" style={styles.count}>
-            {countLine}
-          </Txt>
-        </HStack>
-      ) : null}
-
-      {children}
+      {children !== undefined && children !== null ? <View style={styles.actions}>{children}</View> : null}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  // A tap on the card that is not on a button goes to what lies under it.
   card: {
     width: '100%',
     maxWidth: CARD_MAX_WIDTH,
@@ -82,7 +89,13 @@ const styles = StyleSheet.create({
     padding: rhythm.cardPadding,
     borderRadius: radius.card,
     borderWidth: border.hairline,
+    pointerEvents: 'box-none',
   },
+  // The words and pictures never take a touch (a screen reader still reads
+  // them one by one).
+  words: { gap: space.md, pointerEvents: 'none' },
+  // The buttons take their own touches; the room between them does not.
+  actions: { gap: space.md, pointerEvents: 'box-none' },
   // The footer under the words, with a hairline rule above it.
   proof: { paddingTop: space.md, borderTopWidth: border.hairline },
   count: { flex: 1 },

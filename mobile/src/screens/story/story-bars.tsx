@@ -1,7 +1,7 @@
-import { Platform, StyleSheet, View } from 'react-native';
+import { Platform, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 
-import { useTheme } from '@/theme';
+import { useTheme, type Palette } from '@/theme';
 
 // The drawing's own grid. The picture takes the card's width and keeps this
 // shape, so the bars scale evenly and their round tops stay round.
@@ -42,8 +42,22 @@ function barPath(x: number, width: number, height: number): string {
 // resting chart colour and the one the sentence names in the chart's blue.
 // The order of the bars is the order of the data and never flips: a chart's
 // time axis runs the same way in every language.
-export function StoryBars({ series, peakIndex }: { series: number[]; peakIndex?: number }) {
-  const { colors } = useTheme();
+//
+// `palette` and `style` are for the shared picture, which is always on light
+// paper and gives the plot its own width; on screen both are left out.
+export function StoryBars({
+  series,
+  peakIndex,
+  palette,
+  style,
+}: {
+  series: number[];
+  peakIndex?: number;
+  palette?: Palette;
+  style?: StyleProp<ViewStyle>;
+}) {
+  const theme = useTheme();
+  const colors = palette ?? theme.colors;
   const count = series.length;
   const highest = series.reduce((best, value) => (value > best ? value : best), 0);
   if (count === 0 || highest <= 0) return null;
@@ -54,7 +68,7 @@ export function StoryBars({ series, peakIndex }: { series: number[]; peakIndex?:
   const start = (WIDTH - (width * count + gap * (count - 1))) / 2;
 
   return (
-    <View style={styles.plot}>
+    <View style={[styles.plot, style]}>
       <Svg width="100%" height="100%" viewBox={`0 0 ${WIDTH} ${HEIGHT}`} {...SILENT}>
         {series.map((value, index) => {
           const height = Math.max(BAR_MIN_HEIGHT, (Math.max(value, 0) / highest) * HEIGHT);

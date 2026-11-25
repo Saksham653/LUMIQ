@@ -11,6 +11,10 @@ import { duration, fade, rise, spring, useReducedMotion } from '@/theme';
 // It plays once, when it is put on screen. The story gives each card its own
 // key, so every card arrives; it starts unseen, so a new card never flashes
 // at full strength first.
+//
+// It never takes a touch itself: a tap that lands on no button inside it
+// goes through to the tap surface under the card. (A prop, not a style: an
+// animated view in the browser preview drops the style.)
 export function Arrive({ children }: { children: ReactNode }) {
   const reduced = useReducedMotion();
   const opacity = useSharedValue(0);
@@ -25,5 +29,9 @@ export function Arrive({ children }: { children: ReactNode }) {
     return { opacity: opacity.get(), transform: [{ translateY: offset.get() }] };
   });
 
-  return <Animated.View style={entrance}>{children}</Animated.View>;
+  return (
+    <Animated.View pointerEvents="box-none" style={entrance}>
+      {children}
+    </Animated.View>
+  );
 }

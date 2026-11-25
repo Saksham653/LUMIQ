@@ -5,16 +5,16 @@ import { computeInsights, detectTimeColumn } from '@core/engine/insights.js';
 import { runPlan } from '@core/engine/runPlan.js';
 import { isBlank, isNumber } from '@core/lib/stats.js';
 
-import type { ColumnType, Dataset } from '@/data/types';
+import type { ColumnType, Dataset, Row } from '@/data/types';
 import { inSentence, type Language } from '@/i18n';
 import { CHECKS, checkFile, type Deduction } from '@/utils/file-check';
 import { prettyColumn, type NumberFormat, type Numbers } from '@/utils/format';
 import { computeKpis } from '@/utils/kpis';
 
-// The Story of your file, as data: up to five cards built only from what the
+// The Story of your file, as data: up to six cards built only from what the
 // app already works out (the totals of Insights, the shared engine's findings,
-// the File check score). Nothing here is a new calculation, nothing uses AI
-// and nothing leaves the phone.
+// the File check score) and, for What moved, two totals of the shared plan
+// engine. Nothing uses AI and nothing leaves the phone.
 //
 // Every card passes the same gate as an answer in Ask before it may be shown:
 // its sentence is read back with verifyNumbers and every number in it must
@@ -23,7 +23,7 @@ import { computeKpis } from '@/utils/kpis';
 //
 // This file imports no React and no React Native, so tests can reach it.
 
-export type StoryKind = 'cover' | 'big' | 'standout' | 'health' | 'next';
+export type StoryKind = 'cover' | 'big' | 'moved' | 'standout' | 'health' | 'next';
 
 // One number a card may say: the value the phone holds and how the card
 // writes it. `fromFile` marks a number that is part of a name in the file (a
@@ -39,6 +39,11 @@ export type StoryCard = {
   title: string;
   // The one sentence of the card. Every number in it is one of `figures`.
   sentence: string;
+  // The same sentence with the names that can point at people or groups in
+  // the file (a group, the name of a row) written "Group A", "Group B", for a
+  // picture shared with "Hide names" on. Equal to `sentence` when the card
+  // names none. Its numbers pass the same check.
+  sentenceHidden: string;
   figures: StoryFigure[];
   // The card's main figure, when it has one, for the big numeral.
   numeral?: StoryNumeral;
@@ -71,6 +76,30 @@ export type StoryWord =
   | 'big.howSumSome'
   | 'big.howAvg'
   | 'big.howAvgSome'
+  | 'moved.title'
+  | 'moved.up'
+  | 'moved.down'
+  | 'moved.upSoFar'
+  | 'moved.downSoFar'
+  | 'moved.flat'
+  | 'moved.flatSoFar'
+  | 'moved.days'
+  | 'moved.monthYear'
+  | 'unit.days'
+  | 'unit.dayOne'
+  | 'month.1'
+  | 'month.2'
+  | 'month.3'
+  | 'month.4'
+  | 'month.5'
+  | 'month.6'
+  | 'month.7'
+  | 'month.8'
+  | 'month.9'
+  | 'month.10'
+  | 'month.11'
+  | 'month.12'
+  | 'name.group'
   | 'standout.title'
   | 'standout.period'
   | 'standout.top'
@@ -99,11 +128,12 @@ export type StoryTools = {
   language: Language;
 };
 
-// A sentence in two forms: as the card shows it, and with every name from
-// the file hidden, so that the numbers the phone worked out can be checked
-// and counted apart from digits that happen to be in a name.
-type Said = { text: string; bare: string };
-type Draft = Omit<StoryCard, 'checked'> & { bare: string };
+// A sentence in three forms: as the card shows it; with every name from the
+// file hidden, so that the numbers the phone worked out can be checked and
+// counted apart from digits that happen to be in a name; and with the names
+// of groups and rows written "Group A", for a picture with names hidden.
+type Said = { text: string; bare: string; hidden: string };
+type Draft = Omit<StoryCard, 'checked' | 'sentenceHidden'> & { bare: string; hidden: string };
 type Checked = { checked: number; unverified: number };
 type Found = { raw: string; value: number };
 type TimeColumn = { column: string; keyOf: (value: unknown) => number };
@@ -143,20 +173,48 @@ const finite = (value: unknown): number | null => (typeof value === 'number' && 
 
 // One sentence from the screen's words. `values` are numbers already
 // formatted by the app; `names` are taken from the file as they are (a
-// column, a group, a period).
+// column, a group, a period); `standIns` replace some of those names in the
+// form with names hidden ({ group: "Group A" }).
 function say(
   tools: StoryTools,
   key: StoryWord,
   values: Record<string, string> = {},
   names: Record<string, string> = {},
+  standIns: Record<string, string> = {},
 ): Said {
-  const hidden: Record<string, string> = {};
-  for (const name of Object.keys(names)) hidden[name] = NAME_MARK;
-  return { text: tools.t(key, { ...values, ...names }), bare: tools.t(key, { ...values, ...hidden }) };
+  const marks: Record<string, string> = {};
+  for (const name of Object.keys(names)) marks[name] = NAME_MARK;
+  return {
+    text: tools.t(key, { ...values, ...names }),
+    bare: tools.t(key, { ...values, ...marks }),
+    hidden: tools.t(key, { ...values, ...names, ...standIns }),
+  };
 }
 
-function join(parts: Said[]): { sentence: string; bare: string } {
-  return { sentence: parts.map((part) => part.text).join(' '), bare: parts.map((part) => part.bare).join(' ') };
+function join(parts: Said[]): { sentence: string; bare: string; hidden: string } {
+  return {
+    sentence: parts.map((part) => part.text).join(' '),
+    bare: parts.map((part) => part.bare).join(' '),
+    hidden: parts.map((part) => part.hidden).join(' '),
+  };
+}
+
+// "Group A", "Group B": what a name from the file becomes in a picture shared
+// with names hidden. A letter, never a digit, so the check reads nothing new.
+function standIn(tools: StoryTools, place: number): string {
+  return tools.t('name.group', { letter: String.fromCharCode(65 + (place % 26)) });
+}
+
+// A day written the computer's way in the file ("2026-11-07") as people say
+// it ("7 Nov 2026", in the app's language); anything else stays as written.
+const ISO_DAY = /^(\d{4})-(\d{2})-(\d{2})$/;
+function dayWords(label: string, numbers: Numbers): string {
+  const match = ISO_DAY.exec(label.trim());
+  if (!match) return label;
+  const month = Number(match[2]) - 1;
+  const date = new Date(Number(match[1]), month, Number(match[3]));
+  if (date.getMonth() !== month) return label;
+  return numbers.date(date.getTime());
 }
 
 // Numbers that are part of names taken from the file ("2024-Q1", "Plan 2",
@@ -263,8 +321,10 @@ function coverCard(dataset: Dataset, name: string, tools: StoryTools): Draft {
   ];
   const period = rows > 0 ? periodOf(dataset) : null;
   if (period) {
-    parts.push(say(tools, 'cover.period', {}, { first: period.first, last: period.last }));
-    figures.push(...nameFigures([period.first, period.last], numbers.format));
+    const first = dayWords(period.first, numbers);
+    const last = dayWords(period.last, numbers);
+    parts.push(say(tools, 'cover.period', {}, { first, last }));
+    figures.push(...nameFigures([first, last], numbers.format));
   }
   // The name is the title, not part of the sentence: a file name is not a
   // number the phone worked out ("sales-2025.xlsx").
@@ -303,6 +363,359 @@ function bigCard(dataset: Dataset, metric: string, tools: StoryTools): Draft | n
   };
 }
 
+// --- What moved: the file's latest period against the one before it ---------
+//
+// The periods come from the file's first date or month column. A date column
+// is cut into calendar months; a month column ("Jan", "Jan 2025", "2025-01")
+// or a quarter column ("2025-Q1") gives its own periods. The two totals are
+// worked out by the shared plan engine, one period at a time.
+//
+// When the periods cannot be told apart, the card is withheld: dates written
+// 03/04/2025 where no day is over 12 (the 3rd of April or the 4th of March?),
+// one column mixing "Jan" and "Jan 2025", or month names without a year in an
+// order that does not say which month is the latest.
+
+type PeriodBucket = { key: number; label: string; rows: Row[]; days: Set<number> };
+// The buckets in time order. `dated` when they come from real dates, which
+// is when the days with data can be counted.
+type Periods = { dated: boolean; buckets: PeriodBucket[] };
+// One cell of a date column: a day, or a whole month (the app may keep "Apr
+// 2025" in a date column as 2025-04). `month` counts from 0.
+type DateCell = { year: number; month: number; day: number | null };
+type NamedPeriod = { kind: 'month' | 'monthAlone' | 'quarter'; key: number };
+
+// A column is read as periods when this share of its filled cells are
+// periods (the share the File check uses to call a column dates).
+const PERIOD_SHARE = 0.9;
+// The small picture of What moved shows at most this many periods, the
+// latest last.
+const MOVED_MAX_BARS = 12;
+
+const MONTH_NAMES = [
+  'january',
+  'february',
+  'march',
+  'april',
+  'may',
+  'june',
+  'july',
+  'august',
+  'september',
+  'october',
+  'november',
+  'december',
+];
+const MONTH_WORDS: StoryWord[] = [
+  'month.1',
+  'month.2',
+  'month.3',
+  'month.4',
+  'month.5',
+  'month.6',
+  'month.7',
+  'month.8',
+  'month.9',
+  'month.10',
+  'month.11',
+  'month.12',
+];
+
+// 2025-04-03, 2025/4/3, 2025-04-03 10:30 (the year first: never in doubt).
+const YEAR_FIRST = /^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})(?:[T\s].*)?$/;
+// 03/04/2025, 3-4-25 (day and month in an order the column must show).
+const YEAR_LAST = /^(\d{1,2})[-/.](\d{1,2})[-/.](\d{4}|\d{2})$/;
+const YEAR_QUARTER = /^(\d{4})\s*-?\s*q([1-4])$/i;
+const QUARTER_YEAR = /^q([1-4])[\s'’/-]*(\d{4}|\d{2})$/i;
+const YEAR_MONTH = /^(\d{4})[-/.](\d{1,2})$/;
+const MONTH_YEAR = /^([a-z]+)\.?[\s,'’/-]*(\d{4}|\d{2})$/i;
+const YEAR_MONTH_WORD = /^(\d{4})[\s/-]+([a-z]+)\.?$/i;
+const MONTH_ALONE = /^([a-z]+)\.?$/i;
+
+const daysInMonth = (year: number, month: number) => new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
+
+// "25" is 2025; "2025" is 2025.
+const fullYear = (digits: string) => (digits.length === 2 ? 2000 + Number(digits) : Number(digits));
+
+// A month written as a word: "Jan", "January", "Sept". Not "Marketing".
+function monthWord(word: string): number | null {
+  const lower = word.toLowerCase();
+  if (lower.length < 3) return null;
+  if (lower === 'sept') return 8;
+  const index = MONTH_NAMES.findIndex((name) => name.startsWith(lower));
+  return index === -1 ? null : index;
+}
+
+function realDay(year: number, month: number, day: number): DateCell | null {
+  if (month < 1 || month > 12 || day < 1 || day > daysInMonth(year, month - 1)) return null;
+  return { year, month: month - 1, day };
+}
+
+// The cells of a date column, one each (null for a cell that is not a real
+// date). The app stores a date it could read as 2025-04-03 (or 2025-04 for
+// a month); a date it could not settle stays as written. Day first or month
+// first is then read from the column as a whole: a first part over 12 says
+// day first, a second part over 12 says month first. When the column shows
+// neither, or both, it cannot be read: null.
+function readDates(cells: string[]): (DateCell | null)[] | null {
+  let dayFirst = false;
+  let monthFirst = false;
+  let yearLast = false;
+  for (const cell of cells) {
+    const parts = YEAR_LAST.exec(cell);
+    if (!parts) continue;
+    yearLast = true;
+    if (Number(parts[1]) > 12) dayFirst = true;
+    if (Number(parts[2]) > 12) monthFirst = true;
+  }
+  if (yearLast && dayFirst === monthFirst) return null;
+  return cells.map((cell) => {
+    const iso = YEAR_FIRST.exec(cell);
+    if (iso) return realDay(Number(iso[1]), Number(iso[2]), Number(iso[3]));
+    const whole = YEAR_MONTH.exec(cell);
+    if (whole) {
+      const month = Number(whole[2]);
+      return month >= 1 && month <= 12 ? { year: Number(whole[1]), month: month - 1, day: null } : null;
+    }
+    const parts = YEAR_LAST.exec(cell);
+    if (!parts) return null;
+    const year = fullYear(parts[3]);
+    return dayFirst
+      ? realDay(year, Number(parts[2]), Number(parts[1]))
+      : realDay(year, Number(parts[1]), Number(parts[2]));
+  });
+}
+
+// One cell of a month or quarter column, or null.
+function readNamedPeriod(cell: string): NamedPeriod | null {
+  let parts = YEAR_QUARTER.exec(cell);
+  if (parts) return { kind: 'quarter', key: Number(parts[1]) * 4 + Number(parts[2]) - 1 };
+  parts = QUARTER_YEAR.exec(cell);
+  if (parts) return { kind: 'quarter', key: fullYear(parts[2]) * 4 + Number(parts[1]) - 1 };
+  parts = YEAR_MONTH.exec(cell);
+  if (parts) {
+    const month = Number(parts[2]);
+    return month >= 1 && month <= 12 ? { kind: 'month', key: Number(parts[1]) * 12 + month - 1 } : null;
+  }
+  parts = MONTH_YEAR.exec(cell);
+  if (parts) {
+    const month = monthWord(parts[1]);
+    return month === null ? null : { kind: 'month', key: fullYear(parts[2]) * 12 + month };
+  }
+  parts = YEAR_MONTH_WORD.exec(cell);
+  if (parts) {
+    const month = monthWord(parts[2]);
+    return month === null ? null : { kind: 'month', key: Number(parts[1]) * 12 + month };
+  }
+  parts = MONTH_ALONE.exec(cell);
+  if (parts) {
+    const month = monthWord(parts[1]);
+    return month === null ? null : { kind: 'monthAlone', key: month };
+  }
+  return null;
+}
+
+// Month names without a year: only the order of the rows can say which month
+// is the latest. Rows that go through the months once, in calendar order or
+// passing December once (a year from April to March), say it; rows in any
+// other order do not, and neither do two months alone with the later one
+// first (February then January: newest first, or into the next year?).
+function monthAloneOrder(months: number[]): number[] | null {
+  const runs: number[] = [];
+  for (const month of months) if (runs[runs.length - 1] !== month) runs.push(month);
+  if (new Set(runs).size !== runs.length) return null;
+  let wraps = 0;
+  for (let place = 1; place < runs.length; place++) if (runs[place] < runs[place - 1]) wraps++;
+  if (wraps === 0) return runs;
+  if (wraps === 1 && runs.length > 2 && runs[runs.length - 1] < runs[0]) return runs;
+  return null;
+}
+
+// The file's periods, from its first date or month column: 'unclear' when
+// that column's periods cannot be told apart, null when the file has none.
+function filePeriods(dataset: Dataset, tools: StoryTools): Periods | 'unclear' | null {
+  for (const column of dataset.columns) {
+    const type = dataset.columnTypes?.[column]?.type ?? 'text';
+    if (type !== 'date' && type !== 'text') continue;
+    const rows: Row[] = [];
+    const cells: string[] = [];
+    for (const row of dataset.data) {
+      const cell = row[column];
+      if (isBlank(cell)) continue;
+      rows.push(row);
+      cells.push(String(cell).trim());
+    }
+    if (cells.length === 0) continue;
+
+    if (type === 'date') {
+      const dates = readDates(cells);
+      if (dates === null) return 'unclear';
+      const read = dates.filter((date): date is DateCell => date !== null);
+      if (read.length < cells.length * PERIOD_SHARE) return 'unclear';
+      // Days and whole months in one column cannot be compared fairly.
+      const dayCells = read.filter((date) => date.day !== null).length;
+      if (dayCells > 0 && dayCells < read.length) return 'unclear';
+      const buckets = new Map<number, PeriodBucket>();
+      dates.forEach((date, place) => {
+        if (date === null) return;
+        const key = date.year * 12 + date.month;
+        let bucket = buckets.get(key);
+        if (!bucket) {
+          // A label made from the file's own dates: the month in the app's
+          // language and the year as written in a date.
+          const label = tools.t('moved.monthYear', { month: tools.t(MONTH_WORDS[date.month]), year: String(date.year) });
+          bucket = { key, label, rows: [], days: new Set() };
+          buckets.set(key, bucket);
+        }
+        bucket.rows.push(rows[place]);
+        if (date.day !== null) bucket.days.add(date.day);
+      });
+      return { dated: dayCells > 0, buckets: [...buckets.values()].sort((a, b) => a.key - b.key) };
+    }
+
+    // A text column is only a period column when nearly all of it is.
+    if (readNamedPeriod(cells[0]) === null) continue;
+    const named = cells.map(readNamedPeriod);
+    const found = named.filter((period): period is NamedPeriod => period !== null);
+    if (found.length < cells.length * PERIOD_SHARE) continue;
+    const kinds = new Set(found.map((period) => period.kind));
+    if (kinds.size > 1) return 'unclear';
+
+    const buckets = new Map<number, PeriodBucket>();
+    named.forEach((period, place) => {
+      if (period === null) return;
+      let bucket = buckets.get(period.key);
+      if (!bucket) {
+        // Labelled as the file writes it, the first time it appears.
+        bucket = { key: period.key, label: cells[place], rows: [], days: new Set() };
+        buckets.set(period.key, bucket);
+      }
+      bucket.rows.push(rows[place]);
+    });
+    if (found[0].kind === 'monthAlone') {
+      const order = monthAloneOrder(found.map((period) => period.key));
+      if (order === null) return 'unclear';
+      const inOrder = order
+        .map((key) => buckets.get(key))
+        .filter((bucket): bucket is PeriodBucket => bucket !== undefined);
+      return { dated: false, buckets: inOrder };
+    }
+    return { dated: false, buckets: [...buckets.values()].sort((a, b) => a.key - b.key) };
+  }
+  return null;
+}
+
+// The total of the main number column over some rows, by the shared plan
+// engine (blanks skipped, as everywhere). Null when none of them has a number.
+function periodTotal(dataset: Dataset, rows: Row[], metric: string): number | null {
+  const table = runPlan(rows, dataset.columns, {
+    measures: [{ op: 'sum', column: metric, as: 'value' }],
+  }).table as Record<string, unknown>[];
+  return finite(table[0]?.value);
+}
+
+// (b2) What moved: the latest period's total of the main number column
+// against the period before it in the file, up or down and by how much. "So
+// far" when the latest month has fewer days of data than the one before (and
+// a smaller part of its month, so a whole February is not "so far"); the
+// days of data on each side are said whenever they differ, unless both months
+// are whole.
+function movedCard(dataset: Dataset, metric: string, tools: StoryTools): Draft | null {
+  const { t, numbers } = tools;
+  // A total of a rate or an average means nothing.
+  if (aggregationRule(metric, dataset.columnTypes?.[metric]) === 'avg') return null;
+  const periods = filePeriods(dataset, tools);
+  if (periods === null || periods === 'unclear' || periods.buckets.length < 2) return null;
+
+  const { buckets } = periods;
+  const totals = buckets.map((bucket) => periodTotal(dataset, bucket.rows, metric));
+  const latest = buckets[buckets.length - 1];
+  const previous = buckets[buckets.length - 2];
+  const to = totals[totals.length - 1];
+  const from = totals[totals.length - 2];
+  if (to === null || from === null) return null;
+
+  const typeInfo = dataset.columnTypes?.[metric];
+  const column = prettyColumn(metric);
+  const toText = numbers.amount(to, typeInfo, metric);
+  const fromText = numbers.amount(from, typeInfo, metric);
+  const difference = to - from;
+  const up = difference > 0;
+  // By how much: in percent from a positive total, otherwise as an amount.
+  const inPercent = from > 0 && to >= 0;
+  const change = inPercent ? (Math.abs(difference) / from) * 100 : Math.abs(difference);
+  const changeText = inPercent ? numbers.percent(change, 1) : numbers.amount(change, typeInfo, metric);
+  const flat = inPercent ? Number(change.toFixed(1)) === 0 : difference === 0;
+
+  const figures: StoryFigure[] = [figure(to, toText), figure(from, fromText)];
+  if (!flat) figures.push(figure(change, changeText));
+
+  let soFar = false;
+  let days: Said | null = null;
+  if (periods.dated) {
+    const latestDays = latest.days.size;
+    const previousDays = previous.days.size;
+    const latestMonth = daysInMonth(Math.floor(latest.key / 12), latest.key % 12);
+    const previousMonth = daysInMonth(Math.floor(previous.key / 12), previous.key % 12);
+    soFar = latestDays < previousDays && latestDays / latestMonth < previousDays / previousMonth;
+    // Two whole months (30 days of November, 31 of October) need no note.
+    const bothWhole = latestDays >= latestMonth && previousDays >= previousMonth;
+    if (latestDays !== previousDays && !bothWhole) {
+      const latestText = numbers.count(latestDays);
+      const previousText = numbers.count(previousDays);
+      days = say(
+        tools,
+        'moved.days',
+        {
+          latestDays: t(latestDays === 1 ? 'unit.dayOne' : 'unit.days', { n: latestText }),
+          previousDays: t(previousDays === 1 ? 'unit.dayOne' : 'unit.days', { n: previousText }),
+        },
+        { latest: latest.label, previous: previous.label },
+      );
+      figures.push(figure(latestDays, latestText), figure(previousDays, previousText));
+    }
+  }
+
+  const key: StoryWord = flat
+    ? soFar
+      ? 'moved.flatSoFar'
+      : 'moved.flat'
+    : up
+      ? soFar
+        ? 'moved.upSoFar'
+        : 'moved.up'
+      : soFar
+        ? 'moved.downSoFar'
+        : 'moved.down';
+  const lead = say(
+    tools,
+    key,
+    flat ? { to: toText, from: fromText } : { change: changeText, to: toText, from: fromText },
+    { metric: column, latest: latest.label, previous: previous.label },
+  );
+  figures.push(...nameFigures([column, latest.label, previous.label], numbers.format));
+
+  // The big numeral: the change with its sign ("+20.9%"), or the latest total
+  // when there is no percent to give.
+  let numeral: StoryNumeral = numbers.amountParts(to, typeInfo, metric);
+  if (!flat && inPercent) {
+    const parts = numbers.amountParts(change, PERCENT);
+    numeral = { ...parts, number: `${up ? '+' : '-'}${parts.number}` };
+    if (!up) figures.push(figure(-change, `-${changeText}`));
+  }
+
+  const recent = totals.slice(-MOVED_MAX_BARS);
+  const bars = recent.filter((value): value is number => value !== null);
+  return {
+    id: 'moved',
+    kind: 'moved',
+    title: t('moved.title'),
+    ...join(days ? [lead, days] : [lead]),
+    figures,
+    numeral,
+    ...(bars.length === recent.length ? pictureOf(bars, bars.length - 1) : {}),
+  };
+}
+
 // (c) What stands out, first choice: the period with the highest value and
 // the one with the lowest.
 function periodCard(dataset: Dataset, metric: string, tools: StoryTools): Draft | null {
@@ -321,6 +734,8 @@ function periodCard(dataset: Dataset, metric: string, tools: StoryTools): Draft 
   const column = prettyColumn(metric);
   const highValue = numbers.amount(points[high].value, typeInfo, metric);
   const lowValue = numbers.amount(points[low].value, typeInfo, metric);
+  const highLabel = dayWords(points[high].label, numbers);
+  const lowLabel = dayWords(points[low].label, numbers);
   return {
     id: 'standout',
     kind: 'standout',
@@ -330,13 +745,13 @@ function periodCard(dataset: Dataset, metric: string, tools: StoryTools): Draft 
         tools,
         'standout.period',
         { highValue, lowValue },
-        { high: points[high].label, metric: column, low: points[low].label },
+        { high: highLabel, metric: column, low: lowLabel },
       ),
     ]),
     figures: [
       figure(points[high].value, highValue),
       figure(points[low].value, lowValue),
-      ...nameFigures([points[high].label, points[low].label, column], numbers.format),
+      ...nameFigures([highLabel, lowLabel, column], numbers.format),
     ],
     numeral: numbers.amountParts(points[high].value, typeInfo, metric),
     ...pictureOf(
@@ -381,6 +796,7 @@ function topCard(dataset: Dataset, facts: Record<string, unknown>, tools: StoryT
         'standout.top',
         { share: shareText, total: totalText, groups: groupsText },
         { group, metric: column, groupColumn: groupName },
+        { group: standIn(tools, 0) },
       ),
     ]),
     figures: [
@@ -474,14 +890,18 @@ function highestCard(dataset: Dataset, metric: string, tools: StoryTools): Draft
   // The row's name is the file's first column; a first column of numbers
   // (a serial number) is not a name.
   const nameType = dataset.columnTypes?.[dataset.columns[0]]?.type ?? 'text';
-  const label = nameType === 'text' || nameType === 'date' ? kpis.highestLabel : null;
+  const raw = nameType === 'text' || nameType === 'date' ? kpis.highestLabel : null;
+  const label = raw === null || raw === undefined ? null : nameType === 'date' ? dayWords(String(raw), numbers) : raw;
+  // A row's name in words (a customer, a shop) is hidden in a shared picture
+  // when asked; a date is not a name.
+  const standIns: Record<string, string> = nameType === 'text' ? { label: standIn(tools, 0) } : {};
   return {
     id: 'standout',
     kind: 'standout',
     title: t('standout.title'),
     ...join([
       label
-        ? say(tools, 'standout.highest', { value }, { metric: column, label })
+        ? say(tools, 'standout.highest', { value }, { metric: column, label }, standIns)
         : say(tools, 'standout.highestPlain', { value }, { metric: column }),
     ]),
     figures: [figure(highest, value), ...nameFigures(label ? [column, label] : [column], numbers.format)],
@@ -615,6 +1035,10 @@ function checkCard(draft: Draft, format: NumberFormat): StoryCard | null {
   if (whole.unverified > 0) return null;
   const bare = verifyNumbers(draft.bare, workedOut, format) as Checked;
   if (bare.unverified > 0) return null;
+  // The form with names hidden says the same numbers, so it passes the same
+  // check: it is what a shared picture may show.
+  const hidden = verifyNumbers(draft.hidden, all, format) as Checked;
+  if (hidden.unverified > 0) return null;
   if (draft.numeral) {
     const { prefix, number, suffix } = draft.numeral;
     const shown = verifyNumbers(`${prefix}${number}${suffix}`, workedOut, format) as Checked;
@@ -626,6 +1050,7 @@ function checkCard(draft: Draft, format: NumberFormat): StoryCard | null {
     kind: draft.kind,
     title: draft.title,
     sentence: draft.sentence,
+    sentenceHidden: draft.hidden,
     figures: draft.figures,
     numeral: draft.numeral,
     series: draft.series,
@@ -635,8 +1060,8 @@ function checkCard(draft: Draft, format: NumberFormat): StoryCard | null {
 }
 
 // The story of one file, in the app's language and number format: cover, the
-// big number, what stands out, file health, what next. Only cards that have
-// something to say and passed the check are returned, in that order.
+// big number, what moved, what stands out, file health, what next. Only cards
+// that have something to say and passed the check are returned, in that order.
 export function buildStory(dataset: Dataset, name: string, tools: StoryTools): StoryCard[] {
   const format = tools.numbers.format;
   // Built, then checked. A card that cannot be built or does not pass is null.
@@ -656,7 +1081,10 @@ export function buildStory(dataset: Dataset, name: string, tools: StoryTools): S
   const slots: (StoryCard | null)[] = [checked(() => coverCard(dataset, name, tools))];
   if (dataset.data.length > 0) {
     const metric = attempt(() => mainNumberColumn(dataset));
-    if (metric) slots.push(checked(() => bigCard(dataset, metric, tools)));
+    if (metric) {
+      slots.push(checked(() => bigCard(dataset, metric, tools)));
+      slots.push(checked(() => movedCard(dataset, metric, tools)));
+    }
     slots.push(firstChecked(attempt(() => standoutChoices(dataset, metric, tools)) ?? []));
     slots.push(checked(() => healthCard(dataset, tools)));
   }
