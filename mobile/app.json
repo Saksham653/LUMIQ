@@ -22,7 +22,23 @@
         "android.permission.READ_EXTERNAL_STORAGE",
         "android.permission.WRITE_EXTERNAL_STORAGE"
       ],
-      "allowBackup": false
+      "allowBackup": false,
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "category": ["DEFAULT"],
+          "data": [
+            { "scheme": "content" },
+            { "scheme": "file" },
+            { "mimeType": "text/csv" },
+            { "mimeType": "text/comma-separated-values" },
+            { "mimeType": "application/csv" },
+            { "mimeType": "text/plain" },
+            { "mimeType": "application/vnd.ms-excel" },
+            { "mimeType": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }
+          ]
+        }
+      ]
     },
     "web": {
       "output": "single",
