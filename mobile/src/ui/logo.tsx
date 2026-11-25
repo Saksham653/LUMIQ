@@ -1,7 +1,7 @@
 import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import Svg, { Path, Rect } from 'react-native-svg';
 
-import { brand, useTheme } from '@/theme';
+import { brand, useTheme, keepLeftToRight } from '@/theme';
 
 // The LUMIQ logo (brand spec, section 2), drawn in code so it looks the same
 // before any font or image has loaded. Three parts:
@@ -359,5 +359,5 @@ const styles = StyleSheet.create({
   // Mark first, then name, in every language: `direction` pins the row so a
   // right-to-left layout cannot mirror it. The name's box is centred on its
   // letters, so centring the box on the tile centres the name.
-  lockup: { flexDirection: 'row', alignItems: 'center', direction: 'ltr' },
+  lockup: { flexDirection: 'row', alignItems: 'center', ...keepLeftToRight },
 });

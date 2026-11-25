@@ -1,7 +1,7 @@
 import { StyleSheet, View } from 'react-native';
 import Svg, { Path, Rect } from 'react-native-svg';
 
-import { brand, useTheme } from '@/theme';
+import { brand, useTheme, keepLeftToRight } from '@/theme';
 
 // The lockup of the app header (brand spec, section 2, rule 6): the mark on
 // its blue tile at 32, a gap of 9, then the drawn name 75 by 20. Drawn in
@@ -71,5 +71,5 @@ const styles = StyleSheet.create({
   // Mark first, then name, in every language: `direction` pins the row so a
   // right-to-left layout cannot mirror it. 9 between them is the lockup's own
   // gap at this size (brand spec, section 2), not a step of the spacing scale.
-  lockup: { flexDirection: 'row', alignItems: 'center', gap: 9, direction: 'ltr' },
+  lockup: { flexDirection: 'row', alignItems: 'center', gap: 9, ...keepLeftToRight },
 });

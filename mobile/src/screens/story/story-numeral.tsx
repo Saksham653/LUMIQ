@@ -10,6 +10,7 @@ import {
   numeralUnit,
   textFont,
   useTheme,
+  keepLeftToRight,
 } from '@/theme';
 import type { StoryNumeral as NumeralParts } from '@/utils/story';
 
@@ -81,6 +82,6 @@ export function StoryNumeral({ parts }: { parts: NumeralParts }) {
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', alignItems: 'baseline', alignSelf: 'flex-start', maxWidth: '100%', direction: 'ltr' },
+  row: { flexDirection: 'row', alignItems: 'baseline', alignSelf: 'flex-start', maxWidth: '100%', ...keepLeftToRight },
   digits: { flexShrink: 1 },
 });
