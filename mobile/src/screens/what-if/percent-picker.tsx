@@ -1,98 +1,81 @@
-import { Host, Slider } from '@expo/ui';
-import { useRef } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet } from 'react-native';
 
-import { AppText } from '@/components/app-text';
-import { ChoiceChips } from '@/components/choice-chips';
-import { hapticSelection } from '@/components/haptics';
-import { Numeral, Spacing } from '@/constants/theme';
-import { useTheme } from '@/hooks/use-theme';
 import { useNumbers } from '@/state/app-state';
-import { figureFont } from '@/theme';
+import { space } from '@/theme';
+import { Card } from '@/ui/card';
+import { Chip, ChipGroup } from '@/ui/chip';
+import { Numeral } from '@/ui/numeral';
+import { Slider } from '@/ui/slider';
+import { HStack, VStack } from '@/ui/stack';
+import { Txt } from '@/ui/text';
 
+// The range and steps of the change (the same as before the rebuild).
 const MIN = -50;
 const MAX = 50;
+const STEP = 5;
 const PRESETS = [-20, -10, 5, 10, 20, 50];
 
-// "By how much?": the change as a big numeral in the figures face (always in
-// ink, a fall as much as a rise), the phone's own slider from
-// -50% to +50% snapping to steps of 5 with a selection haptic at every
-// step, and one-tap presets for the usual changes.
+// "By how much?": the change as a numeral (always in ink, a fall as much as
+// a rise), what it means in words, the slider from -50% to +50% in steps of
+// 5 (each step it crosses gives one selection tap in the hand; the slider
+// does that itself), and one-tap chips for the usual changes.
 export function PercentPicker({
   value,
   onChange,
   description,
   sliderLabel,
+  presetsLabel,
 }: {
   value: number;
   onChange: (value: number) => void;
   description: string;
   sliderLabel: string;
+  presetsLabel: string;
 }) {
-  const colors = useTheme();
   const numbers = useNumbers();
-  const last = useRef(value);
-
-  const step = (next: number) => {
-    const rounded = Math.round(next / 5) * 5;
-    if (rounded === last.current) return;
-    last.current = rounded;
-    hapticSelection();
-    onChange(rounded);
-  };
+  const written = numbers.signedPercent(value);
+  const preset = PRESETS.includes(value) ? String(value) : null;
 
   return (
-    <View style={styles.wrap}>
-      <Text
-        style={[styles.big, { color: colors.text }]}
-        accessibilityLiveRegion="polite"
-        maxFontSizeMultiplier={1.3}>
-        {numbers.signedPercent(value)}
-      </Text>
-      <AppText tone="secondary" style={styles.center}>
+    <Card style={styles.card}>
+      <Numeral value={written} size="large" align="center" accessibilityLabel={written} />
+      <Txt tone="soft" align="center" style={styles.stretch}>
         {description}
-      </AppText>
-      <View accessible accessibilityLabel={sliderLabel} accessibilityValue={{ text: numbers.signedPercent(value) }}>
-        <Host matchContents={{ vertical: true }} seedColor={colors.primary} style={styles.slider}>
-          <Slider value={value} min={MIN} max={MAX} step={5} onValueChange={step} />
-        </Host>
-        {/* The phone's slider mirrors in Hebrew (lowest at the right), so its
-            scale mirrors with it; each label itself still reads left to right. */}
-        <View style={styles.ends}>
-          <AppText variant="small" tone="secondary">
+      </Txt>
+      <VStack gap="xs">
+        <Slider
+          value={value}
+          onValueChange={onChange}
+          min={MIN}
+          max={MAX}
+          step={STEP}
+          accessibilityLabel={sliderLabel}
+          valueText={written}
+        />
+        {/* The slider runs from the reading edge, so its scale mirrors with
+            it in Hebrew; each figure itself still reads left to right. */}
+        <HStack gap="sm" justify="between" aria-hidden>
+          <Txt variant="small" tone="soft" snug>
             {numbers.signedPercent(MIN)}
-          </AppText>
-          <AppText variant="small" tone="secondary">
+          </Txt>
+          <Txt variant="small" tone="soft" snug>
             {numbers.percent(0)}
-          </AppText>
-          <AppText variant="small" tone="secondary">
+          </Txt>
+          <Txt variant="small" tone="soft" snug>
             {numbers.signedPercent(MAX)}
-          </AppText>
-        </View>
-      </View>
-      <ChoiceChips
-        choices={PRESETS.map((preset) => ({ value: String(preset), label: numbers.signedPercent(preset) }))}
-        selected={PRESETS.includes(value) ? String(value) : null}
-        onSelect={(preset) => {
-          last.current = Number(preset);
-          onChange(Number(preset));
-        }}
-      />
-    </View>
+          </Txt>
+        </HStack>
+      </VStack>
+      <ChipGroup wrap value={preset} onChange={(next) => onChange(Number(next))} accessibilityLabel={presetsLabel}>
+        {PRESETS.map((step) => (
+          <Chip key={step} value={String(step)} label={numbers.signedPercent(step)} />
+        ))}
+      </ChipGroup>
+    </Card>
   );
 }
 
 const styles = StyleSheet.create({
-  wrap: { gap: Spacing.md },
-  big: {
-    textAlign: 'center',
-    alignSelf: 'stretch',
-    // The sign and the percent mark are part of the number: the same face.
-    ...figureFont(),
-    fontSize: Numeral.hero,
-    lineHeight: Math.round(Numeral.hero * 1.15),
-  },
-  center: { textAlign: 'center', alignSelf: 'stretch' },
-  slider: { alignSelf: 'stretch' },
-  ends: { flexDirection: 'row', justifyContent: 'space-between' },
+  card: { gap: space.md },
+  stretch: { alignSelf: 'stretch' },
 });

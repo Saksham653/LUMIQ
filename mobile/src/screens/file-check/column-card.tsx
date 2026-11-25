@@ -1,22 +1,23 @@
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet } from 'react-native';
 
-import { type IconName } from '@/components/app-icon';
-import { AppText } from '@/components/app-text';
-import { IconCircle, ListRow, Tag } from '@/components/grouped';
-import { Spacing } from '@/constants/theme';
 import type { ColumnKind } from '@/data/types';
+import { space } from '@/theme';
+import type { IconName } from '@/ui/icon-set';
+import { ListRow } from '@/ui/list';
+import { Tag } from '@/ui/tag';
 
 const TYPE_ICON: Record<ColumnKind, IconName> = {
-  number: { ios: 'number', android: 'numbers' },
-  money: { ios: 'banknote', android: 'payments' },
-  percent: { ios: 'percent', android: 'percent' },
-  date: { ios: 'calendar', android: 'calendar_month' },
-  text: { ios: 'textformat', android: 'text_fields' },
+  number: 'numbers',
+  money: 'currency',
+  percent: 'numbers',
+  date: 'calendar',
+  text: 'column',
 };
 
-// One column as LUMIQ read it, as a row of the "Your columns" group: its
-// type and a one-line summary of its values; empty cells in the warning
-// colour.
+// One column as LUMIQ read it, as a row of the "Your columns" list: its
+// name, a one-line summary of its values, its kind (the icon and the word at
+// the row's end), and how many of its cells are empty (a warning tag: an
+// icon and the count in words), read as one line by a screen reader.
 export function ColumnRow({
   name,
   type,
@@ -32,30 +33,17 @@ export function ColumnRow({
 }) {
   return (
     <ListRow
-      accessibilityLabel={`${name}, ${typeLabel}. ${summary}${note ? `. ${note}` : ''}`}
-      icon={<IconCircle icon={TYPE_ICON[type]} size={36} />}
-      title={
-        <View style={styles.titleRow}>
-          {/* Grows into the free space so Android never measures it too narrow. */}
-          <AppText variant="label" style={styles.name}>
-            {name}
-          </AppText>
-          <Tag label={typeLabel} />
-        </View>
-      }
+      icon={TYPE_ICON[type]}
+      title={name}
       subtitle={summary}
-      detail={
-        note ? (
-          <AppText variant="small" tone="accent">
-            {note}
-          </AppText>
-        ) : undefined
-      }
-    />
+      trailing={typeLabel}
+      accessible
+      accessibilityLabel={`${name}, ${typeLabel}. ${summary}${note ? `. ${note}` : ''}`}>
+      {note ? <Tag tone="warn" label={note} style={styles.note} /> : null}
+    </ListRow>
   );
 }
 
 const styles = StyleSheet.create({
-  titleRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: Spacing.sm },
-  name: { flexGrow: 1, flexShrink: 1 },
+  note: { marginTop: space.xs },
 });

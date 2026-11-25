@@ -1,79 +1,102 @@
-import { useState, type ReactNode } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { useState } from 'react';
+import { StyleSheet } from 'react-native';
 
-import { AppIcon } from '@/components/app-icon';
-import { AppText } from '@/components/app-text';
-import { Radius, Spacing, TouchTarget } from '@/constants/theme';
-import { useTheme } from '@/hooks/use-theme';
+import { space } from '@/theme';
+import { Card } from '@/ui/card';
+import type { IconName } from '@/ui/icon-set';
+import { ListRow } from '@/ui/list';
+import { VStack } from '@/ui/stack';
+import { Tag } from '@/ui/tag';
+import { Txt } from '@/ui/text';
 
-// One of the four checks, as a row of the "What we checked" group: a green
-// tick and "OK" when clear; otherwise what was found in the warning colour,
-// and "See it" (an action, so blue) to show where and how to fix it in a
-// sunk well.
+// clear       the check found nothing.
+// found       it found something; the row opens to show where.
+// notChecked  there was nothing it could look at (no number columns).
+export type CheckResult = 'clear' | 'found' | 'notChecked';
+
+// One of the four checks, as a row of the "What we checked" list: what was
+// checked, what it found, and its result as a tag beside it (an icon and
+// words, never colour alone: a tick and "OK" when clear, a warning and "To
+// fix" when something was found, a warning and "Not checked" when there was
+// nothing to look at). A row that found something opens to show every place
+// it was found, and how to fix it.
 export function CheckRow({
+  icon,
   title,
   summary,
-  clear,
-  okLabel,
+  result,
+  resultLabel,
+  details,
+  tip,
   seeLabel,
   hideLabel,
-  children,
 }: {
+  icon: IconName;
   title: string;
   summary: string;
-  clear: boolean;
-  okLabel: string;
+  result: CheckResult;
+  resultLabel: string;
+  details: string[];
+  tip: string;
   seeLabel: string;
   hideLabel: string;
-  children?: ReactNode;
 }) {
-  const colors = useTheme();
   const [open, setOpen] = useState(false);
+  const found = result === 'found';
+  const tag = <Tag tone={result === 'clear' ? 'good' : 'warn'} label={resultLabel} />;
+
+  if (!found) {
+    return (
+      <ListRow
+        icon={icon}
+        title={title}
+        subtitle={summary}
+        trailing={tag}
+        accessible
+        accessibilityLabel={`${title}. ${resultLabel}. ${summary}`}
+      />
+    );
+  }
+
+  // A pressable row is read as one thing, so what it shows when open is read
+  // with it.
+  const spoken = [title, resultLabel, summary, ...(open ? [...details, tip] : [])].join('. ');
 
   return (
-    <View style={styles.row}>
-      <View style={styles.top}>
-        <View style={styles.text}>
-          <AppText variant="label">{title}</AppText>
-          <AppText variant="small" tone={clear ? 'secondary' : 'accent'}>
-            {summary}
-          </AppText>
-        </View>
-        {clear ? (
-          <View style={styles.ok} accessible accessibilityLabel={okLabel}>
-            <AppIcon name={{ ios: 'checkmark.circle.fill', android: 'check_circle' }} size={20} color={colors.success} />
-            <AppText variant="small" tone="success" snug style={styles.okText}>
-              {okLabel}
-            </AppText>
-          </View>
-        ) : (
-          <Pressable
-            onPress={() => setOpen((value) => !value)}
-            accessibilityRole="button"
-            accessibilityState={{ expanded: open }}
-            accessibilityLabel={`${open ? hideLabel : seeLabel}: ${title}`}
-            hitSlop={8}
-            style={styles.see}>
-            {/* Fixed width, full-width centred text: shrink-wrapped bold Hindi
-                is measured too narrow on Android and loses letters. */}
-            <AppText variant="label" tone="primary" style={styles.seeText}>
-              {open ? hideLabel : seeLabel}
-            </AppText>
-          </Pressable>
-        )}
-      </View>
-      {!clear && open && <View style={[styles.details, { backgroundColor: colors.surfaceVariant }]}>{children}</View>}
-    </View>
+    <ListRow
+      icon={icon}
+      title={title}
+      subtitle={summary}
+      trailing={tag}
+      onPress={() => setOpen((now) => !now)}
+      aria-expanded={open}
+      accessibilityLabel={spoken}
+      style={open ? styles.open : undefined}>
+      <VStack gap="sm" style={styles.more}>
+        {open ? (
+          <Card variant="sunk" size="sm" style={styles.details}>
+            {details.map((line, index) => (
+              <Txt key={index} variant="small">
+                {line}
+              </Txt>
+            ))}
+            <Txt variant="small" tone="soft">
+              {tip}
+            </Txt>
+          </Card>
+        ) : null}
+        <Txt variant="small" tone="action" weight="600">
+          {open ? hideLabel : seeLabel}
+        </Txt>
+      </VStack>
+    </ListRow>
   );
 }
 
 const styles = StyleSheet.create({
-  row: { paddingHorizontal: Spacing.lg, paddingVertical: Spacing.md, gap: Spacing.sm },
-  top: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, minHeight: TouchTarget - 8 },
-  text: { flex: 1, gap: 2 },
-  ok: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs },
-  okText: { fontWeight: '700' },
-  see: { minHeight: 44, width: 96, justifyContent: 'center' },
-  seeText: { textAlign: 'center', alignSelf: 'stretch' },
-  details: { borderRadius: Radius.md, padding: Spacing.md, gap: Spacing.xs },
+  // Open, the row is tall: its icon stays beside the title instead of
+  // sinking to the middle.
+  open: { alignItems: 'flex-start', paddingVertical: space.sm },
+  more: { paddingTop: space.xs },
+  details: { gap: space.xs },
 });

@@ -1,25 +1,31 @@
-import { StyleSheet, View } from 'react-native';
-import Animated from 'react-native-reanimated';
+import { useEffect } from 'react';
+import { StyleSheet, View, type LayoutChangeEvent } from 'react-native';
+import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 
-import { AppText } from '@/components/app-text';
-import { Numeral, type NumeralParts } from '@/components/numeral';
-import { CSS_EASE_OUT } from '@/constants/motion';
-import { Radius, Spacing } from '@/constants/theme';
-import { useTheme } from '@/hooks/use-theme';
-import type { NumberFormat } from '@/utils/format';
+import { radius, space, spring, useIsRTL, useReducedMotion, useTheme } from '@/theme';
+import { Card } from '@/ui/card';
+import { Numeral } from '@/ui/numeral';
+import { HStack, VStack } from '@/ui/stack';
+import { Txt } from '@/ui/text';
 
-const UPDATE = 200;
+// The height of a bar's track. It belongs to these two bars only.
+const TRACK = 12;
+// A value that is not zero always shows a sliver of bar.
+const SLIVER = 0.02;
 
-// The answer to the what-if: the value after the change as a big numeral,
-// the difference in words, then two bars on sunk tracks: now in neutral ink,
-// after in the action blue (a fall as much as a rise: the words say which).
-// When the change moves, the bars slide to their new length (200 ms).
+type Parts = { prefix: string; number: string; suffix: string; rtl: boolean };
+
+// The answer to the what-if: what is shown, the value after the change as a
+// big numeral, the difference as one plain sentence, then before and after
+// as two bars on sunk tracks, each with its label and its value written
+// beside it: now in resting grey, after in the chart's blue. The words say
+// whether it is a rise or a fall; the bars only show the sizes.
 export function ResultCard({
   title,
   label,
   parts,
-  format,
-  detail,
+  spokenValue,
+  sentence,
   groupLine,
   nowLabel,
   afterLabel,
@@ -30,98 +36,114 @@ export function ResultCard({
 }: {
   title: string;
   label: string;
-  parts: NumeralParts;
-  format: NumberFormat;
-  detail: string;
+  parts: Parts;
+  spokenValue: string;
+  sentence: string;
   groupLine: string | null;
   nowLabel: string;
   afterLabel: string;
-  before: number;
-  after: number;
+  before: number | null;
+  after: number | null;
   beforeText: string;
   afterText: string;
 }) {
-  const colors = useTheme();
-  const largest = Math.max(Math.abs(before), Math.abs(after), Number.EPSILON);
-  const share = (value: number) => `${Math.max(Math.min(Math.abs(value) / largest, 1), 0.02) * 100}%` as const;
+  const { colors } = useTheme();
+
+  // Each bar is its value's share of the larger of the two. An unknown value
+  // has no bar (and a dash for its value), never a bar of zero drawn as a
+  // number.
+  const known = [before, after].filter((value): value is number => value !== null).map(Math.abs);
+  const largest = known.length > 0 ? Math.max(...known) : 0;
+  const share = (value: number | null) => {
+    if (value === null || largest === 0 || value === 0) return 0;
+    return Math.max(Math.min(Math.abs(value) / largest, 1), SLIVER);
+  };
 
   return (
-    <View
-      style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}
-      accessible
-      accessibilityLabel={`${label}: ${afterText}. ${detail}`}>
-      <AppText variant="small" tone="secondary" style={styles.title}>
+    <Card style={styles.card}>
+      <Txt variant="small" tone="soft" weight="600" accessibilityRole="header">
         {title}
-      </AppText>
-      <AppText variant="label">{label}</AppText>
-      <Numeral parts={parts} format={format} size="hero" />
-      <AppText>{detail}</AppText>
+      </Txt>
+      <Txt variant="label">{label}</Txt>
+      <Numeral value={parts.number} prefix={parts.prefix} unit={parts.suffix} size="hero" accessibilityLabel={spokenValue} />
+      <Txt accessibilityLiveRegion="polite">{sentence}</Txt>
       {groupLine ? (
-        <AppText variant="small" tone="secondary">
+        <Txt variant="small" tone="soft">
           {groupLine}
-        </AppText>
+        </Txt>
       ) : null}
-
-      <View style={styles.bars}>
-        <Bar label={nowLabel} valueText={beforeText} width={share(before)} color={colors.textTertiary} />
-        <Bar label={afterLabel} valueText={afterText} width={share(after)} color={colors.primary} strong />
-      </View>
-    </View>
+      <VStack gap="md" style={styles.bars}>
+        <ChangeBar label={nowLabel} valueText={beforeText} share={share(before)} color={colors.chartRest} />
+        <ChangeBar label={afterLabel} valueText={afterText} share={share(after)} color={colors.chartPeak} strong />
+      </VStack>
+    </Card>
   );
 }
 
-function Bar({
+// One bar: its label and value above a sunk track. The fill is as long as
+// the track and is slid along it (a transform, never an animated width),
+// clipped by the track's round ends. It runs from the reading edge. When the
+// change moves, it settles at its new length on the settle spring; with
+// reduced motion it is simply there.
+function ChangeBar({
   label,
   valueText,
-  width,
+  share,
   color,
-  strong,
+  strong = false,
 }: {
   label: string;
   valueText: string;
-  width: `${number}%`;
+  share: number;
   color: string;
   strong?: boolean;
 }) {
-  const colors = useTheme();
+  const { colors } = useTheme();
+  const reduced = useReducedMotion();
+  const side = useIsRTL() ? -1 : 1;
+  const width = useSharedValue(0);
+  const filled = useSharedValue(share);
+
+  useEffect(() => {
+    filled.set(withSpring(share, spring('settle', reduced)));
+  }, [share, reduced, filled]);
+
+  const fillStyle = useAnimatedStyle(() => {
+    const wide = width.get();
+    return {
+      // Nothing is drawn in the one frame before the track is measured.
+      opacity: wide > 0 ? 1 : 0,
+      transform: [{ translateX: side * (filled.get() - 1) * wide }],
+    };
+  });
+
+  const measure = (event: LayoutChangeEvent) => {
+    width.set(event.nativeEvent.layout.width);
+  };
+
   return (
-    <View style={styles.barBlock}>
-      <View style={styles.barLabels}>
-        <AppText variant="small" style={[styles.flex, strong && styles.bold]}>
+    <View accessible accessibilityLabel={`${label}: ${valueText}`} style={styles.bar}>
+      <HStack gap="sm" justify="between" wrap>
+        <Txt variant="small" weight={strong ? '600' : undefined} style={styles.label}>
           {label}
-        </AppText>
-        <AppText variant="small" style={[styles.value, strong && styles.bold]}>
+        </Txt>
+        <Txt variant="small" weight={strong ? '600' : undefined}>
           {valueText}
-        </AppText>
-      </View>
-      <View style={[styles.track, { backgroundColor: colors.surfaceVariant }]}>
-        {/* Absolutely placed and childless: allowed to animate its width. */}
-        <Animated.View
-          style={[
-            styles.fill,
-            {
-              width,
-              backgroundColor: color,
-              transitionProperty: ['width', 'backgroundColor'],
-              transitionDuration: UPDATE,
-              transitionTimingFunction: CSS_EASE_OUT,
-            },
-          ]}
-        />
+        </Txt>
+      </HStack>
+      <View onLayout={measure} style={[styles.track, { backgroundColor: colors.surfaceSunk }]}>
+        <Animated.View style={[styles.fill, { backgroundColor: color }, fillStyle]} />
       </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  card: { gap: Spacing.sm, padding: Spacing.xl, borderRadius: Radius.xxl, borderWidth: 1 },
-  title: { fontWeight: '600' },
-  bars: { gap: Spacing.md, marginTop: Spacing.md },
-  barBlock: { gap: Spacing.xs },
-  barLabels: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
-  flex: { flex: 1 },
-  value: { fontVariant: ['tabular-nums'] },
-  bold: { fontWeight: '700' },
-  track: { height: 12, borderRadius: 6, overflow: 'hidden' },
-  fill: { position: 'absolute', start: 0, top: 0, bottom: 0, borderRadius: 6 },
+  card: { gap: space.sm },
+  bars: { marginTop: space.sm },
+  bar: { gap: space.xs },
+  label: { flexGrow: 1, flexShrink: 1 },
+  // The round ends of the track clip the fill.
+  track: { height: TRACK, borderRadius: radius.pill, overflow: 'hidden' },
+  fill: { ...StyleSheet.absoluteFill, borderRadius: radius.pill },
 });
