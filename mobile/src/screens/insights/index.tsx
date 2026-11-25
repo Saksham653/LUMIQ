@@ -14,7 +14,7 @@ import { EmptyState } from '@/ui/empty-state';
 import { NoFilesIllustration } from '@/ui/illustrations';
 import { Notice } from '@/ui/notice';
 import { Section } from '@/ui/section';
-import { prettyColumn } from '@/utils/format';
+import { dayWords, prettyColumn } from '@/utils/format';
 import { describeInsights, type InsightView } from '@/utils/insight-text';
 
 import { ColumnSkeleton } from './column-skeleton';
@@ -110,7 +110,7 @@ function ColumnAnswer({ metric, facts, roll, onAsk }: ColumnAnswerProps) {
           parts={parts(kpis.highest)}
           proof={
             kpis.highestLabel
-              ? tl('highestOfIn', { n: values, label: kpis.highestLabel })
+              ? tl('highestOfIn', { n: values, label: dayWords(String(kpis.highestLabel), numbers) })
               : tl('highestOf', { n: values })
           }
         />

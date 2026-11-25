@@ -90,6 +90,18 @@ export function makeNumbers(
   };
 }
 
+// A day written the computer's way ("2026-11-07") as people say it ("7 Nov
+// 2026", in the app's language); anything else stays as written.
+const ISO_DAY = /^(\d{4})-(\d{2})-(\d{2})$/;
+export function dayWords(label: string, numbers: Pick<Numbers, 'date'>): string {
+  const match = ISO_DAY.exec(label.trim());
+  if (!match) return label;
+  const month = Number(match[2]) - 1;
+  const date = new Date(Number(match[1]), month, Number(match[3]));
+  if (date.getMonth() !== month) return label;
+  return numbers.date(date.getTime());
+}
+
 // Column names as people would say them: "avg_order_value" → "Avg order value".
 export function prettyColumn(column: string): string {
   const spaced = column.replace(/[_]+/g, ' ').replace(/\s+/g, ' ').trim();

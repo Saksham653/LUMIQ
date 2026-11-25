@@ -8,7 +8,7 @@ import { isBlank, isNumber } from '@core/lib/stats.js';
 import type { ColumnType, Dataset, Row } from '@/data/types';
 import { inSentence, type Language } from '@/i18n';
 import { CHECKS, checkFile, type Deduction } from '@/utils/file-check';
-import { prettyColumn, type NumberFormat, type Numbers } from '@/utils/format';
+import { dayWords, prettyColumn, type NumberFormat, type Numbers } from '@/utils/format';
 import { computeKpis } from '@/utils/kpis';
 
 // The Story of your file, as data: up to six cards built only from what the
@@ -203,18 +203,6 @@ function join(parts: Said[]): { sentence: string; bare: string; hidden: string }
 // with names hidden. A letter, never a digit, so the check reads nothing new.
 function standIn(tools: StoryTools, place: number): string {
   return tools.t('name.group', { letter: String.fromCharCode(65 + (place % 26)) });
-}
-
-// A day written the computer's way in the file ("2026-11-07") as people say
-// it ("7 Nov 2026", in the app's language); anything else stays as written.
-const ISO_DAY = /^(\d{4})-(\d{2})-(\d{2})$/;
-function dayWords(label: string, numbers: Numbers): string {
-  const match = ISO_DAY.exec(label.trim());
-  if (!match) return label;
-  const month = Number(match[2]) - 1;
-  const date = new Date(Number(match[1]), month, Number(match[3]));
-  if (date.getMonth() !== month) return label;
-  return numbers.date(date.getTime());
 }
 
 // Numbers that are part of names taken from the file ("2024-Q1", "Plan 2",
