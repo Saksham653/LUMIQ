@@ -1,27 +1,26 @@
 import { useHeaderHeight } from 'expo-router/react-navigation';
-import { useMemo, useRef, useState } from 'react';
-import { KeyboardAvoidingView, Pressable, ScrollView, StyleSheet, View, type ScrollViewInstance } from 'react-native';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Keyboard, KeyboardAvoidingView, ScrollView, StyleSheet, View, type ScrollViewInstance } from 'react-native';
 
 import { AskError, isAskConfigured, type AskErrorCode } from '@/ai/ask-client';
 import { answerQuestion, type AskContextItem, type AskResult, type AskStage } from '@/ai/ask-flow';
-import { AppIcon } from '@/components/app-icon';
-import { AppText } from '@/components/app-text';
-import { FileHeader } from '@/components/file-header';
-import { Group } from '@/components/grouped';
 import { hapticSuccess } from '@/components/haptics';
 import { NoFileChosen } from '@/components/no-file-chosen';
-import { PressableScale } from '@/components/pressable-scale';
-import { PrivacyNote } from '@/components/privacy-note';
-import { Radius, Spacing } from '@/constants/theme';
 import type { Dataset } from '@/data/types';
-import { useTheme } from '@/hooks/use-theme';
 import type { StringKey } from '@/i18n';
 import { useAppState, useNumbers, useT } from '@/state/app-state';
+import { getAiConsent, setAiConsent, useAiConsent } from '@/state/consent';
 import { useActiveDataset } from '@/state/datasets';
+import { radius, rhythm, sizes, space, useTheme } from '@/theme';
+import { Button } from '@/ui/button';
+import { Icon } from '@/ui/icon';
+import { Txt } from '@/ui/text';
 import { suggestedQuestions } from '@/utils/suggested-questions';
 
-import { AnswerCard, AssistantPanel, WorkingPanel } from './answer-card';
+import { AnswerCard, ErrorPanel, WorkingPanel } from './answer-card';
 import { AskInput } from './ask-input';
+import { ConsentCard } from './consent-card';
+import { FileChip } from './file-chip';
 import { SuggestionRow } from './suggestion-button';
 
 type ChatItem =
@@ -41,6 +40,10 @@ const ERROR_TEXT: Record<AskErrorCode, StringKey> = {
 
 const RETRYABLE = new Set<AskErrorCode>(['busy', 'offline', 'failed', 'stopped']);
 
+// The corner of the question bubble that points to the speaker (brand board,
+// the Ask screen). It belongs to the bubble alone.
+const BUBBLE_TAIL = 6;
+
 let lastId = 0;
 const nextId = () => ++lastId;
 
@@ -52,26 +55,71 @@ export function Ask() {
   return dataset ? <AskChat key={dataset.id} dataset={dataset} /> : <NoFileChosen />;
 }
 
+// The person's own question, at the end of the row.
+function QuestionBubble({ text, speaker }: { text: string; speaker: string }) {
+  const { colors } = useTheme();
+  return (
+    <View
+      style={[styles.userBubble, { backgroundColor: colors.userBubble }]}
+      accessible
+      accessibilityLabel={`${speaker}: ${text}`}>
+      <Txt selectable color={colors.onUserBubble}>
+        {text}
+      </Txt>
+    </View>
+  );
+}
+
 function AskChat({ dataset }: { dataset: Dataset }) {
-  const colors = useTheme();
+  const { colors } = useTheme();
   const t = useT();
   const { language } = useAppState();
   const numbers = useNumbers();
   const headerHeight = useHeaderHeight();
   const configured = isAskConfigured();
+  const consent = useAiConsent();
 
   const [items, setItems] = useState<ChatItem[]>([]);
   const [input, setInput] = useState('');
   const [busy, setBusy] = useState(false);
   const [questionsLeft, setQuestionsLeft] = useState<number | null>(null);
+  // A question that was asked before the person allowed sending. It has not
+  // left the phone: it waits here while the permission card is shown.
+  const [waiting, setWaiting] = useState<string | null>(null);
   const contextRef = useRef<AskContextItem[]>([]);
   const abortRef = useRef<AbortController | null>(null);
   const scrollRef = useRef<ScrollViewInstance>(null);
   const suggestions = useMemo(() => suggestedQuestions(dataset, language), [dataset, language]);
 
+  // The question the permission card is asking about, while there is one.
+  const held = consent === 'yes' ? null : waiting;
+
+  useEffect(() => {
+    // Permission taken back while an answer is on its way: stop, so nothing
+    // more of that question is sent.
+    if (consent !== 'yes') abortRef.current?.abort();
+  }, [consent]);
+
+  useEffect(() => {
+    // The settings file has a second writer (see @/state/consent), which
+    // saves when the open file, the language or the number style changes and
+    // can put back an old answer. Saving the answer again right after it
+    // keeps the file true. Nothing is written when the file already agrees.
+    setAiConsent(getAiConsent());
+  }, [dataset.id, language, numbers]);
+
   const ask = async (raw: string) => {
     const question = raw.trim();
     if (!question || busy || !configured) return;
+    // Until the person has said yes, nothing leaves the phone. The question
+    // waits and the permission card is shown instead. Read at this moment, not
+    // from the last render, so an answer given a moment ago is never missed.
+    if (getAiConsent() !== 'yes') {
+      Keyboard.dismiss();
+      setWaiting(question);
+      return;
+    }
+    setWaiting(null);
     setInput('');
     const answerId = nextId();
     const replace = (update: (item: ChatItem) => ChatItem) =>
@@ -101,7 +149,7 @@ function AskChat({ dataset }: { dataset: Dataset }) {
           ),
       });
       replace(() => ({ id: answerId, role: 'assistant', state: 'done', result }));
-      // One success haptic, in the frame the check starts to draw; none when
+      // One success haptic, in the frame the stamp starts to land; none when
       // a number could not be matched.
       if (result.kind === 'answer' && result.checked > 0 && result.unverified === 0) hapticSuccess();
       if (result.questionsLeft !== null) setQuestionsLeft(result.questionsLeft);
@@ -118,11 +166,27 @@ function AskChat({ dataset }: { dataset: Dataset }) {
     }
   };
 
+  // "Allow": the answer is saved, and the question that was waiting is sent.
+  const allow = () => {
+    const question = waiting;
+    setAiConsent('yes');
+    setWaiting(null);
+    if (question !== null) void ask(question);
+  };
+
+  // "Not now": the answer is saved and nothing is sent. The screen stays as it
+  // was; the next question brings the card back.
+  const notNow = () => {
+    setAiConsent('no');
+    setWaiting(null);
+  };
+
   const stop = () => abortRef.current?.abort();
 
   const newChat = () => {
     stop();
     contextRef.current = [];
+    setWaiting(null);
     setItems([]);
   };
 
@@ -133,7 +197,7 @@ function AskChat({ dataset }: { dataset: Dataset }) {
     // window no longer resizes for the keyboard and the question box would stay
     // under it. The offset is the header above this screen.
     <KeyboardAvoidingView
-      style={[styles.flex, { backgroundColor: colors.background }]}
+      style={[styles.flex, { backgroundColor: colors.ground }]}
       behavior="padding"
       keyboardVerticalOffset={headerHeight}>
       <ScrollView
@@ -143,74 +207,72 @@ function AskChat({ dataset }: { dataset: Dataset }) {
         style={styles.flex}
         contentContainerStyle={styles.content}
         onContentSizeChange={() => {
-          if (items.length > 0) scrollRef.current?.scrollToEnd({ animated: true });
+          // While the permission card is up, it is brought into view from its
+          // top (see below), not from its foot.
+          if (items.length > 0 && held === null) scrollRef.current?.scrollToEnd({ animated: true });
         }}>
-        <FileHeader dataset={dataset} />
+        <FileChip dataset={dataset} />
 
-        {!configured && (
-          <View style={[styles.notice, { backgroundColor: colors.accentContainer }]}>
-            <AppIcon name={{ ios: 'info.circle.fill', android: 'info' }} size={22} color={colors.accent} />
-            <AppText style={styles.flex}>{t('ask.error.notConfigured')}</AppText>
-          </View>
-        )}
+        {!configured && <ErrorPanel code="not_configured" message={t('ask.error.notConfigured')} />}
 
-        <PrivacyNote text={t('ask.privacy')} align="start" />
+        <View style={styles.privacy} accessible accessibilityLabel={t('ask.privacy')}>
+          <Icon name="lock" size={sizes.iconSmall} color={colors.inkSoft} />
+          <Txt variant="small" tone="soft" style={styles.flex}>
+            {t('ask.privacy')}
+          </Txt>
+        </View>
 
-        {items.length === 0 ? (
+        {items.length === 0 && held === null ? (
           <View style={styles.intro}>
-            <AppText variant="heading">{t('ask.intro')}</AppText>
-            <AppText variant="small" tone="secondary">
+            <Txt variant="heading">{t('ask.intro')}</Txt>
+            <Txt variant="small" tone="soft">
               {t('ask.tryThese')}
-            </AppText>
-            <Group>
+            </Txt>
+            <View style={styles.suggestions}>
               {suggestions.map((question) => (
                 <SuggestionRow key={question} text={question} onPress={() => ask(question)} disabled={!configured || busy} />
               ))}
-            </Group>
+            </View>
           </View>
         ) : (
           <>
             {items.map((item) => {
-              if (item.role === 'user') {
-                return (
-                  <View
-                    key={item.id}
-                    style={[styles.userBubble, { backgroundColor: colors.userBubble }]}
-                    accessible
-                    accessibilityLabel={`${t('ask.you')}: ${item.text}`}>
-                    <AppText selectable style={{ color: colors.onUserBubble }}>
-                      {item.text}
-                    </AppText>
-                  </View>
-                );
-              }
+              if (item.role === 'user') return <QuestionBubble key={item.id} text={item.text} speaker={t('ask.you')} />;
               if (item.state === 'working') return <WorkingPanel key={item.id} stages={item.stages} />;
               if (item.state === 'error') {
                 return (
-                  <AssistantPanel key={item.id} enter>
-                    <AppText>{t(ERROR_TEXT[item.code], { limit: item.limit ?? '' })}</AppText>
-                    {RETRYABLE.has(item.code) && (
-                      <Pressable onPress={() => ask(item.question)} disabled={busy} accessibilityRole="button" style={styles.retry}>
-                        <AppIcon name={{ ios: 'arrow.clockwise', android: 'refresh' }} size={20} color={colors.primary} />
-                        <AppText variant="label" tone="primary" style={styles.flex}>
-                          {t('ask.retry')}
-                        </AppText>
-                      </Pressable>
-                    )}
-                  </AssistantPanel>
+                  <ErrorPanel
+                    key={item.id}
+                    enter
+                    code={item.code}
+                    message={t(ERROR_TEXT[item.code], { limit: item.limit ?? '' })}
+                    retryLabel={t('ask.retry')}
+                    onRetry={RETRYABLE.has(item.code) ? () => ask(item.question) : undefined}
+                    busy={busy}
+                  />
                 );
               }
               return <AnswerCard key={item.id} result={item.result} suggestions={suggestions} onAsk={ask} busy={busy} />;
             })}
-            {!busy && (
-              <PressableScale onPress={newChat} accessibilityRole="button" style={styles.newChat}>
-                <AppIcon name={{ ios: 'plus', android: 'add' }} size={20} color={colors.primary} />
-                {/* Self-sizing label: snug keeps Android from cutting Hindi short. */}
-                <AppText variant="label" tone="primary" snug>
-                  {t('ask.newChat')}
-                </AppText>
-              </PressableScale>
-            )}
+            {held !== null ? (
+              // The question that is waiting, and the card that asks before it
+              // is sent. Brought into view from the top, so the card is read
+              // before its buttons are reached.
+              <View
+                style={styles.held}
+                onLayout={(event) => {
+                  const { y } = event.nativeEvent.layout;
+                  // One frame later, so the card is on screen before the view
+                  // moves to it.
+                  requestAnimationFrame(() => scrollRef.current?.scrollTo({ y, animated: true }));
+                }}>
+                <QuestionBubble text={held} speaker={t('ask.you')} />
+                <ConsentCard onAllow={allow} onNotNow={notNow} />
+              </View>
+            ) : null}
+            {!busy && held === null ? (
+              <Button variant="plain" icon="add" label={t('ask.newChat')} onPress={newChat} style={styles.newChat} />
+            ) : null}
           </>
         )}
       </ScrollView>
@@ -233,25 +295,20 @@ function AskChat({ dataset }: { dataset: Dataset }) {
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
-  content: { padding: Spacing.xl, gap: Spacing.lg, paddingBottom: Spacing.xxl },
-  notice: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, padding: Spacing.lg, borderRadius: Radius.xxl },
-  intro: { gap: Spacing.md, marginTop: Spacing.sm },
+  content: { padding: rhythm.screenEdge, gap: rhythm.cardGap, paddingBottom: space.xxl },
+  // The lock sits on the first line of the sentence beside it.
+  privacy: { flexDirection: 'row', alignItems: 'flex-start', gap: space.sm, paddingHorizontal: space.xs },
+  intro: { gap: space.md, marginTop: space.sm },
+  suggestions: { gap: space.sm },
   userBubble: {
     alignSelf: 'flex-end',
     maxWidth: '85%',
-    paddingHorizontal: Spacing.xl,
-    paddingVertical: Spacing.md,
-    borderRadius: Radius.xxl,
-    borderBottomEndRadius: Spacing.sm,
+    paddingHorizontal: space.lg,
+    paddingVertical: space.md,
+    borderRadius: radius.card,
+    borderBottomEndRadius: BUBBLE_TAIL,
   },
-  retry: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, minHeight: 44 },
-  newChat: {
-    alignSelf: 'center',
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.xs,
-    minHeight: 44,
-    paddingHorizontal: Spacing.lg,
-    borderRadius: Radius.pill,
-  },
+  // The waiting question and the permission card, spaced like the chat.
+  held: { gap: rhythm.cardGap },
+  newChat: { alignSelf: 'center' },
 });
