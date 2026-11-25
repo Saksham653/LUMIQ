@@ -9,8 +9,8 @@ import { brand, useTheme, keepLeftToRight } from '@/theme';
 //   Mark      an L and a sun. The L is two edges of one spreadsheet cell and
 //             the two axes of a chart; the sun is the number the phone has
 //             checked, held in the corner.
-//   Wordmark  the name in five drawn letters. The Q is a whole ring with a
-//             dot for its tail.
+//   Wordmark  the name in five drawn letters. The Q is a whole ring crossed
+//             by a short tail that ends in a round dot.
 //   Lockup    the mark on its tile, a gap, the name.
 //
 // <Logo variant="lockup | mark | wordmark" /> picks one of the three.
@@ -18,7 +18,7 @@ import { brand, useTheme, keepLeftToRight } from '@/theme';
 // The rules the code keeps for you:
 // - The sun is yellow only on the blue tile. Without the tile the whole mark
 //   is one colour: there is no way to ask for yellow on paper.
-// - The name is one colour, its dot included. The yellow never enters it.
+// - The name is one colour, the Q's tail included. The yellow never enters it.
 // - Small sizes are redrawn, not shrunk: the 24 and the 16 drawings, on a
 //   tile and off it.
 // - On a tile the art sits a little right and up of centre, where it looks
@@ -105,8 +105,8 @@ function tileArtFor(side: number): TileArt {
 
 // The name: five drawn letters in a box of 150 by 40. The cap height is 32,
 // from y 4 to y 36: the box is centred on the letters, so centring the box
-// centres the name. One list of paths per letter, in reading order. The Q is
-// its ring and its dot; the dot is the last path, as in wordmark.svg.
+// centres the name. One list of paths per letter, in reading order, one path
+// each, as in wordmark.svg.
 const WORD_WIDTH = 150;
 const WORD_HEIGHT = 40;
 const WORD_CAP = 32;
@@ -120,11 +120,14 @@ const WORD_LETTERS: readonly (readonly string[])[] = [
   ['M56.5 5.5A1.5 1.5 0 0 1 58 4L64.27 4A1 1 0 0 1 65.17 4.57L73.96 22.87A.6 .6 0 0 0 75.04 22.87L83.83 4.57A1 1 0 0 1 84.73 4L91 4A1.5 1.5 0 0 1 92.5 5.5L92.5 34.5A1.5 1.5 0 0 1 91 36L87 36A1.5 1.5 0 0 1 85.5 34.5L85.5 15.87L76.06 35.55A.8 .8 0 0 1 75.34 36L73.66 36A.8 .8 0 0 1 72.94 35.55L63.5 15.87L63.5 34.5A1.5 1.5 0 0 1 62 36L58 36A1.5 1.5 0 0 1 56.5 34.5Z'],
   // I
   ['M100 5.5A1.5 1.5 0 0 1 101.5 4L105.5 4A1.5 1.5 0 0 1 107 5.5L107 34.5A1.5 1.5 0 0 1 105.5 36L101.5 36A1.5 1.5 0 0 1 100 34.5Z'],
-  // Q: a whole ring whose outer edge gives way round the dot, then the dot,
-  // its tail. The dot hangs below the line, so the letter never reads as an O.
+  // Q: a whole ring (outer radius 17, inner 10) crossed at its lower right by
+  // a tail of the same stroke 7, on the 45 degree line through the ring's
+  // centre. The tail starts inside the ring with a flat end and ends outside
+  // in a round end, the dot of light, 3.5 below the line. Ring and tail are
+  // one shape, so the letter reads as a Q at every size and never as an O
+  // with a full stop beside it.
   [
-    'M136.53 35.9A17 17 0 1 1 146.4 26.03A1.5 1.5 0 0 1 144.99 27A7.5 7.5 0 0 0 137.5 34.49A1.5 1.5 0 0 1 136.53 35.9ZM140.5 20A10 10 0 1 0 120.5 20A10 10 0 1 0 140.5 20Z',
-    'M150 34.5A5 5 0 1 1 140 34.5A5 5 0 0 1 150 34.5Z',
+    'M139.79 34.24A17 17 0 1 1 144.74 29.29L148.96 33.51A3.5 3.5 0 0 1 148.96 38.46A3.5 3.5 0 0 1 144.01 38.46ZM139.6 24.15A10 10 0 1 0 134.65 29.1L133.33 27.78A1.5 1.5 0 0 1 133.33 25.66L136.16 22.83A1.5 1.5 0 0 1 138.28 22.83Z',
   ],
 ];
 
@@ -153,8 +156,8 @@ export const LOGO_ART = {
     width: WORD_WIDTH,
     height: WORD_HEIGHT,
     capHeight: WORD_CAP,
-    // One list of paths per letter, in reading order. The Q holds two: its
-    // ring and its dot, which move as one letter.
+    // One list of paths per letter, in reading order. The Q's ring and tail
+    // are one path, so they move as one letter.
     letters: WORD_LETTERS,
   },
 } as const;
@@ -264,7 +267,7 @@ export type WordmarkProps = SharedProps & {
   // and 4.69 times as wide as the letters are high.
   size?: LogoSize | number;
   // The one colour, a palette colour. Default ink, which is right on paper
-  // and on a dark ground. The dot takes it too.
+  // and on a dark ground. The Q's tail takes it too.
   color?: string;
 };
 

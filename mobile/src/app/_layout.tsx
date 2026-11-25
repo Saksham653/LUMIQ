@@ -6,15 +6,57 @@ import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useRef, useState } from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
+import { defineStrings, useLocalT } from '@/i18n/local';
 import { AppStateProvider, useAppState } from '@/state/app-state';
 import { DatasetsProvider } from '@/state/datasets';
 import { fixDirectionAtLaunch } from '@/state/layout-direction';
 import { FONT, palettes, useAppFonts, useTheme, type Scheme } from '@/theme';
+import { ErrorBoundary, ErrorRecovery, type ErrorBoundaryRecovery } from '@/ui/error-boundary';
 import { LaunchMoment } from '@/ui/launch-moment';
+import { UIStringsProvider } from '@/ui/strings';
 import { loadSettings, saveSettings } from '@/utils/settings-file';
 
 SplashScreen.preventAutoHideAsync();
+
+// The words of the safety net below: what a person reads if a screen crashes
+// while it is drawn, in place of a blank white screen.
+const CRASH_STRINGS = defineStrings({
+  en: {
+    title: 'Something broke',
+    body: 'Your files are safe on this phone. Try again. If it keeps happening, close LUMIQ and open it again.',
+    action: 'Try again',
+  },
+  hi: {
+    title: 'कुछ गड़बड़ हो गई',
+    body: 'आपकी फ़ाइलें इस फ़ोन पर सुरक्षित हैं। फिर कोशिश करें। अगर ऐसा बार-बार हो, तो LUMIQ बंद करके दोबारा खोलें।',
+    action: 'फिर कोशिश करें',
+  },
+});
+
+// The library's recovery screen (a torn sheet, what happened, one button that
+// tries again) with the words above in the app's language. The words are
+// given to this screen alone, so the rest of the library keeps whatever
+// words it reads today.
+function CrashScreen({ restart }: { restart: () => void }) {
+  const t = useLocalT(CRASH_STRINGS);
+  return (
+    <UIStringsProvider strings={{ errorTitle: t('title'), errorBody: t('body'), errorAction: t('action') }}>
+      <ErrorRecovery variant="screen" onRestart={restart} />
+    </UIStringsProvider>
+  );
+}
+
+function drawCrashScreen({ restart }: ErrorBoundaryRecovery) {
+  return <CrashScreen restart={restart} />;
+}
+
+// Nothing leaves the phone: the failure goes to the phone's own log, for a
+// tester's bug report. The person only ever sees the recovery screen.
+function logCrash(error: unknown, info: { componentStack: string | null }) {
+  console.warn('LUMIQ: a screen crashed while drawing; the recovery screen took its place', error, info.componentStack);
+}
 
 // The start screen is held for the brand fonts for at most this long (brand
 // spec, section 5, rule 6). After it the app opens in the phone's own font.
@@ -131,28 +173,40 @@ function RootStack({ ready }: { ready: boolean }) {
 
   return (
     <View style={styles.fill}>
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Protected guard={onboarded}>
-          <Stack.Screen name="(tabs)" />
-        </Stack.Protected>
-        <Stack.Protected guard={!onboarded}>
-          <Stack.Screen name="welcome" />
-        </Stack.Protected>
-      </Stack>
-      {/* Over everything, once per start. Its first frame is the phone's start
-          screen (the tile with the still L), so nothing jumps; the browser has
-          no start screen, so there the L draws itself. */}
-      {!opened ? (
-        <LaunchMoment
-          mode={opening}
-          drawMark={Platform.OS === 'web'}
-          style={StyleSheet.absoluteFill}
-          onDone={() => {
-            setOpened(true);
-            if (opening === 'full') saveSettings({ ...loadSettings(), launchSeen: true });
-          }}
-        />
-      ) : null}
+      {/* The safety net: a crash while anything below draws (a screen, the
+          launch moment) shows the calm recovery screen instead of a white
+          one. It sits inside the providers, so the recovery screen has the
+          theme and the language, and below the checks above, so the splash
+          still hides and a restart for the layout direction is still known.
+          Trying again draws the screens afresh and skips the launch moment,
+          in case that was what broke. */}
+      <ErrorBoundary variant="screen" fallback={drawCrashScreen} onError={logCrash} onRestart={() => setOpened(true)}>
+        <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Protected guard={onboarded}>
+            <Stack.Screen name="(tabs)" />
+            {/* The Story covers the whole screen, the tab bar too: it rises
+                over the tabs and its close button takes it away. */}
+            <Stack.Screen name="story" options={{ animation: 'slide_from_bottom' }} />
+          </Stack.Protected>
+          <Stack.Protected guard={!onboarded}>
+            <Stack.Screen name="welcome" />
+          </Stack.Protected>
+        </Stack>
+        {/* Over everything, once per start. Its first frame is the phone's start
+            screen (the tile with the still L), so nothing jumps; the browser has
+            no start screen, so there the L draws itself. */}
+        {!opened ? (
+          <LaunchMoment
+            mode={opening}
+            drawMark={Platform.OS === 'web'}
+            style={StyleSheet.absoluteFill}
+            onDone={() => {
+              setOpened(true);
+              if (opening === 'full') saveSettings({ ...loadSettings(), launchSeen: true });
+            }}
+          />
+        ) : null}
+      </ErrorBoundary>
     </View>
   );
 }
@@ -163,15 +217,19 @@ export default function RootLayout() {
   const { scheme } = useTheme();
   const ready = useFontsOrBackstop();
   return (
-    <ThemeProvider value={NAVIGATION_THEME[scheme]}>
-      {/* Status bar icons follow the theme on screen: dark on light screens, light on dark. */}
-      <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
-      <AppStateProvider>
-        <DatasetsProvider>
-          <RootStack ready={ready} />
-        </DatasetsProvider>
-      </AppStateProvider>
-    </ThemeProvider>
+    // The gesture root: drags and taps on the charts and sliders need it
+    // around the whole app.
+    <GestureHandlerRootView style={styles.fill}>
+      <ThemeProvider value={NAVIGATION_THEME[scheme]}>
+        {/* Status bar icons follow the theme on screen: dark on light screens, light on dark. */}
+        <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
+        <AppStateProvider>
+          <DatasetsProvider>
+            <RootStack ready={ready} />
+          </DatasetsProvider>
+        </AppStateProvider>
+      </ThemeProvider>
+    </GestureHandlerRootView>
   );
 }
 

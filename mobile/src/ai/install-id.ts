@@ -18,9 +18,13 @@ export function installId(): string {
     // Unreadable: make a new one below.
   }
   const id = randomUUID();
+  // Written synchronously, as settings are (utils/settings-file.ts): `write()`
+  // is asynchronous, so its failure would escape this try and an app closed
+  // straight after could lose the id, giving the phone a new one (and a fresh
+  // count of free questions) on its next start.
   try {
     if (!file.exists) file.create();
-    file.write(id);
+    file.writeSync(id);
   } catch (error) {
     console.warn('LUMIQ: could not save the install id', error);
   }
